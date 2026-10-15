@@ -6,7 +6,11 @@ import { requireTenantContext } from "@/modules/organization/use-cases/resolve-s
 import { cancelBrochureOrder } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
-const schema = z.object({ reason: z.string().trim().min(3, "Nhập lý do huỷ (tối thiểu 3 ký tự)").max(500) })
+const schema = z.object({
+  reason: z.string().trim().min(3, "Nhập lý do huỷ (tối thiểu 3 ký tự)").max(500),
+  /** Đơn đang giao: người huỷ đã đọc cảnh báo shipper đang trên đường (PO 15/10/2026) */
+  confirmInTransit: z.boolean().optional(),
+})
 
 /** POST /api/v1/greeting-card/orders/[id]/cancel — huỷ đơn Thẻ chào (R6). */
 export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request, context) => {
@@ -15,5 +19,5 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
   const { id } = await context.params
   const parsed = schema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
-  return jsonResponse({ data: await cancelBrochureOrder(ctx, id, parsed.data.reason) })
+  return jsonResponse({ data: await cancelBrochureOrder(ctx, id, parsed.data.reason, parsed.data.confirmInTransit === true) })
 })

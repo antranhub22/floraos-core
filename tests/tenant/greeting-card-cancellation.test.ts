@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
 import { CancellationRepository } from "@/modules/greeting-card/infra/cancellation-repository"
+import { CancellationFollowUpRepository } from "@/modules/greeting-card/infra/cancellation-follow-up-repository"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -49,7 +50,7 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
     expect(after.status).toBe("CONFIRMED")
   })
 
-  it("hoàn toàn phần hoàn đúng số đã thu dù đề xuất gửi 0đ, và chỉ duyệt được một lần", async () => {
+  it("duyệt hoàn toàn phần chỉ huỷ đơn; hoàn tiền là bước riêng, đúng số đã thu, chỉ một lần (PO 15/10/2026)", async () => {
     const orderId = await order(a, 300_000)
     const { id } = await repo.createProposal(a.ctx, {
       orderId, senderRole: "COORDINATOR", proposal: { type: "FULL_REFUND", reason: "Hết hoa", refundAmountVnd: 0 },
@@ -58,14 +59,33 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
 
     const res = await repo.decide(a.ctx, { requestId: id, approve: true, note: "", actualRefundVnd: 1 })
     expect(res).toMatchObject({ status: "APPROVED", orderStatus: "CANCELLED", refundVnd: 300_000 })
+    // Duyệt không chuyển tiền: sổ thu chưa đổi, việc "Cần hoàn tiền" chờ Điều hành
+    const approved = await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })
+    expect(Number(approved.paid_vnd)).toBe(300_000)
+    expect(approved.status).toBe("CANCELLED")
+    expect(await prisma.order_payments.count({ where: { order_id: orderId, kind: "REFUND" } })).toBe(0)
+    const followUps = new CancellationFollowUpRepository()
+    expect((await followUps.listPending(a.ctx)).map((r) => r.payload.followUp?.refundDueVnd)).toEqual([300_000])
+    expect(await followUps.listPending(b.ctx)).toHaveLength(0)
 
+    await followUps.complete(a.ctx, id, "Đã chuyển khoản trả khách")
     const after = await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })
     expect(Number(after.paid_vnd)).toBe(0)
-    expect(after.status).toBe("CANCELLED")
     const refunds = await prisma.order_payments.findMany({ where: { order_id: orderId, kind: "REFUND" } })
     expect(refunds.map((r) => Number(r.amount_vnd))).toEqual([300_000])
 
     await expect(repo.decide(a.ctx, { requestId: id, approve: true, note: "" })).rejects.toMatchObject({ code: "CONFLICT" })
+    await expect(followUps.complete(a.ctx, id, "")).rejects.toMatchObject({ code: "CONFLICT" })
+  })
+
+  it("huỷ đơn đang giao: hệ thống không tự duyệt khi quá hạn (cần người duyệt)", async () => {
+    const orderId = await order(a, 0)
+    await prisma.orders.update({ where: { id: orderId }, data: { delivery_status: "DELIVERING" } })
+    const { id } = await repo.createProposal(a.ctx, { orderId, senderRole: "COORDINATOR", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } })
+    await expect(repo.decide(a.ctx, { requestId: id, approve: true, note: "", autoTimeoutMinutes: 15 })).rejects.toMatchObject({ code: "CONFLICT" })
+    expect((await repo.getPendingInfo(a.ctx, id))?.deliveryStatus).toBe("DELIVERING")
+    await repo.decide(a.ctx, { requestId: id, approve: true, note: "Điều phối đã gọi shipper quay về" })
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })).status).toBe("CANCELLED")
   })
 
   it("hủy đơn không hoàn không ghi sổ thu dù client gửi số hoàn", async () => {
@@ -93,14 +113,14 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
     expect((await prisma.vouchers.findUniqueOrThrow({ where: { id: v.id } }))).toMatchObject({ is_used: false, order_id: null })
   })
 
-  it("hai lần duyệt hoàn cùng lúc trên một đơn: không ghi đè số đã thu, tổng hoàn không vượt số đã thu", async () => {
+  it("hai khoản hoàn cùng lúc trên một đơn: không ghi đè số đã thu, tổng hoàn không vượt số đã thu", async () => {
     const orderId = await order(a, 300_000)
     const p1 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Hoa dập", refundAmountVnd: 200_000 } })
     const p2 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Giao trễ", refundAmountVnd: 200_000 } })
-    const results = await Promise.allSettled([
-      repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" }),
-      repo.decide(a.ctx, { requestId: p2.id, approve: true, note: "" }),
-    ])
+    await repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" })
+    await repo.decide(a.ctx, { requestId: p2.id, approve: true, note: "" })
+    const followUps = new CancellationFollowUpRepository()
+    const results = await Promise.allSettled([followUps.complete(a.ctx, p1.id, ""), followUps.complete(a.ctx, p2.id, "")])
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1)
     const after = await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })
     expect(Number(after.paid_vnd)).toBe(100_000)

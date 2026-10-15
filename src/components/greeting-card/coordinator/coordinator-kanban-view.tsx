@@ -151,6 +151,7 @@ export function CoordinatorKanbanView({
               onOpen={onOpen}
               onOpenDetail={() => setDetailTarget(buildDetailTarget(o, col))}
               workflowPolicy={workflowPolicy}
+              now={now}
             />
           )
 

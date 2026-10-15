@@ -9,8 +9,8 @@ import {
   detectWorkflowPreset,
   isUrgentOrder,
   canRoleApproveDeposit,
-  shouldRequireCoordinatorAcceptance,
   canBypassFinishedPhoto,
+  canBypassDeliveryPhoto,
   shouldBlockDispatchForBalance,
   type BrochureWorkflowPolicy,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
@@ -33,7 +33,6 @@ describe("Brochure Workflow Policy Domain Tests", () => {
       }
       const policy = parseBrochureWorkflowPolicy(legacySettings)
       expect(policy.requireAdminDepositApproval).toBe(true)
-      expect(policy.requireCoordinatorAcceptance).toBe(false)
       expect(policy.requireFinishedPhoto).toBe(false)
       expect(policy.customerApprovalMode).toBe("BYPASS")
       expect(policy.requireFullPaymentBeforeDispatch).toBe(false)
@@ -67,7 +66,7 @@ describe("Brochure Workflow Policy Domain Tests", () => {
       const custom: BrochureWorkflowPolicy = {
         ...STANDARD_WORKFLOW_POLICY,
         preset: "CUSTOM",
-        requireFinishedPhoto: false, // differ from standard
+        requireFinishedPhoto: true, // differ from standard
       }
       expect(detectWorkflowPreset(custom)).toBe("CUSTOM")
     })
@@ -76,7 +75,6 @@ describe("Brochure Workflow Policy Domain Tests", () => {
       const custom: BrochureWorkflowPolicy = {
         preset: "CUSTOM",
         requireAdminDepositApproval: false,
-        requireCoordinatorAcceptance: true,
         requireFinishedPhoto: false,
         customerApprovalMode: "BYPASS",
         requireFullPaymentBeforeDispatch: true,
@@ -147,30 +145,34 @@ describe("Brochure Workflow Policy Domain Tests", () => {
       })
     })
 
-    describe("shouldRequireCoordinatorAcceptance", () => {
-      it("returns false in LEAN policy", () => {
-        expect(shouldRequireCoordinatorAcceptance(LEAN_WORKFLOW_POLICY)).toBe(false)
-      })
-
-      it("returns true in STANDARD and STRICT policies for normal orders", () => {
-        expect(shouldRequireCoordinatorAcceptance(STANDARD_WORKFLOW_POLICY)).toBe(true)
-        expect(shouldRequireCoordinatorAcceptance(STRICT_WORKFLOW_POLICY)).toBe(true)
-      })
-
-      it("returns false for urgent orders even in STANDARD or STRICT policies", () => {
-        expect(shouldRequireCoordinatorAcceptance(STANDARD_WORKFLOW_POLICY, true)).toBe(false)
-        expect(shouldRequireCoordinatorAcceptance(STRICT_WORKFLOW_POLICY, true)).toBe(false)
-      })
-    })
-
-    describe("canBypassFinishedPhoto", () => {
-      it("returns true in LEAN policy", () => {
+    describe("canBypassFinishedPhoto / canBypassDeliveryPhoto (PO 15/10/2026)", () => {
+      it("gói Tinh gọn và Tiêu chuẩn cho bỏ qua ảnh", () => {
         expect(canBypassFinishedPhoto(LEAN_WORKFLOW_POLICY)).toBe(true)
+        expect(canBypassFinishedPhoto(STANDARD_WORKFLOW_POLICY)).toBe(true)
+        expect(canBypassDeliveryPhoto(STANDARD_WORKFLOW_POLICY)).toBe(true)
       })
 
-      it("returns false in STANDARD policy normally, but true for urgent orders", () => {
-        expect(canBypassFinishedPhoto(STANDARD_WORKFLOW_POLICY, false)).toBe(false)
-        expect(canBypassFinishedPhoto(STANDARD_WORKFLOW_POLICY, true)).toBe(true)
+      it("gói Nghiêm ngặt bắt buộc cả hai ảnh", () => {
+        expect(canBypassFinishedPhoto(STRICT_WORKFLOW_POLICY)).toBe(false)
+        expect(canBypassDeliveryPhoto(STRICT_WORKFLOW_POLICY)).toBe(false)
+      })
+
+      it("tiệm lưu gói Tiêu chuẩn cũ (còn bắt buộc ảnh) không bị khoá nút bỏ qua", () => {
+        const stored = { ...serializeWorkflowPolicy(STANDARD_WORKFLOW_POLICY), require_finished_photo: true }
+        const policy = parseBrochureWorkflowPolicy({ [BROCHURE_WORKFLOW_POLICY_KEY]: stored })
+        expect(policy.preset).toBe("STANDARD")
+        expect(canBypassFinishedPhoto(policy)).toBe(true)
+      })
+
+      it("tiệm cấu hình cũ (brochure_policy) được bỏ qua ảnh", () => {
+        const policy = parseBrochureWorkflowPolicy({ brochure_policy: { require_product_photo_qc: true, require_recipient_photo: true } })
+        expect(canBypassFinishedPhoto(policy)).toBe(true)
+        expect(canBypassDeliveryPhoto(policy)).toBe(true)
+      })
+
+      it("Tự chỉnh theo đúng công tắc đã bật", () => {
+        const stored = { ...serializeWorkflowPolicy(LEAN_WORKFLOW_POLICY), preset: "CUSTOM", require_finished_photo: true }
+        expect(canBypassFinishedPhoto(parseBrochureWorkflowPolicy({ [BROCHURE_WORKFLOW_POLICY_KEY]: stored }))).toBe(false)
       })
     })
 

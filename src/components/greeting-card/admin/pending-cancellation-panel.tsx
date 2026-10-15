@@ -5,7 +5,7 @@ import { AlertOctagon, CheckCircle2, RefreshCw, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
 import { useApi, apiSend } from "@/components/greeting-card/greeting-api"
-import { CANCELLATION_TYPE_LABEL, type CancellationPayload, type CancellationType } from "@/modules/greeting-card/domain/cancellation-request"
+import { CANCELLATION_TYPE_LABEL, type CancellationPayload, type CancellationType, IN_TRANSIT_CANCEL_WARNING, isInTransit } from "@/modules/greeting-card/domain/cancellation-request"
 
 interface PendingRow {
   id: string
@@ -14,6 +14,7 @@ interface PendingRow {
   body: string
   payload: unknown
   created_at: string
+  delivery_status?: string | null
 }
 
 const vnd = (n: number) => `${n.toLocaleString("vi-VN")}đ`
@@ -75,9 +76,15 @@ function CancellationRequestCard({ row, onDone }: { row: PendingRow; onDone: () 
         )}
       </div>
 
+      {isInTransit(row.delivery_status) && (
+        <p role="alert" className="rounded-lg bg-warning-bg px-2.5 py-2 text-caption font-semibold text-warning-text">⚠ {IN_TRANSIT_CANCEL_WARNING}</p>
+      )}
       <div className="rounded-lg border border-border bg-surface px-2.5 py-2 text-body-sm text-foreground">
         <span className="font-bold text-text-muted">Lý do:</span> {payload.reason}
       </div>
+      {(payload.refundAmountVnd ?? 0) > 0 || payload.type === "FULL_REFUND" ? (
+        <p className="text-caption text-text-muted">Phê duyệt chỉ đổi trạng thái đơn. Hoàn tiền là bước riêng: khi đã chuyển trả khách, xác nhận ở mục &ldquo;Cần hoàn tiền&rdquo; trong Hộp việc.</p>
+      ) : null}
 
       <div className="flex gap-3 text-caption text-text-muted">
         <span>Tổng đơn: <strong className="text-foreground">{vnd(payload.totalVnd)}</strong></span>

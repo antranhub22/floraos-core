@@ -11,7 +11,6 @@ import { customerSecondPaymentReminderMessage } from "@/modules/greeting-card/do
 import { firstPaymentAmountVnd } from "@/modules/greeting-card/domain/payment-plan"
 import {
   isUrgentOrder,
-  shouldRequireCoordinatorAcceptance,
   canRoleApproveDeposit,
   type BrochureWorkflowPolicy,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
@@ -38,12 +37,10 @@ export function CoordinatorCardDecisionBlocks({
 
   // 1. Khối Xác nhận nhận đơn — chỉ hiện khi đơn đã thanh toán nhưng chưa được Điều phối duyệt
   const paymentProofUrl = work?.paymentProofUrl || order.payment_proof_url
-  const requireAcceptance = workflowPolicy ? shouldRequireCoordinatorAcceptance(workflowPolicy, isUrgent) : true
-  const rawAcceptBlocker = coordinatorAcceptanceBlocker(
+  const acceptBlocker = coordinatorAcceptanceBlocker(
     { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
     { paidVnd: order.paid_vnd, paymentProofUrl },
   )
-  const acceptBlocker = requireAcceptance ? rawAcceptBlocker : "BYPASSED"
 
   const isDepositOrder = order.paid_vnd > 0 && order.paid_vnd < order.total_vnd
   const isReadyForDispatch = order.production_status === "READY" || order.production_status === "DONE"

@@ -143,10 +143,11 @@ export async function cancelBrochureOrder(
   ctx: TenantContext,
   orderId: string,
   reason: string,
+  confirmInTransit = false,
   payments = new BrochurePaymentRepository()
 ) {
   await assertOrderInScope(ctx, orderId)
-  const result = await payments.cancel(ctx, orderId, reason.trim())
+  const result = await payments.cancel(ctx, orderId, reason.trim(), { confirmInTransit })
   queueOrderNotification(ctx.organizationId, orderId, "CANCELLED")
   return result
 }

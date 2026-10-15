@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
   canProposeCancellation,
-  decisionCapabilities,
   resolveRefundVnd,
   validateCancellationProposal,
 } from "@/modules/greeting-card/domain/cancellation-request"
@@ -106,19 +105,4 @@ describe("quy trình đề xuất Hủy/Hoàn tiền Thẻ chào — domain logi
     })
   })
 
-  describe("decisionCapabilities", () => {
-    const caps = { orderCancel: "gc:order:cancel", paymentRefund: "gc:payment:refund" }
-
-    it("CANCEL_ONLY chỉ cần quyền hủy đơn (R6)", () => {
-      expect(decisionCapabilities("CANCEL_ONLY", caps)).toEqual(["gc:order:cancel"])
-    })
-
-    it("FULL_REFUND cần cả quyền hủy đơn và hoàn tiền (R6 + R10)", () => {
-      expect(decisionCapabilities("FULL_REFUND", caps)).toEqual(["gc:order:cancel", "gc:payment:refund"])
-    })
-
-    it("PARTIAL_REFUND chỉ cần quyền hoàn tiền (R10)", () => {
-      expect(decisionCapabilities("PARTIAL_REFUND", caps)).toEqual(["gc:payment:refund"])
-    })
-  })
 })

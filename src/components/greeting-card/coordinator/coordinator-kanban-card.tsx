@@ -1,5 +1,6 @@
 "use client"
 
+import { PhotoApprovalNote, photoWaitBlocker } from "./photo-approval-note"
 import React from "react"
 import { Clock, UserCheck, Camera, Truck, CheckCircle2, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,8 +15,6 @@ import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 import type { CoordinatorKanbanColDef } from "./coordinator-kanban-view"
 import {
   isUrgentOrder,
-  canBypassFinishedPhoto,
-  shouldRequireCoordinatorAcceptance,
   type BrochureWorkflowPolicy,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
@@ -28,6 +27,8 @@ interface CoordinatorKanbanCardProps {
   onOpen: (m: ModalState) => void
   onOpenDetail: () => void
   workflowPolicy?: BrochureWorkflowPolicy | undefined
+  /** Giờ hiện tại (tick từ tab) — đếm ngược chờ khách duyệt ảnh */
+  now: number
 }
 
 export function CoordinatorKanbanCard({
@@ -39,6 +40,7 @@ export function CoordinatorKanbanCard({
   onOpen,
   onOpenDetail,
   workflowPolicy,
+  now,
 }: CoordinatorKanbanCardProps) {
   const { product } = o
   const isStuck = work?.stuck?.owner === "COORDINATOR"
@@ -47,7 +49,8 @@ export function CoordinatorKanbanCard({
     deliveryDate: o.delivery_window?.date,
     deliveryTimeSlot: o.delivery_window?.timeSlot,
   })
-  const canSkipPhoto = workflowPolicy ? canBypassFinishedPhoto(workflowPolicy, isUrgent) : policy.requireProductPhotoQC === false
+  // Giao ship khi chưa qua bước ảnh: theo cài đặt ảnh QC của tiệm, khớp kiểm tra ở máy chủ
+  const canSkipPhoto = policy.requireProductPhotoQC === false
 
   const blockerOf = (action: CoordinatorAction) =>
     coordinatorActionBlocker(
@@ -59,6 +62,7 @@ export function CoordinatorKanbanCard({
       },
       { skipPhoto: canSkipPhoto },
     ) ?? paymentGateBlocker(action, policy, { totalVnd: o.total_vnd, paidVnd: o.paid_vnd })
+    ?? (action === "dispatch-shipping" ? photoWaitBlocker(o.photo_approval, now) : null)
 
   // Viền và nền theo tầng thời gian
   let tierBorder = "border-border"
@@ -153,17 +157,16 @@ export function CoordinatorKanbanCard({
         </div>
       </button>
 
+      <PhotoApprovalNote approval={o.photo_approval} now={now} />
       {/* Quick Action buttons depending on state */}
       {col.id !== "DELIVERED" && (
         <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/40">
           {col.id === "PENDING" && (() => {
             const paymentProofUrl = work?.paymentProofUrl || o.payment_proof_url
-            const requireAcceptance = workflowPolicy ? shouldRequireCoordinatorAcceptance(workflowPolicy, isUrgent) : true
-            const rawAcceptBlocker = coordinatorAcceptanceBlocker(
+            const acceptBlocker = coordinatorAcceptanceBlocker(
               { status: o.status, productionStatus: o.production_status, deliveryStatus: o.delivery_status },
               { paidVnd: o.paid_vnd, paymentProofUrl },
             )
-            const acceptBlocker = requireAcceptance ? rawAcceptBlocker : "BYPASSED"
             if (acceptBlocker !== null) return (
               <Button
                 type="button"

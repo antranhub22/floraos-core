@@ -8,10 +8,11 @@ import {
   type CancellationPayload,
   type CancellationProposal,
   autoApprovedNotice,
+  isInTransit,
   resolveRefundVnd,
   validateCancellationProposalData,
 } from "../domain/cancellation-request"
-import type { MessageRole } from "../domain/internal-message"
+import { roleOf, type MessageRole } from "../domain/internal-message"
 import { cancelBlocker } from "../domain/brochure-payment-policy"
 
 type Loose = Record<string, unknown>
@@ -139,6 +140,9 @@ export class CancellationRepository {
       const blocker = input.approve && cancels ? cancelBlocker({ status: order.status, deliveryStatus: order.delivery_status }) : null
       if (blocker) throw conflict(blocker)
 
+      // Đơn đang giao: bắt buộc có người duyệt — hệ thống không tự duyệt khi quá hạn (mục 6, PO 15/10/2026)
+      if (auto && cancels && isInTransit(order.delivery_status)) throw conflict("Đơn đang giao — cần Điều hành hoặc Điều phối duyệt huỷ")
+
       const refundVnd = input.approve
         ? resolveRefundVnd(payload.type, Number(order.paid_vnd), payload.refundAmountVnd, input.actualRefundVnd)
         : 0
@@ -149,35 +153,8 @@ export class CancellationRepository {
 
       const now = new Date()
 
-      // 1. Nếu duyệt và có hoàn tiền -> ghi sổ thu order_payments (kind: REFUND)
-      if (input.approve && refundVnd > 0 && !auto) {
-        await tx.order_payments.create({
-          data: scopedData(ctx, {
-            id: randomUUID(),
-            order_id: order.id,
-            kind: "REFUND",
-            amount_vnd: refundVnd,
-            payment_method: "BANK_TRANSFER",
-            collected_by: ctx.userId,
-            collected_at: now,
-            note: `Hoàn tiền theo đề xuất: ${input.note || payload.reason}`,
-          }),
-        })
-
-        const newPaid = Number(order.paid_vnd) - refundVnd
-        const newBalance = Number(order.total_vnd) - newPaid
-
-        // Khoá lạc quan trên số đã thu: hai thao tác hoàn cùng lúc không ghi đè nhau
-        const moved = await tx.orders.updateMany({
-          where: scopedWhere(ctx, { id: order.id, paid_vnd: order.paid_vnd }),
-          data: {
-            paid_vnd: newPaid,
-            balance_vnd: newBalance,
-          },
-        })
-        if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")
-      }
-
+      // 1. Duyệt KHÔNG chuyển tiền (PO 15/10/2026, mục 6): hoàn tiền là bước riêng ở danh sách "Cần hoàn tiền"
+      //    — Điều hành ghi khoản hoàn vào sổ thu khi tiền đã thật sự chuyển (CancellationFollowUpRepository.complete).
       // 2. Nếu duyệt hủy đơn (CANCEL_ONLY hoặc FULL_REFUND) -> chuyển trạng thái orders thành CANCELLED
       const shouldCancelOrder = input.approve && cancels
       if (shouldCancelOrder) {
@@ -212,8 +189,9 @@ export class CancellationRepository {
         decidedBy: ctx.userId,
         decidedAt: now.toISOString(),
         decidedNote: input.note || undefined,
-        actualRefundVnd: auto ? 0 : refundVnd,
-        ...(auto ? { autoApproved: true, followUp: { status: "PENDING" as const, refundDueVnd: refundVnd } } : {}),
+        actualRefundVnd: 0,
+        ...(auto ? { autoApproved: true } : {}),
+        ...(auto || (input.approve && refundVnd > 0) ? { followUp: { status: "PENDING" as const, refundDueVnd: refundVnd } } : {}),
       }
 
       const updatedReq = await tx.greeting_messages.updateMany({
@@ -229,7 +207,7 @@ export class CancellationRepository {
           order_id: order.id,
           step_key: "GENERAL",
           sender_id: ctx.userId,
-          sender_role: "ADMIN",
+          sender_role: auto ? "ADMIN" : roleOf(ctx.capabilities) ?? "ADMIN",
           to_user_id: req.sender_id,
           kind: "CANCELLATION_DECISION",
           reply_to_id: req.id,
@@ -275,22 +253,38 @@ export class CancellationRepository {
 
   /** Loại đề xuất đang chờ duyệt — route dùng để gác năng lực trước khi gọi `decide`. */
   async getPendingType(ctx: TenantContext, requestId: string): Promise<CancellationPayload["type"] | null> {
+    return (await this.getPendingInfo(ctx, requestId))?.type ?? null
+  }
+
+  /** Loại đề xuất + người đề xuất + trạng thái giao của đơn — để kiểm ai được duyệt (mục 6, PO 15/10/2026). */
+  async getPendingInfo(ctx: TenantContext, requestId: string) {
     const req = await this.db.greeting_messages.findFirst({
       where: scopedWhere(ctx, { id: requestId, kind: "CANCELLATION_REQUEST" }),
-      select: { payload: true },
+      select: { payload: true, sender_id: true, order_id: true },
     })
     if (!req) return null
     const type = obj(req.payload).type
-    return type === "CANCEL_ONLY" || type === "FULL_REFUND" || type === "PARTIAL_REFUND" ? type : null
+    if (type !== "CANCEL_ONLY" && type !== "FULL_REFUND" && type !== "PARTIAL_REFUND") return null
+    const order = req.order_id
+      ? await this.db.orders.findFirst({ where: scopedWhere(ctx, { id: req.order_id }), select: { delivery_status: true } })
+      : null
+    return { type: type as CancellationPayload["type"], requesterId: req.sender_id, deliveryStatus: order?.delivery_status ?? null }
   }
 
   /** Lấy danh sách đề xuất hủy/hoàn tiền đang chờ duyệt cho Điều hành */
   async listPending(ctx: TenantContext) {
-    return this.db.greeting_messages.findMany({
+    const rows = await this.db.greeting_messages.findMany({
       where: scopedWhere(ctx, { kind: "CANCELLATION_REQUEST", payload: { path: ["status"], equals: "PENDING" } }),
       select: { id: true, order_id: true, sender_id: true, body: true, payload: true, created_at: true },
       orderBy: { created_at: "asc" },
       take: 200,
     })
+    // Trạng thái giao hiện tại của đơn — cảnh báo khi shipper đang trên đường (mục 6, PO 15/10/2026)
+    const ids = rows.flatMap((r) => (r.order_id ? [r.order_id] : []))
+    const orders = ids.length
+      ? await this.db.orders.findMany({ where: scopedWhere(ctx, { id: { in: ids } }), select: { id: true, delivery_status: true } })
+      : []
+    const delivery = new Map(orders.map((o) => [o.id, o.delivery_status as string]))
+    return rows.map((r) => ({ ...r, delivery_status: r.order_id ? delivery.get(r.order_id) ?? null : null }))
   }
 }

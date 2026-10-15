@@ -227,7 +227,7 @@ export default function TheChaoPage() {
               }}
             />
           )}
-          {shownTab === "coordinator" && <CoordinatorBrochureTab />}
+          {shownTab === "coordinator" && <CoordinatorBrochureTab canDecideInTransitCancel={can("R5")} />}
           {shownTab === "payment" && <AdminBrochurePaymentTab />}
         </div>
       )}

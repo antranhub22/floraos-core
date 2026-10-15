@@ -107,14 +107,14 @@ export function BrochureWorkflowSettings() {
       id: "STANDARD",
       title: "Tiêu Chuẩn",
       subtitle: "Tiệm vừa 4–10 người",
-      desc: "Mặc định an toàn. Điều hành duyệt cọc, ảnh thành phẩm có 10p khách duyệt, thu đủ trước khi giao.",
+      desc: "Mặc định an toàn. Điều hành duyệt cọc, ảnh thành phẩm chờ khách duyệt 10 phút (được bỏ qua ảnh khi cần), thu đủ trước khi giao.",
       icon: <ShieldCheck size={18} className="text-primary" />,
     },
     {
       id: "STRICT",
       title: "Nghiêm Ngặt",
       subtitle: "Chuỗi lớn & Cao cấp",
-      desc: "Kiểm soát tuyệt đối. Bắt buộc Điều hành duyệt tiền, bắt buộc 2 lần ảnh (QC + người nhận).",
+      desc: "Kiểm soát tuyệt đối. Bắt buộc Điều hành duyệt tiền, bắt buộc 2 lần ảnh (thành phẩm + người nhận, không có nút bỏ qua), chờ khách duyệt ảnh tối đa 30 phút.",
       icon: <Building2 size={18} className="text-foreground" />,
     },
   ]
@@ -201,24 +201,6 @@ export function BrochureWorkflowSettings() {
                 type="checkbox"
                 checked={policy.requireAdminDepositApproval}
                 onChange={(e) => handleToggle("requireAdminDepositApproval", e.target.checked)}
-                className="mt-1 h-5 w-5 rounded border-border text-primary focus:ring-primary/20"
-              />
-            </div>
-
-            {/* Gate 2: Bắt buộc Điều phối bấm Nhận đơn */}
-            <div className="flex items-start justify-between gap-3 pt-3">
-              <div>
-                <label className="text-body-sm font-bold text-foreground block">
-                  Bắt buộc Điều phối bấm Xác nhận nhận đơn (Gate 2)
-                </label>
-                <p className="text-caption text-text-muted">
-                  Bật: Có bước &quot;Xác nhận nhận đơn (30 phút)&quot;. Tắt: Tiền vào là đơn tự động vào thẳng cột Chờ cắm hoa trên Kanban xưởng.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                checked={policy.requireCoordinatorAcceptance}
-                onChange={(e) => handleToggle("requireCoordinatorAcceptance", e.target.checked)}
                 className="mt-1 h-5 w-5 rounded border-border text-primary focus:ring-primary/20"
               />
             </div>

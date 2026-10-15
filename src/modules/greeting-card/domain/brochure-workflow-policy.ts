@@ -16,8 +16,6 @@ export interface BrochureWorkflowPolicy {
   preset: WorkflowPreset
   /** Gate 1: Bắt buộc Điều hành duyệt tiền cọc (false = cho phép Điều phối/Sale xác nhận cọc khi có bill) */
   requireAdminDepositApproval: boolean
-  /** Gate 2: Bắt buộc Điều phối bấm Nhận đơn (false = tự động nhận đơn sang xưởng khi đã cọc) */
-  requireCoordinatorAcceptance: boolean
   /** Gate 3: Bắt buộc chụp Ảnh thành phẩm trước khi giao (false = tùy chọn, có nút bỏ qua ảnh) */
   requireFinishedPhoto: boolean
   /** Gate 4: Cơ chế khách duyệt ảnh thành phẩm (Bỏ qua / Tự động duyệt sau 10p / Bắt buộc khách bấm duyệt) */
@@ -36,7 +34,6 @@ export interface BrochureWorkflowPolicy {
 export const LEAN_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object.freeze({
   preset: "LEAN",
   requireAdminDepositApproval: false,
-  requireCoordinatorAcceptance: false,
   requireFinishedPhoto: false,
   customerApprovalMode: "BYPASS",
   requireFullPaymentBeforeDispatch: false,
@@ -49,8 +46,8 @@ export const LEAN_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object.fre
 export const STANDARD_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object.freeze({
   preset: "STANDARD",
   requireAdminDepositApproval: true,
-  requireCoordinatorAcceptance: true,
-  requireFinishedPhoto: true,
+  // PO 15/10/2026: mặc định Điều phối được bỏ qua ảnh — chỉ gói Nghiêm ngặt bắt buộc ảnh
+  requireFinishedPhoto: false,
   customerApprovalMode: "AUTO_PASS_10M",
   requireFullPaymentBeforeDispatch: true,
   requireDeliveryProofPhoto: false,
@@ -62,7 +59,6 @@ export const STANDARD_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object
 export const STRICT_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object.freeze({
   preset: "STRICT",
   requireAdminDepositApproval: true,
-  requireCoordinatorAcceptance: true,
   requireFinishedPhoto: true,
   customerApprovalMode: "REQUIRE_CUSTOMER",
   requireFullPaymentBeforeDispatch: true,
@@ -75,7 +71,6 @@ export const STRICT_WORKFLOW_POLICY: Readonly<BrochureWorkflowPolicy> = Object.f
 export function detectWorkflowPreset(policy: Omit<BrochureWorkflowPolicy, "preset">): WorkflowPreset {
   const isMatch = (target: BrochureWorkflowPolicy) =>
     target.requireAdminDepositApproval === policy.requireAdminDepositApproval &&
-    target.requireCoordinatorAcceptance === policy.requireCoordinatorAcceptance &&
     target.requireFinishedPhoto === policy.requireFinishedPhoto &&
     target.customerApprovalMode === policy.customerApprovalMode &&
     target.requireFullPaymentBeforeDispatch === policy.requireFullPaymentBeforeDispatch &&
@@ -99,17 +94,15 @@ export function parseBrochureWorkflowPolicy(settings: unknown): BrochureWorkflow
     if (legacy && typeof legacy === "object") {
       const requireFull = legacy.require_full_before_dispatch === true
       const requirePhotoQC = legacy.require_product_photo_qc !== false
-      const requireRecipient = legacy.require_recipient_photo === true
-      const trackingTrigger = legacy.tracking_trigger_policy
 
       const partial: Omit<BrochureWorkflowPolicy, "preset"> = {
         // PO 14/10/2026: mặc định mọi tiệm chỉ Điều hành duyệt cọc — cấu hình cũ không nới quyền này
         requireAdminDepositApproval: true,
-        requireCoordinatorAcceptance: trackingTrigger !== "PAYMENT_ONLY",
-        requireFinishedPhoto: requirePhotoQC,
+        // Tiệm cũ chưa từng chọn gói Nghiêm ngặt → được bỏ qua ảnh (PO 15/10/2026)
+        requireFinishedPhoto: false,
         customerApprovalMode: requirePhotoQC ? "AUTO_PASS_10M" : "BYPASS",
         requireFullPaymentBeforeDispatch: requireFull,
-        requireDeliveryProofPhoto: requireRecipient,
+        requireDeliveryProofPhoto: false,
         allowSlaEscalation: true,
         slaEscalationMinutes: 15,
       }
@@ -138,8 +131,7 @@ export function parseBrochureWorkflowPolicy(settings: unknown): BrochureWorkflow
 
   const partial: Omit<BrochureWorkflowPolicy, "preset"> = {
     requireAdminDepositApproval: raw.require_admin_deposit_approval !== false,
-    requireCoordinatorAcceptance: raw.require_coordinator_acceptance !== false,
-    requireFinishedPhoto: raw.require_finished_photo !== false,
+    requireFinishedPhoto: raw.require_finished_photo === true,
     customerApprovalMode: approvalMode,
     requireFullPaymentBeforeDispatch: raw.require_full_payment_before_dispatch !== false,
     requireDeliveryProofPhoto: raw.require_delivery_proof_photo === true,
@@ -148,6 +140,13 @@ export function parseBrochureWorkflowPolicy(settings: unknown): BrochureWorkflow
   }
 
   const requestedPreset = typeof raw.preset === "string" ? (raw.preset as WorkflowPreset) : null
+  // Gói có tên (không phải Tự chỉnh): hai công tắc ảnh theo định nghĩa gói hiện hành — tiệm lưu gói
+  // Tiêu chuẩn trước 15/10/2026 (khi gói này còn bắt buộc ảnh) không bị khoá nút "Bỏ qua ảnh"
+  const named = requestedPreset === "LEAN" ? LEAN_WORKFLOW_POLICY : requestedPreset === "STANDARD" ? STANDARD_WORKFLOW_POLICY : requestedPreset === "STRICT" ? STRICT_WORKFLOW_POLICY : null
+  if (named) {
+    partial.requireFinishedPhoto = named.requireFinishedPhoto
+    partial.requireDeliveryProofPhoto = named.requireDeliveryProofPhoto
+  }
   const detected = detectWorkflowPreset(partial)
   const finalPreset: WorkflowPreset = requestedPreset === "CUSTOM" || detected === requestedPreset ? (requestedPreset ?? detected) : detected
 
@@ -162,7 +161,6 @@ export function serializeWorkflowPolicy(policy: BrochureWorkflowPolicy): Record<
   return {
     preset: policy.preset,
     require_admin_deposit_approval: policy.requireAdminDepositApproval,
-    require_coordinator_acceptance: policy.requireCoordinatorAcceptance,
     require_finished_photo: policy.requireFinishedPhoto,
     customer_approval_mode: policy.customerApprovalMode,
     require_full_payment_before_dispatch: policy.requireFullPaymentBeforeDispatch,
@@ -211,22 +209,15 @@ export function canRoleApproveDeposit(
   return false
 }
 
-/** Đánh giá xem có cần Điều phối bấm Xác nhận nhận đơn không */
-export function shouldRequireCoordinatorAcceptance(
-  policy: BrochureWorkflowPolicy,
-  isUrgent: boolean = false,
-): boolean {
-  if (isUrgent) return false
-  return policy.requireCoordinatorAcceptance
+/** Đánh giá xem có cho phép bỏ qua ảnh thành phẩm không */
+export function canBypassFinishedPhoto(policy: Pick<BrochureWorkflowPolicy, "requireFinishedPhoto">): boolean {
+  // PO 15/10/2026: tiệm bắt buộc ảnh (gói Nghiêm ngặt) thì đơn hoả tốc cũng không được bỏ qua
+  return !policy.requireFinishedPhoto
 }
 
-/** Đánh giá xem có cho phép bỏ qua ảnh thành phẩm không */
-export function canBypassFinishedPhoto(
-  policy: BrochureWorkflowPolicy,
-  isUrgent: boolean = false,
-): boolean {
-  if (isUrgent) return true
-  return !policy.requireFinishedPhoto
+/** Đánh giá xem có cho phép bỏ qua ảnh bàn giao người nhận không */
+export function canBypassDeliveryPhoto(policy: Pick<BrochureWorkflowPolicy, "requireDeliveryProofPhoto">): boolean {
+  return !policy.requireDeliveryProofPhoto
 }
 
 /** Đánh giá xem có chặn xuất giao (Giao Ship) do chưa thu đủ tiền lần 2 không */

@@ -10,6 +10,8 @@ interface CoordinatorImageUploadProps {
   orderId: string
   endpoint: "product-photo" | "recipient-photo"
   label: string
+  /** `false` khi tiệm bắt buộc ảnh (gói Nghiêm ngặt) — không hiện "Bỏ qua ảnh" */
+  allowSkip?: boolean | undefined
   onSuccess: () => void
   onCancel: () => void
 }
@@ -51,7 +53,7 @@ async function uploadOne(file: File): Promise<string> {
  * Tải ảnh/video cho một lần chụp (thành phẩm hoặc người nhận): 1–5 ảnh, 0–2 video ≤ 15 giây.
  * Lưới xem trước, xoá từng tệp trước khi lưu; cả bộ gắn vào đơn trong một lần.
  */
-export function CoordinatorImageUpload({ orderId, endpoint, label, onSuccess, onCancel }: CoordinatorImageUploadProps) {
+export function CoordinatorImageUpload({ orderId, endpoint, label, allowSkip = true, onSuccess, onCancel }: CoordinatorImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [picked, setPicked] = useState<Picked[]>([])
   const [state, setState] = useState<UploadState>("idle")
@@ -191,6 +193,7 @@ export function CoordinatorImageUpload({ orderId, endpoint, label, onSuccess, on
 
       {/* Tác vụ Bỏ qua ảnh nếu giao gấp (Spec #13) */}
       <div className="pt-2 border-t border-border flex items-center justify-between">
+        {allowSkip ? (
         <button
           type="button"
           disabled={state === "uploading"}
@@ -216,6 +219,9 @@ export function CoordinatorImageUpload({ orderId, endpoint, label, onSuccess, on
         >
           Giao gấp — Bỏ qua {label.toLowerCase()}
         </button>
+        ) : (
+          <p className="text-caption text-text-muted">Tiệm bắt buộc {label.toLowerCase()} trước khi làm bước tiếp theo</p>
+        )}
 
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-9 text-caption">

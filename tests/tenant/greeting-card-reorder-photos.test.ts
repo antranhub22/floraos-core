@@ -4,6 +4,7 @@ import { disconnectDatabase, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { PhotoApprovalRepository } from "@/modules/greeting-card/infra/photo-approval-repository"
 import { ProductRepository } from "@/modules/products/infra/product-repository"
 import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-link"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
@@ -114,6 +115,9 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
     const recipient = await asset()
     await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
     await uploadBrochureProductPhoto(a.ctx, order.orderId, { assetId: product.id })
+    // Gói mặc định chờ khách duyệt ảnh thành phẩm trước khi giao (PO 15/10/2026) — khách bấm duyệt
+    const row = await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })
+    await new PhotoApprovalRepository().recordApproval(row)
     await dispatchBrochureShipping(a.ctx, order.orderId, { trackingNote: "Ship A" })
     await uploadBrochureRecipientPhoto(a.ctx, order.orderId, { assetId: recipient.id })
 

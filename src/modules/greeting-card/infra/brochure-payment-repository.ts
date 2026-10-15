@@ -5,6 +5,7 @@ import { conflict, notFound, unprocessable } from "@/core/http/errors"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { cancelBlocker, quoteBlocker } from "../domain/brochure-payment-policy"
 import { quotedTotalAfterPromotion } from "../domain/promotion-pricing"
+import { IN_TRANSIT_CANCEL_WARNING, isInTransit } from "../domain/cancellation-request"
 
 export interface IncomingPayment {
   amountVnd: number
@@ -229,10 +230,12 @@ export class BrochurePaymentRepository {
 
   /** Huỷ đơn + trả lại mã giảm giá đã dùng. Tiền đã thu KHÔNG tự hoàn — hoàn bằng thao tác riêng (R10). */
   /** `paymentFailed` = huỷ vì hết hạn thanh toán: đánh dấu `pricing_rule_ref.paymentFailed` để báo PAYMENT_FAILED. */
-  async cancel(ctx: TenantContext, orderId: string, reason: string, opts: { paymentFailed?: boolean } = {}) {
+  async cancel(ctx: TenantContext, orderId: string, reason: string, opts: { paymentFailed?: boolean; confirmInTransit?: boolean } = {}) {
     const order = await this.loadOrder(ctx, orderId)
     const blocker = cancelBlocker({ status: order.status, deliveryStatus: order.delivery_status })
     if (blocker) throw conflict(blocker)
+    // Đơn đang giao: người huỷ phải xác nhận đã đọc cảnh báo (PO 15/10/2026, mục 6)
+    if (isInTransit(order.delivery_status) && !opts.confirmInTransit) throw conflict(IN_TRANSIT_CANCEL_WARNING)
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({

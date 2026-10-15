@@ -69,11 +69,11 @@ Phân hệ **Thẻ Chào Mẫu Hoa** hiện đang vận hành theo chuỗi 9 bư
 | Mã Gate | Tên Điểm Quyết Định | Thuộc Tính Cấu Hình (Domain Key) | Giá Trị Gói Tinh Gọn | Giá Trị Gói Tiêu Chuẩn | Giá Trị Gói Nghiêm Ngặt | Tác Động Nghiệp Vụ Khi Tắt |
 |---|---|---|:---:|:---:|:---:|---|
 | **GATE-1** | Bắt buộc Điều hành duyệt tiền cọc | `requireAdminDepositApproval` | ❌ Tắt (Cho phép ĐP/Sale) | ✅ Bật | ✅ Bật | Điều phối / Sale có nút xác nhận cọc ngay khi thấy bill |
-| **GATE-2** | Bắt buộc Điều phối bấm Nhận đơn | `requireCoordinatorAcceptance` | ❌ Tắt (Tự động nhận) | ✅ Bật (Chờ 30') | ✅ Bật | Tiền cọc vào là đơn tự nhảy sang trạng thái "Chờ cắm hoa" |
-| **GATE-3** | Bắt buộc chụp Ảnh thành phẩm | `requireFinishedPhoto` | ❌ Tùy chọn | ✅ Bật | ✅ Bật | Có nút "Bỏ qua ảnh", chuyển thẳng sang sẵn sàng giao |
-| **GATE-4** | Khách đếm ngược duyệt ảnh (10p) | `customerApprovalMode` | `BYPASS` (Bỏ qua) | `AUTO_PASS_10M` | `REQUIRE_CUSTOMER` | Không bắt khách duyệt; hoa cắm xong là giao ngay |
+| ~~**GATE-2**~~ | ~~Bắt buộc Điều phối bấm Nhận đơn~~ | — | — | — | — | **Đã bỏ (PO 15/10/2026):** không còn công tắc; Điều phối tự quyết "Xác nhận nhận đơn", không chặn bước sau |
+| **GATE-3** | Bắt buộc chụp Ảnh thành phẩm | `requireFinishedPhoto` | ❌ Tùy chọn | ❌ Tùy chọn (PO 15/10/2026) | ✅ Bật — máy chủ chặn "Bỏ qua ảnh", kể cả đơn hoả tốc | Có nút "Bỏ qua ảnh", chuyển thẳng sang sẵn sàng giao |
+| **GATE-4** | Khách đếm ngược duyệt ảnh (10p) | `customerApprovalMode` | `BYPASS` (Bỏ qua) | `AUTO_PASS_10M` | `REQUIRE_CUSTOMER` (khách im lặng → tự qua sau 30') | Không bắt khách duyệt; hoa cắm xong là giao ngay. Máy chủ chặn "Giao Ship" khi còn chờ; thẻ Điều phối hiện đếm ngược (PO 15/10/2026) |
 | **GATE-5** | Chặn giao ship nếu chưa thu đủ Lần 2 | `requireFullPaymentBeforeDispatch` | ❌ Tắt (Thu COD) | ✅ Bật | ✅ Bật | Mở khóa nút "Giao Ship" ngay cả khi còn nợ tiền |
-| **GATE-6** | Bắt buộc chụp Ảnh người nhận | `requireDeliveryProofPhoto` | ❌ Tùy chọn | ❌ Tùy chọn | ✅ Bật (Bắt buộc) | Cho phép bấm hoàn tất đơn không cần ảnh người nhận |
+| **GATE-6** | Bắt buộc chụp Ảnh người nhận | `requireDeliveryProofPhoto` | ❌ Tùy chọn | ❌ Tùy chọn | ✅ Bật — máy chủ chặn "Bỏ qua ảnh" | Cho phép bấm hoàn tất đơn không cần ảnh người nhận |
 | **GATE-7** | Cho phép ủy quyền duyệt khi quá SLA | `allowSlaEscalation` | ✅ Bật (Sau 5') | ✅ Bật (Sau 15') | ❌ Tắt (Chỉ Điều hành) | Điều phối/Sale được duyệt thay khi Điều hành vắng mặt |
 
 ---

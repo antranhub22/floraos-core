@@ -67,6 +67,8 @@ export function canProposeCancellation(order: {
   if (order.status === "COMPLETED" || order.deliveryStatus === "DELIVERED") {
     return { allowed: false, reason: "Đơn hàng đã giao hoàn tất, không thể hủy." }
   }
+  // Đơn đang giao: được đề xuất huỷ, kèm cảnh báo, và phải có người duyệt (PO 15/10/2026, mục 6)
+  if (isInTransit(order.deliveryStatus)) return { allowed: true }
   if (order.productionStatus && order.productionStatus !== "WAITING") {
     return {
       allowed: false,
@@ -169,15 +171,32 @@ export function resolveRefundVnd(
   return Math.max(0, Math.round(actualVnd ?? requestedVnd ?? 0))
 }
 
-/** Năng lực cần để duyệt/từ chối: hủy đơn → R6, có hoàn tiền → R10 (trần cứng điều hành). */
-export function decisionCapabilities(
-  type: CancellationType,
-  caps: { orderCancel: string; paymentRefund: string },
-): string[] {
-  if (type === "CANCEL_ONLY") return [caps.orderCancel]
-  if (type === "FULL_REFUND") return [caps.orderCancel, caps.paymentRefund]
-  return [caps.paymentRefund]
+/** Shipper đang cầm hoa đi giao (PO 15/10/2026, mục 6): huỷ được nhưng phải có người duyệt, kèm cảnh báo. */
+export function isInTransit(deliveryStatus: string | null | undefined): boolean {
+  return deliveryStatus === "DISPATCHED" || deliveryStatus === "DELIVERING"
 }
+
+export const IN_TRANSIT_CANCEL_WARNING = "Shipper đang trên đường giao hoa — huỷ lúc này cần báo shipper quay về và có thể mất phí giao"
+
+/**
+ * Ai được duyệt đề xuất (PO 15/10/2026): duyệt huỷ CHỈ đổi trạng thái, không chuyển tiền — hoàn tiền là bước
+ * riêng (R10) ở danh sách "Cần hoàn tiền". Huỷ → R6; đơn đang giao thì Điều phối (R5) cũng được duyệt, nhưng
+ * không tự duyệt đề xuất của chính mình. Chỉ hoàn một phần (không huỷ) → R10.
+ */
+export function canDecideCancellation(
+  type: CancellationType,
+  ctx: { capabilities: ReadonlySet<string>; userId: string },
+  input: { inTransit: boolean; requesterId: string },
+  caps: { orderCancel: string; paymentRefund: string; deliveryManage: string },
+): string | null {
+  if (type === "PARTIAL_REFUND") return ctx.capabilities.has(caps.paymentRefund) ? null : "Bạn không có quyền duyệt hoàn tiền"
+  if (ctx.capabilities.has(caps.orderCancel)) return null
+  if (input.inTransit && ctx.capabilities.has(caps.deliveryManage)) {
+    return input.requesterId === ctx.userId ? "Không tự duyệt đề xuất huỷ của chính mình — cần người khác duyệt" : null
+  }
+  return "Bạn không có quyền duyệt huỷ đơn"
+}
+
 
 /** Nội dung tin báo Điều hành khi hệ thống tự duyệt huỷ đơn. */
 export function autoApprovedNotice(orderCode: string, timeoutMinutes: number, refundDueVnd: number): string {

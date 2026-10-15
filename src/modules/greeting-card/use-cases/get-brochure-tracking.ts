@@ -2,6 +2,7 @@ import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { mapOrderStatusToTrackingStep } from "../domain/greeting-card-rules"
 import { areaOnly, maskPersonName, phoneLast4Matches } from "../domain/tracking-privacy"
+import { orderPhotoApproval } from "../domain/photo-approval"
 import type { ProductSnapshot } from "../domain/greeting-card-types"
 import { parseStepSla, calculateExpectedStepTimeline } from "../domain/step-sla"
 import { parseShippingConfig } from "../domain/brochure-pricing"
@@ -68,58 +69,21 @@ export async function getBrochureTracking(
   const address = (order.delivery_address as { recipientName?: string; street?: string; parts?: { ward?: string; province?: string } } | null) || {}
   const deliveryWindow = (order.delivery_window as Record<string, string> | null) || {}
 
-  // SPEC #3: Customer Approval cho ảnh sản phẩm hoàn thiện
-  const productPhotoQc = order.qc_records.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-  const customerApprovedQc = order.qc_records.find((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-
-  // Countdown cấu hình trong Collection Settings (mặc định 10 phút)
-  const sessionWithCatalog = order.greeting_sessions.find((s) => s.catalog?.filters)
-  const catalogFilters = sessionWithCatalog?.catalog?.filters as Record<string, unknown> | null | undefined
-  const appliedPolicies = catalogFilters?.appliedPolicies as { photoApprovalCountdownMinutes?: number } | undefined
+  // SPEC #3 + PO 15/10/2026 (mục 4): khách duyệt ảnh thành phẩm theo chế độ tiệm chọn — cùng luật
+  // với chặn giao ship ở Điều phối. Chế độ "Bỏ qua" không hỏi khách.
   const storePolicy = parsePaymentPolicy(order.organization?.settings)
-  const countdownMinutes = appliedPolicies?.photoApprovalCountdownMinutes ?? storePolicy.productPhotoReviewMinutes ?? 10
-
-  let photoApproval: {
+  const catalogFilters = order.greeting_sessions.find((s) => s.catalog?.filters)?.catalog?.filters as Record<string, unknown> | null | undefined
+  const approval = productPhotoUrls.length > 0
+    ? orderPhotoApproval(order, order.organization?.settings, storePolicy.productPhotoReviewMinutes, new Date())
+    : null
+  const photoApproval: {
     status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"
     uploadedAt: string | null
     countdownMinutes: number
     approvedAt: string | null
-  } = {
-    status: "NONE",
-    uploadedAt: null,
-    countdownMinutes,
-    approvedAt: null,
-  }
-
-  if (productPhotoQc && productPhotoUrls.length > 0) {
-    const uploadedAt = productPhotoQc.created_at
-    const uploadedTime = uploadedAt.getTime()
-    const now = Date.now()
-    const isExpired = now >= uploadedTime + countdownMinutes * 60_000
-
-    if (customerApprovedQc) {
-      photoApproval = {
-        status: "APPROVED",
-        uploadedAt: uploadedAt.toISOString(),
-        countdownMinutes,
-        approvedAt: customerApprovedQc.created_at.toISOString(),
-      }
-    } else if (isExpired) {
-      photoApproval = {
-        status: "AUTO_APPROVED",
-        uploadedAt: uploadedAt.toISOString(),
-        countdownMinutes,
-        approvedAt: new Date(uploadedTime + countdownMinutes * 60_000).toISOString(),
-      }
-    } else {
-      photoApproval = {
-        status: "PENDING",
-        uploadedAt: uploadedAt.toISOString(),
-        countdownMinutes,
-        approvedAt: null,
-      }
-    }
-  }
+  } = approval && approval.status !== "BYPASSED"
+    ? { status: approval.status, uploadedAt: approval.uploadedAt, countdownMinutes: approval.countdownMinutes, approvedAt: approval.approvedAt }
+    : { status: "NONE", uploadedAt: null, countdownMinutes: approval?.countdownMinutes ?? 10, approvedAt: null }
 
   const orgSettings = (order as { organization?: { settings?: unknown } }).organization?.settings
   const slaConfig = parseStepSla(orgSettings)

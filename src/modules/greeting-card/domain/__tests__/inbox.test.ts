@@ -64,6 +64,12 @@ describe("inboxActions — cơ chế thanh toán lần 2 và thu nợ sau giao",
     expect(adminCollect?.tab).toBe("payment")
   })
 
+  it("Đơn đã giao chưa thu đồng nào cũng nhắc thu (PO 15/10/2026)", () => {
+    const unpaidDelivered: PipelineLike = { ...baseOrder, paidVnd: 0, balanceVnd: 1_000_000, currentStepId: "STEP_9_COMPLETED", deliveryStatus: "DELIVERED" }
+    expect(inboxActions([unpaidDelivered], "ADMIN", "admin-1").find((a) => a.kind === "COLLECT_POST_DELIVERY_BALANCE")?.detail).toContain("1.000.000")
+    expect(inboxActions([unpaidDelivered], "SALE", "sale-99").find((a) => a.kind === "COLLECT_POST_DELIVERY_BALANCE")).toBeDefined()
+  })
+
   it("Đơn đã trả đủ 100% không sinh các action đòi nợ lần 2", () => {
     const fullPaidOrder: PipelineLike = {
       ...baseOrder,

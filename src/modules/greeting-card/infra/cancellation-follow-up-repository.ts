@@ -50,7 +50,7 @@ export class CancellationFollowUpRepository {
     })
   }
 
-  /** Đơn đã tự huỷ còn chờ Điều hành xử lý — hiện ở Hộp việc. */
+  /** Đơn đã huỷ / đề xuất hoàn đã duyệt còn chờ chuyển tiền hoàn — danh sách "Cần hoàn tiền" ở Hộp việc. */
   async listPending(ctx: TenantContext) {
     const rows = await this.db.greeting_messages.findMany({
       where: scopedWhere(ctx, {
@@ -92,7 +92,7 @@ export class CancellationFollowUpRepository {
         await tx.order_payments.create({
           data: scopedData(ctx, {
             id: randomUUID(), order_id: order.id, kind: "REFUND", amount_vnd: refundVnd, payment_method: "BANK_TRANSFER",
-            collected_by: ctx.userId, collected_at: now, note: `Hoàn tiền đơn tự huỷ${doneNote ? `: ${doneNote}` : ""}`,
+            collected_by: ctx.userId, collected_at: now, note: `Hoàn tiền ${payload.autoApproved ? "đơn tự huỷ" : "theo đề xuất đã duyệt"}${doneNote ? `: ${doneNote}` : ""}`,
           }),
         })
         const newPaid = Number(order.paid_vnd) - refundVnd

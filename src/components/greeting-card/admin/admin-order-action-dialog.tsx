@@ -1,5 +1,6 @@
 "use client"
 
+import { IN_TRANSIT_CANCEL_WARNING, isInTransit } from "@/modules/greeting-card/domain/cancellation-request"
 import React, { useState } from "react"
 import { PaymentCheckPanel } from "./payment-check-panel"
 import { Button } from "@/components/ui/button"
@@ -89,6 +90,7 @@ export function AdminOrderActionDialog({
 
   const [amount, setAmount] = useState(suggested ? String(suggested) : "")
   const [text, setText] = useState("")
+  const inTransit = isInTransit(order.delivery_status)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Điều hành cảnh báo khoản Lần 1 khách đã báo nhưng tiền chưa về (PO 15/10/2026)
@@ -165,8 +167,8 @@ export function AdminOrderActionDialog({
           }),
         })
       } else if (type === "cancel") {
-        await apiSend(`/api/v1/greeting-card/orders/${order.id}/cancel`, "POST", { reason: text }, "Không huỷ được đơn")
-        onDone({ message: `Đã huỷ đơn ${order.code}${order.paid_vnd > 0 ? " — nhớ hoàn tiền cho khách nếu cần" : ""}.` })
+        await apiSend(`/api/v1/greeting-card/orders/${order.id}/cancel`, "POST", { reason: text, ...(inTransit ? { confirmInTransit: true } : {}) }, "Không huỷ được đơn")
+        onDone({ message: `Đã huỷ đơn ${order.code}${order.paid_vnd > 0 ? " — hoàn tiền là bước riêng: bấm \"Hoàn tiền\" khi đã chuyển trả khách" : ""}.` })
       } else {
         await apiSend(`/api/v1/greeting-card/orders/${order.id}/refund`, "POST", { amountVnd, reason: text }, "Không ghi nhận được hoàn tiền")
         onDone({ message: `Đã ghi nhận hoàn ${vnd(amountVnd)} cho đơn ${order.code}.` })
@@ -227,6 +229,9 @@ export function AdminOrderActionDialog({
         )}
 
         {error && <p role="alert" className="p-3 rounded-xl bg-danger-bg text-danger text-body-sm">{error}</p>}
+        {type === "cancel" && inTransit && (
+          <p role="alert" className="p-3 rounded-xl bg-warning-bg text-warning-text text-body-sm font-semibold">⚠ {IN_TRANSIT_CANCEL_WARNING}</p>
+        )}
         {type === "quote" && (
           <p className="text-caption text-text-muted">Khách đặt mẫu chưa niêm yết giá. Nhập tổng tiền trọn gói (gồm phí giao) để khách thanh toán.</p>
         )}

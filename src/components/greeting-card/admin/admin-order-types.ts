@@ -32,6 +32,7 @@ export type ActionResult = { message: string; customerMessage?: string | undefin
 export const ORDER_FILTERS = [
   { id: "reported", label: "Khách báo đã chuyển", query: "payment=OUTSTANDING&reported=1" },
   { id: "outstanding", label: "Còn phải thu", query: "payment=OUTSTANDING" },
+  { id: "delivered-debt", label: "Đã giao còn nợ", query: "payment=OUTSTANDING&delivered=1" },
   { id: "paid", label: "Đã thu đủ", query: "payment=PAID" },
   { id: "cancelled", label: "Đã huỷ", query: "status=CANCELLED" },
   { id: "all", label: "Tất cả", query: "" },

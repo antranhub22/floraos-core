@@ -121,6 +121,8 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
     const isReady = (i.productionStatus === "READY" || i.currentStepId === "STEP_7_READY_QC") && i.currentStepId !== "STEP_3_FILLING_FORM" && i.currentStepId !== "STEP_4_PAYMENT_PENDING"
     const isDelivered = i.deliveryStatus === "DELIVERED" || i.currentStepId === "STEP_9_COMPLETED"
     const isReported = Boolean(i.customerReportedPaid || i.sessionStatus === "PAYMENT_REPORTED")
+    // Đã giao mà còn nợ — kể cả đơn chưa thu đồng nào (PO 15/10/2026, mục 3)
+    const deliveredWithDebt = i.type === "ORDER" && isDelivered && total > 0 && balance > 0
 
     // --- 1. NGHIỆP VỤ ĐIỀU HÀNH (ADMIN) ---
     if (role === "ADMIN") {
@@ -138,7 +140,7 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
         out.push({ ...base, id: `quote:${i.id}`, kind: "QUOTE", title: "Báo giá mẫu chưa niêm yết", detail: `${code(i)} · ${i.productName}`, tab: "payment", urgency: 500 })
       } else if (i.currentStepId === "STEP_4_PAYMENT_PENDING") {
         out.push({ ...base, id: `pay:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Đối chiếu và xác nhận tiền", detail: `${code(i)} · khách báo đã chuyển`, tab: "payment", urgency: 400 })
-      } else if (i.type === "ORDER" && hasDeposit && isDelivered) {
+      } else if (deliveredWithDebt) {
         out.push({
           ...base,
           id: `collect-post-delivery:${i.id}`,
@@ -194,7 +196,7 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
             tab: "sales",
             urgency: 620,
           })
-        } else if (i.type === "ORDER" && hasDeposit && isDelivered) {
+        } else if (deliveredWithDebt) {
           out.push({
             ...base,
             id: `collect-post-delivery:${i.id}`,
