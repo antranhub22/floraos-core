@@ -35,6 +35,16 @@ describe("SSOT thông tin mẫu hoa của đơn Thẻ chào", () => {
     expect(orderProductView(src("https://cdn.example/p.jpg"), images, undefined, now).imageUrl).toBe("https://cdn.example/p.jpg")
   })
 
+  it("mẫu chỉ có link Google Drive (nhập từ Excel) → ảnh xem trước qua proxy", () => {
+    const folder = "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWx"
+    expect(orderProductView({ items: [{ product_id: "px" }], greeting_sessions: [{ product_snapshot: { name: "Kệ", driveLink: folder } }] }, images).imageUrl)
+      .toBe("/api/v1/public/drive-thumb-proxy?folder_id=1AbCdEfGhIjKlMnOpQrStUvWx")
+    // Ảnh trong kho vẫn được ưu tiên hơn link Drive
+    expect(orderProductView({ items: [{ product_id: "p1" }], greeting_sessions: [{ product_snapshot: { name: "Rosa", driveLink: folder } }] }, images).imageUrl).toBe("/kho/p1.jpg")
+    // Link không phải Drive (trang web bán hàng) → không có ảnh
+    expect(orderProductView({ items: [{ product_id: "px", metadata: { driveLink: "https://shop.example/hoa.html" } }], greeting_sessions: [] }, images).imageUrl).toBeNull()
+  })
+
   it("tên và giá rơi về mô tả / đơn giá dòng đơn, rồi tên mặc định", () => {
     expect(orderProductView({ items: [{ description: "Bó tay", unit_price_vnd: 300000 }], greeting_sessions: [] }, images)).toMatchObject({ name: "Bó tay", price: 300000 })
     expect(orderProductView({ items: [], greeting_sessions: [] }, images, "Chưa chốt mẫu")).toMatchObject({ name: "Chưa chốt mẫu", price: 0, imageUrl: null })

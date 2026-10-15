@@ -3,6 +3,7 @@
  * dựng `product` bằng hàm này, giao diện chỉ đọc `product`, không tự chọn giữa ảnh chụp mẫu và dòng đơn.
  * Pure TypeScript.
  */
+import { driveThumbProxySrc } from "./drive-thumb"
 
 export interface OrderProductView {
   productId: string | null
@@ -56,7 +57,10 @@ export function orderProductView(source: OrderProductSource, images: ReadonlyMap
     productId,
     name: str(snap.name) ?? str(meta.name) ?? str(item?.description) ?? fallbackName,
     code: str(snap.code) ?? str(meta.code),
-    imageUrl: liveImageUrl(str(snap.imageUrl), now.getTime()) ?? liveImageUrl(str(meta.imageUrl), now.getTime()) ?? (productId ? images.get(productId) ?? null : null),
+    // Cuối cùng: link Google Drive của mẫu (sản phẩm nhập từ Excel chưa có ảnh trong kho)
+    imageUrl: liveImageUrl(str(snap.imageUrl), now.getTime()) ?? liveImageUrl(str(meta.imageUrl), now.getTime())
+      ?? (productId ? images.get(productId) ?? null : null)
+      ?? driveThumbProxySrc(str(snap.driveLink)) ?? driveThumbProxySrc(str(meta.driveLink)),
     price: num(snap.price) ?? num(meta.price) ?? num(item?.unit_price_vnd) ?? 0,
     flowersSummary: str(snap.flowersSummary) ?? str(meta.flowersSummary),
   }

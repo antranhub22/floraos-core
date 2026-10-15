@@ -139,4 +139,12 @@ describe("greeting-card: luật Điều phối (PO 15/10/2026)", () => {
     const row = (await getCoordinatorBoard(a.ctx, {})).data.find((o) => o.id === order.orderId)
     expect(row?.product.imageUrl).toContain(img.storage_key)
   })
+
+  it("mẫu chỉ có link Google Drive vẫn hiện ảnh xem trước trên bảng Điều phối", async () => {
+    const order = await placeOrder()
+    const item = await prisma.order_items.findFirstOrThrow({ where: { order_id: order.orderId } })
+    await prisma.products.update({ where: { id: item.product_id ?? "" }, data: { attributes: { price: 500000, drive_link: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWx" } } })
+    const row = (await getCoordinatorBoard(a.ctx, {})).data.find((o) => o.id === order.orderId)
+    expect(row?.product.imageUrl).toBe("/api/v1/public/drive-thumb-proxy?folder_id=1AbCdEfGhIjKlMnOpQrStUvWx")
+  })
 })
