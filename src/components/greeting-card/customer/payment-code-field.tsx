@@ -27,9 +27,7 @@ export function PaymentCodeField({
   const applied = !error && plan?.source === "PAYMENT_CODE" && plan.paymentCode ? plan : null
 
   return (
-    <section aria-labelledby="payment-code-title" className="flex flex-col gap-1 p-3 rounded-xl border border-primary/30 bg-primary/5">
-      <h3 id="payment-code-title" className="text-caption font-bold text-foreground">Mã thanh toán (đặt cọc)</h3>
-      <p className="text-caption text-text-muted">Nhập mã cửa hàng gửi bạn để đặt cọc trước một phần. Đây không phải mã giảm giá — tổng đơn không đổi.</p>
+    <section aria-label="Mã thanh toán" className="flex flex-col gap-1">
       <div className="flex gap-2">
         <input
           type="text"
