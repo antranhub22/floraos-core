@@ -4,12 +4,16 @@ import { getPublicGreetingCatalogBySlug } from "./get-public-greeting-catalog-by
 import { PUBLIC_IMAGE_MAX_BYTES, isSafePublicImageUrl } from "../domain/public-image-url"
 import { getGreetingCatalogForCustomer } from "./get-greeting-catalog"
 
-export const COLLAGE_MAX_IMAGES = 4
+export const COLLAGE_MAX_IMAGES = 3
 
 export interface CatalogCollageData {
   catalogName: string
   shopName: string | null
   priceLabel: string | null
+  /** Logo tiệm dạng data URL; null → dùng chữ cái đầu tên tiệm */
+  logo: string | null
+  /** Tổng số mẫu trong bộ sưu tập — ảnh hiện tối đa 3, phần còn lại thành nhãn "+N" */
+  productCount: number
   /** Ảnh dạng data URL (chỉ JPG/PNG — bộ dựng ảnh không đọc được WEBP). */
   images: string[]
 }
@@ -75,14 +79,27 @@ async function loadImages(urls: string[]): Promise<string[]> {
   return out
 }
 
-async function toCollage(data: PublicData): Promise<CatalogCollageData | null> {
-  if (data.status !== "ACTIVE") return null
+type CollageSource = {
+  catalog: { name: string }
+  shop?: { name: string; logoUrl?: string | null } | null
+  products: Array<{ price: number | null; imageUrl: string | null }>
+}
+
+async function buildCollage(data: CollageSource): Promise<CatalogCollageData> {
+  const logoUrl = data.shop?.logoUrl
   return {
     catalogName: data.catalog.name,
     shopName: data.shop?.name ?? null,
     priceLabel: priceLabelOf(data.products.map((p) => p.price)),
+    logo: logoUrl ? ((await loadImages([logoUrl]))[0] ?? null) : null,
+    productCount: data.products.length,
     images: await loadImages(data.products.map((p) => p.imageUrl).filter((u): u is string => !!u)),
   }
+}
+
+async function toCollage(data: PublicData): Promise<CatalogCollageData | null> {
+  if (data.status !== "ACTIVE") return null
+  return buildCollage(data)
 }
 
 export async function catalogCollageById(catalogId: string): Promise<CatalogCollageData | null> {
@@ -96,10 +113,5 @@ export async function catalogCollageBySlug(orgSlug: string, catalogCode: string)
 export async function catalogCollageBySendCode(sendCode: string): Promise<CatalogCollageData | null> {
   const data = await getGreetingCatalogForCustomer(sendCode)
   if (data.status !== "ACTIVE") return null
-  return {
-    catalogName: data.catalog.name,
-    shopName: data.shop?.name ?? null,
-    priceLabel: priceLabelOf(data.products.map((p) => p.price)),
-    images: await loadImages(data.products.map((p) => p.imageUrl).filter((u): u is string => !!u)),
-  }
+  return buildCollage(data)
 }

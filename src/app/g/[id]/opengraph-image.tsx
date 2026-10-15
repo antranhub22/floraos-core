@@ -9,5 +9,5 @@ export const alt = "Bộ sưu tập mẫu hoa"
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const data = await catalogCollageById(id)
-  return renderCatalogCollage(data ?? { catalogName: "Bộ sưu tập mẫu hoa", shopName: null, priceLabel: null, images: [] })
+  return renderCatalogCollage(data ?? { catalogName: "Bộ sưu tập mẫu hoa", shopName: null, priceLabel: null, logo: null, productCount: 0, images: [] })
 }

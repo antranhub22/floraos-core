@@ -3,94 +3,168 @@ import type { CatalogCollageData } from "@/modules/greeting-card/use-cases/catal
 
 export const COLLAGE_SIZE = { width: 1200, height: 630 }
 
-// Bộ dựng ảnh (satori) không đọc CSS token — màu viết thẳng, khớp bảng màu thương hiệu.
-const C = { bg: "#FFF8F5", panel: "#FFFFFF", text: "#2B1D1A", muted: "#7A6460", primary: "#C2185B", tile: "#F3E6E2" }
+// Bộ dựng ảnh (satori) không đọc CSS token — màu viết thẳng theo bảng màu "điện ảnh" của thumbnail.
+const C = { ink: "#120A0D", wine: "#6B1A2E", champ: "#D9B877", cream: "#FBF5EE", bar: "#000000" }
 
-function Tiles({ images }: { images: string[] }) {
-  const n = images.length
-  // 1 ảnh: phủ kín · 2 ảnh: 2 cột · 3–4 ảnh: lưới 2×2 (ô trống tô nền)
-  const cells = n <= 1 ? 1 : n === 2 ? 2 : 4
-  const w = cells === 1 ? 630 : 315
-  const h = cells === 4 ? 315 : 630
+const GALLERY = { width: 560, height: 482, gap: 12 }
+const MAIN_WIDTH = Math.round((GALLERY.width - GALLERY.gap) * 0.7)
+const SIDE_WIDTH = GALLERY.width - GALLERY.gap - MAIN_WIDTH
+
+function Photo({ src, width, height, dim }: { src: string; width: number; height: number; dim?: boolean }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", width: 630, height: 630, background: C.tile }}>
-      {Array.from({ length: cells }, (_, i) =>
-        images[i] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={i} src={images[i]} width={w} height={h} style={{ objectFit: "cover" }} alt="" />
-        ) : (
-          <div key={i} style={{ width: w, height: h, background: C.tile }} />
-        )
+    <div style={{ display: "flex", position: "relative", width, height, borderRadius: 6, overflow: "hidden" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} width={width} height={height} style={{ objectFit: "cover" }} alt="" />
+      {dim && <div style={{ position: "absolute", inset: 0, background: "rgba(18,10,13,0.22)" }} />}
+    </div>
+  )
+}
+
+function MoreBadge({ count }: { count: number }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: 12,
+        bottom: 12,
+        display: "flex",
+        padding: "6px 14px",
+        borderRadius: 999,
+        fontSize: 22,
+        fontWeight: 700,
+        color: C.cream,
+        background: "rgba(18,10,13,0.75)",
+        border: `1px solid ${C.champ}`,
+      }}
+    >
+      +{count}
+    </div>
+  )
+}
+
+function LogoMark({ logo, shopName, size }: { logo: string | null; shopName: string | null; size: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        overflow: "hidden",
+        background: "rgba(251,245,238,0.12)",
+        border: `2px solid ${C.champ}`,
+        color: C.champ,
+        fontSize: size / 2,
+      }}
+    >
+      {logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} width={size} height={size} style={{ objectFit: "cover" }} alt="" />
+      ) : (
+        (shopName?.trim()[0] ?? "✿").toUpperCase()
       )}
     </div>
   )
 }
 
-function EmptyTiles({ shopName }: { shopName: string | null }) {
+/** 1 ảnh: phủ kín · 2 ảnh: chính + 1 phụ · từ 3 ảnh: chính 70% + 2 phụ, nhãn "+N" khi còn mẫu. */
+function Gallery({ images, productCount }: { images: string[]; productCount: number }) {
+  const shown = images.slice(0, 3)
+  const [main, ...sides] = shown
+  const more = productCount - shown.length
+  if (!main) return null
+  if (sides.length === 0) return <Photo src={main} width={GALLERY.width} height={GALLERY.height} />
+  const sideHeight = sides.length === 1 ? GALLERY.height : (GALLERY.height - GALLERY.gap) / 2
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 500,
-        height: 630,
-        background: "linear-gradient(135deg, #FFF0F5 0%, #FCE4EC 60%, #F8BBD0 100%)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 140,
-          height: 140,
-          borderRadius: 70,
-          background: "#FFFFFF",
-          fontSize: 70,
-        }}
-      >
-        🌸
-      </div>
-      <div
-        style={{
-          marginTop: 24,
-          fontSize: 26,
-          fontWeight: 700,
-          color: C.primary,
-          letterSpacing: 2,
-        }}
-      >
-        {shopName || "Tiệm Hoa Tươi"}
-      </div>
-      <div
-        style={{
-          marginTop: 8,
-          fontSize: 18,
-          color: C.muted,
-        }}
-      >
-        Bộ Sưu Tập Hoa Tươi
+    <div style={{ display: "flex", gap: GALLERY.gap }}>
+      <Photo src={main} width={MAIN_WIDTH} height={GALLERY.height} />
+      <div style={{ display: "flex", flexDirection: "column", gap: GALLERY.gap }}>
+        {sides.map((src, i) => (
+          <div key={i} style={{ display: "flex", position: "relative" }}>
+            <Photo src={src} width={SIDE_WIDTH} height={sideHeight} dim />
+            {i === sides.length - 1 && more > 0 && <MoreBadge count={more} />}
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-/** Ảnh ghép 1200×630 cho link bộ sưu tập: tối đa 4 mẫu + tên, khoảng giá, tên tiệm. */
+function EmptyGallery({ logo, shopName }: { logo: string | null; shopName: string | null }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: GALLERY.width,
+        height: GALLERY.height,
+        borderRadius: 6,
+        backgroundImage: `radial-gradient(circle at 70% 30%, #7A2238 0%, #3A0F1C 55%, ${C.ink} 100%)`,
+      }}
+    >
+      <LogoMark logo={logo} shopName={shopName} size={150} />
+    </div>
+  )
+}
+
+/** Thumbnail 1200×630 kiểu poster phim cho link bộ sưu tập: ảnh mẫu thật, logo, tên, khoảng giá. */
 export function renderCatalogCollage(data: CatalogCollageData, init?: ResponseInit) {
   const hasImages = data.images.length > 0
+  const longTitle = data.catalogName.length > 22
   return new ImageResponse(
     (
-      <div style={{ display: "flex", width: "100%", height: "100%", background: C.bg }}>
-        {hasImages ? <Tiles images={data.images} /> : <EmptyTiles shopName={data.shopName} />}
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, padding: 56, gap: 20 }}>
-          {data.shopName && <div style={{ fontSize: 30, color: C.muted }}>{data.shopName}</div>}
-          <div style={{ fontSize: 60, fontWeight: 700, color: C.text, lineHeight: 1.15 }}>{data.catalogName}</div>
-          {data.priceLabel && <div style={{ fontSize: 36, fontWeight: 700, color: C.primary }}>{data.priceLabel}</div>}
-          <div style={{ display: "flex", marginTop: 12, fontSize: 28, color: C.panel, background: C.primary, borderRadius: 999, padding: "12px 28px", alignSelf: "flex-start" }}>
-            Xem mẫu và đặt hoa
+      <div style={{ display: "flex", position: "relative", width: "100%", height: "100%", background: C.ink, color: C.cream }}>
+        {data.images[0] && (
+          // Nền là chính ảnh chính, phóng to và phủ tối: tông màu luôn ăn theo màu hoa
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={data.images[0]} width={1200} height={630} style={{ position: "absolute", inset: 0, objectFit: "cover", opacity: 0.45 }} alt="" />
+        )}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: "linear-gradient(90deg, rgba(18,10,13,0.97) 0%, rgba(18,10,13,0.85) 45%, rgba(18,10,13,0.45) 100%)",
+          }}
+        />
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 34, background: C.bar }} />
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 34, background: C.bar }} />
+
+        <div style={{ position: "absolute", left: 64, top: 66, display: "flex", alignItems: "center", gap: 16 }}>
+          <LogoMark logo={data.logo} shopName={data.shopName} size={58} />
+          {data.shopName && <div style={{ fontSize: 22, letterSpacing: 3, textTransform: "uppercase" }}>{data.shopName}</div>}
+        </div>
+
+        <div style={{ position: "absolute", left: 64, top: 170, width: 470, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ fontSize: 17, letterSpacing: 5, color: C.champ }}>BỘ SƯU TẬP</div>
+          <div style={{ display: "block", fontSize: longTitle ? 52 : 72, lineHeight: 1.08, lineClamp: 2 }}>{data.catalogName}</div>
+          <div style={{ width: 64, height: 2, background: C.champ }} />
+          {data.priceLabel && <div style={{ fontSize: 30 }}>{data.priceLabel}</div>}
+          <div
+            style={{
+              display: "flex",
+              alignSelf: "flex-start",
+              marginTop: 6,
+              padding: "14px 28px",
+              borderRadius: 999,
+              fontSize: 22,
+              fontWeight: 700,
+              color: C.ink,
+              background: C.champ,
+            }}
+          >
+            {data.priceLabel ? "Xem mẫu và đặt hoa" : "Xem mẫu hoa"}
           </div>
+        </div>
+
+        <div style={{ position: "absolute", right: 56, top: 74, display: "flex" }}>
+          {hasImages ? (
+            <Gallery images={data.images} productCount={data.productCount} />
+          ) : (
+            <EmptyGallery logo={data.logo} shopName={data.shopName} />
+          )}
         </div>
       </div>
     ),

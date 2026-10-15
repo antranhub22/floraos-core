@@ -31,6 +31,8 @@ describe("catalogCollageBySendCode", () => {
       catalogName: "Hoa Sinh Nhật",
       shopName: "Tiệm Hoa Xinh",
       priceLabel: "500.000đ",
+      logo: null,
+      productCount: 1,
       images: [],
     })
   })
