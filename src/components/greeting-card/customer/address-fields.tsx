@@ -1,13 +1,19 @@
-import React, { useState, useMemo } from "react"
+import React, { useState } from "react"
 import { ADDRESS_PART_MAX, type AddressParts } from "@/modules/greeting-card/domain/delivery-address"
-import { ALL_VN_PROVINCES, VN_POPULAR_PROVINCES } from "@/modules/greeting-card/domain/vn-provinces"
-import { ChevronDown, MapPin, Search } from "lucide-react"
+import {
+  ADDRESS_SYSTEM_LABEL,
+  districtNames,
+  guessAddressSystem,
+  provinceNames,
+  wardNames,
+  type AddressSystem,
+} from "@/modules/greeting-card/domain/vn-address-units"
+import { PickOrTypeField } from "./pick-or-type-field"
+import { useVnAddressUnits } from "./use-vn-address-units"
 
 /**
- * Địa chỉ giao hoa nâng cấp (Spec #8):
- * - Cascading Address Selection: Tỉnh/Thành phố → Phường/Xã → Địa chỉ cụ thể.
- * - Nhập nhanh, tự gợi ý, giảm lỗi địa chỉ, cho phép chỉnh sửa thủ công.
- * - 100% tiếng Việt thống nhất (không còn nhãn "Province").
+ * Địa chỉ giao hoa: khách chọn hệ địa chỉ cũ (Tỉnh → Quận/Huyện → Phường/Xã, mặc định)
+ * hoặc mới từ 01/07/2025 (Tỉnh → Phường/Xã), rồi bấm chọn từng cấp; không có trong danh sách thì tự nhập.
  */
 export function AddressFields(props: {
   idPrefix: string
@@ -16,37 +22,19 @@ export function AddressFields(props: {
   onChange: (next: AddressParts) => void
 }) {
   const { idPrefix, value, inputClassName, onChange } = props
+  const [system, setSystem] = useState<AddressSystem>(() => guessAddressSystem(value))
+  const units = useVnAddressUnits(system)
+  const data = units.data
+  const provinces = data ? provinceNames(data) : []
+  const districts = data ? districtNames(data, value.province) : []
+  const wards = data ? wardNames(data, value.province, value.district) : []
+  const loadingHint = units.loading ? "Đang tải danh sách..." : null
 
-  // Phân tích danh sách phường/xã gợi ý theo tỉnh thành đang chọn
-  const provinceData = useMemo(() => {
-    return VN_POPULAR_PROVINCES.find((p) => p.name === value.province)
-  }, [value.province])
-
-  const suggestedWards = provinceData?.wards ?? []
-
-  function handleProvinceChange(province: string) {
-    onChange({
-      ...value,
-      province,
-      // Khi đổi tỉnh thành khác, nếu phường hiện tại không thuộc tỉnh mới thì có thể để người dùng chọn lại
-    })
-  }
-
-  function handleWardSelect(ward: string) {
-    // Tự tách quận/huyện nếu có trong ngoặc: "Phường Bến Nghé (Quận 1)"
-    const match = ward.match(/^(.*?)\s*\((.*?)\)$/)
-    if (match) {
-      onChange({
-        ...value,
-        ward: match[1]?.trim() ?? ward,
-        district: match[2]?.trim() ?? value.district,
-      })
-    } else {
-      onChange({
-        ...value,
-        ward,
-      })
-    }
+  function switchSystem(next: AddressSystem) {
+    if (next === system) return
+    setSystem(next)
+    // Tên tỉnh/phường hai hệ khác nhau → chọn lại từ đầu, giữ số nhà và đường
+    onChange({ houseNumber: value.houseNumber, street: value.street, ward: "", province: "" })
   }
 
   return (
@@ -55,65 +43,63 @@ export function AddressFields(props: {
         Địa chỉ nhận hoa <span className="text-danger">*</span>
       </legend>
 
-      {/* 1. TỈNH / THÀNH PHỐ (CASCADING BƯỚC 1) */}
-      <div className="sm:col-span-1">
-        <label htmlFor={`${idPrefix}-province`} className="mb-1 block text-caption font-semibold text-text-muted">
-          Tỉnh / Thành phố <span className="text-danger">*</span>
-        </label>
-        <select
-          id={`${idPrefix}-province`}
+      <div role="radiogroup" aria-label="Kiểu địa chỉ" className="flex flex-wrap gap-2 sm:col-span-2">
+        {(["old", "new"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={system === s}
+            onClick={() => switchSystem(s)}
+            className={`min-h-11 flex-1 rounded-xl border px-3 text-body-sm font-semibold transition ${
+              system === s ? "border-primary bg-primary/10 text-primary" : "border-border bg-surface text-text-muted hover:border-primary/40"
+            }`}
+          >
+            {ADDRESS_SYSTEM_LABEL[s]}
+          </button>
+        ))}
+      </div>
+      {units.error && <p role="alert" className="text-caption text-danger sm:col-span-2">{units.error}</p>}
+
+      <PickOrTypeField
+        id={`${idPrefix}-province`}
+        label="Tỉnh / Thành phố"
+        required
+        value={value.province}
+        options={provinces}
+        placeholder="VD: Thành phố Hồ Chí Minh"
+        pickPlaceholder={loadingHint ?? "— Chọn Tỉnh / Thành phố —"}
+        inputClassName={inputClassName}
+        onChange={(province) => onChange({ ...value, province, district: undefined, ward: "" })}
+      />
+
+      {system === "old" && (
+        <PickOrTypeField
+          id={`${idPrefix}-district`}
+          label="Quận / Huyện"
           required
-          value={value.province || "TP. Hồ Chí Minh"}
-          onChange={(e) => handleProvinceChange(e.target.value)}
-          className={inputClassName}
-        >
-          <option value="">— Chọn Tỉnh / Thành phố —</option>
-          {ALL_VN_PROVINCES.map((prov) => (
-            <option key={prov} value={prov}>
-              {prov}
-            </option>
-          ))}
-        </select>
-      </div>
+          value={value.district ?? ""}
+          options={districts}
+          placeholder="VD: Quận 1"
+          pickPlaceholder={value.province ? "— Chọn Quận / Huyện —" : "Chọn Tỉnh / Thành phố trước"}
+          inputClassName={inputClassName}
+          onChange={(district) => onChange({ ...value, district, ward: "" })}
+        />
+      )}
 
-      {/* 2. PHƯỜNG / XÃ (CASCADING BƯỚC 2) */}
-      <div className="sm:col-span-1">
-        <label htmlFor={`${idPrefix}-ward`} className="mb-1 block text-caption font-semibold text-text-muted">
-          Phường / Xã <span className="text-danger">*</span>
-        </label>
-        {suggestedWards.length > 0 ? (
-          <div className="space-y-1">
-            <select
-              id={`${idPrefix}-ward`}
-              value={value.district ? `${value.ward} (${value.district})` : value.ward}
-              onChange={(e) => handleWardSelect(e.target.value)}
-              className={inputClassName}
-            >
-              <option value="">— Chọn Phường / Xã —</option>
-              {suggestedWards.map((w) => (
-                <option key={w} value={w}>
-                  {w}
-                </option>
-              ))}
-              <option value="__other__">Khác (tự nhập tay)...</option>
-            </select>
-          </div>
-        ) : (
-          <input
-            id={`${idPrefix}-ward`}
-            type="text"
-            required
-            maxLength={ADDRESS_PART_MAX}
-            placeholder="VD: Phường Bến Thành"
-            value={value.ward ?? ""}
-            onChange={(e) => onChange({ ...value, ward: e.target.value })}
-            className={inputClassName}
-          />
-        )}
-      </div>
+      <PickOrTypeField
+        id={`${idPrefix}-ward`}
+        label="Phường / Xã"
+        required
+        value={value.ward}
+        options={wards}
+        placeholder="VD: Phường Bến Thành"
+        pickPlaceholder="— Chọn Phường / Xã —"
+        inputClassName={inputClassName}
+        onChange={(ward) => onChange({ ...value, ward })}
+      />
 
-      {/* 3. ĐƯỜNG / THÔN / ẤP */}
-      <div className="sm:col-span-1">
+      <div>
         <label htmlFor={`${idPrefix}-street`} className="mb-1 block text-caption font-semibold text-text-muted">
           Đường / Thôn / Ấp <span className="text-danger">*</span>
         </label>
@@ -129,8 +115,7 @@ export function AddressFields(props: {
         />
       </div>
 
-      {/* 4. SỐ NHÀ / TÒA NHÀ / CĂN HỘ */}
-      <div className="sm:col-span-1">
+      <div className={system === "old" ? "sm:col-span-2" : ""}>
         <label htmlFor={`${idPrefix}-houseNumber`} className="mb-1 block text-caption font-semibold text-text-muted">
           Số nhà / Tòa nhà / Phòng <span className="text-danger">*</span>
         </label>
