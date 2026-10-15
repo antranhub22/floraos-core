@@ -2,6 +2,7 @@ import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 import { BROWSING_EVENT_TYPES } from "../domain/customer-journey-events"
+import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
 
 /** Bỏ các bước lướt mẫu vụn của khách — bảng theo dõi chỉ cần mốc nghiệp vụ. */
 const MILESTONE_EVENTS = { event_type: { notIn: [...BROWSING_EVENT_TYPES] } }
@@ -20,7 +21,7 @@ const ORDER_SELECT = {
   total_vnd: true, paid_vnd: true, balance_vnd: true, card_message: true, pricing_rule_ref: true,
   delivery_address: true, delivery_window: true, created_at: true, updated_at: true,
   customer: { select: { name: true, phone: true } },
-  items: { take: 1, select: { metadata: true, description: true, unit_price_vnd: true } },
+  items: { take: 1, select: { product_id: true, metadata: true, description: true, unit_price_vnd: true } },
   payments: { select: { collected_at: true } },
   events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
   qc_records: { select: { created_at: true, inspector_id: true } },
@@ -29,7 +30,7 @@ const ORDER_SELECT = {
   greeting_sessions: {
     take: 1,
     select: {
-      id: true, send_code: true, sale_id: true, status: true, product_snapshot: true,
+      id: true, send_code: true, sale_id: true, status: true, product_snapshot: true, selected_product_id: true,
       payment_proof_asset_id: true, payment_proof_balance_asset_id: true,
       catalog: { select: { id: true, name: true, code: true } },
       events: { where: MILESTONE_EVENTS, select: { event_type: true, created_at: true, metadata: true }, orderBy: { created_at: "asc" as const } },
@@ -138,5 +139,32 @@ export class TrackingPipelineRepository {
       select: { user_id: true, user: { select: { name: true, email: true } } },
     })
     return new Map(rows.map((r) => [r.user_id, r.user.name?.trim() || r.user.email.split("@")[0] || "Nhân viên"]))
+  }
+
+  /**
+   * Ảnh chính hiện tại của sản phẩm trong kho — bù cho đơn/link có ảnh chụp mẫu thiếu ảnh
+   * (đơn tạo tay, mẫu chọn trước khi có ảnh), để mọi vai trò luôn nhận diện được mẫu hoa.
+   */
+  async productMainImages(ctx: TenantContext, productIds: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(productIds.filter(Boolean))]
+    if (ids.length === 0) return new Map()
+    const rows = await this.db.products.findMany({
+      where: scopedWhere(ctx, { id: { in: ids } }),
+      select: { id: true, attributes: true, images: { where: { role: "MAIN" }, take: 1, select: { asset_id: true } } },
+    })
+    const assetIds = rows.flatMap((r) => r.images.map((i) => i.asset_id))
+    const assets = assetIds.length
+      ? await this.db.assets.findMany({ where: scopedWhere(ctx, { id: { in: assetIds } }), select: { id: true, storage_key: true } })
+      : []
+    const keyOf = new Map(assets.map((a) => [a.id, a.storage_key]))
+    const exp = Date.now() + 86_400_000
+    const out = new Map<string, string>()
+    for (const r of rows) {
+      const key = r.images[0] ? keyOf.get(r.images[0].asset_id) : undefined
+      const attrUrl = (r.attributes as { imageUrl?: unknown } | null)?.imageUrl
+      const url = key ? `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}` : typeof attrUrl === "string" && attrUrl ? attrUrl : null
+      if (url) out.set(r.id, url)
+    }
+    return out
   }
 }
