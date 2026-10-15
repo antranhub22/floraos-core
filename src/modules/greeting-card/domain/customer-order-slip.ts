@@ -10,6 +10,10 @@ export interface CustomerOrderSlipInput {
   paidVnd?: number | null | undefined
   balanceVnd?: number | null | undefined
   productName?: string | null | undefined
+  productCode?: string | null | undefined
+  /** Ghi chú khách gửi cửa hàng / thợ cắm và người giao (nhập ở form đặt hoa) */
+  customerNote?: string | null | undefined
+  deliveryNote?: string | null | undefined
   flowersSummary?: string | null | undefined
   cardMessage?: string | null | undefined
   createdAt?: string | null | undefined
@@ -75,9 +79,17 @@ export function buildCustomerOrderSlipLines(input: CustomerOrderSlipInput): Cust
       { label: "Đã thanh toán", value: formatCompactVnd(paid) },
       { label: "Còn lại", value: formatCompactVnd(balance) },
     ],
-    [{ label: "Mẫu", value: [input.productName || "Hoa tươi theo mẫu", input.flowersSummary ? `(${input.flowersSummary})` : null].filter(Boolean).join(" ") }],
-    [{ label: "Nội dung", value: input.cardMessage?.trim() || "gửi sau" }],
+    [
+      { label: "Mẫu", value: [input.productName || "Hoa tươi theo mẫu", input.flowersSummary ? `(${input.flowersSummary})` : null].filter(Boolean).join(" ") },
+      { label: "Mã sản phẩm", value: input.productCode?.trim() || "Chưa có" },
+    ],
+    [{ label: "Nội dung thiệp", value: input.cardMessage?.trim() || "gửi sau" }],
   ]
+  const notes: CustomerOrderSlipLine[] = [
+    { label: "Ghi chú cho tiệm", value: input.customerNote?.trim() ?? "" },
+    { label: "Ghi chú giao hàng", value: input.deliveryNote?.trim() ?? "" },
+  ].filter((l) => l.value)
+  if (notes.length > 0) groups.push(notes)
   if (vat > 0) {
     const invoice: CustomerOrderSlipLine[] = [
       { label: "Tên công ty", value: input.vatCompanyName },

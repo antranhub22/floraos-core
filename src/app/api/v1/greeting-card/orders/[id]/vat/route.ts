@@ -3,7 +3,7 @@ import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
-import { getOrderVat, setOrderVat } from "@/modules/greeting-card/use-cases/order-vat"
+import { getOrderSlip, setOrderVat } from "@/modules/greeting-card/use-cases/order-vat"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional()
@@ -19,12 +19,12 @@ const schema = z.object({
 
 type Ctx = { params: Promise<{ id: string }> }
 
-/** GET /api/v1/greeting-card/orders/[id]/vat — thông tin VAT & tổng tiền của đơn. */
+/** GET /api/v1/greeting-card/orders/[id]/vat — VAT, tổng tiền + mã mẫu, ảnh gốc, ghi chú khách (Thẻ Đơn Khách hàng). */
 export const GET = handle<[Ctx]>(async (request, context) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.orderRead)
   const { id } = await context.params
-  return jsonResponse({ data: await getOrderVat(ctx, id) })
+  return jsonResponse({ data: await getOrderSlip(ctx, id) })
 })
 
 /** PUT /api/v1/greeting-card/orders/[id]/vat — bật/tắt VAT 8%/10% và lưu thông tin xuất hoá đơn. */

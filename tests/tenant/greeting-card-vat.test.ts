@@ -8,7 +8,7 @@ import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-li
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { quoteBrochureOrder } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
-import { getOrderVat, setOrderVat } from "@/modules/greeting-card/use-cases/order-vat"
+import { getOrderSlip, getOrderVat, setOrderVat } from "@/modules/greeting-card/use-cases/order-vat"
 import { decideDiscount, requestDiscount } from "@/modules/greeting-card/use-cases/discount-requests"
 
 /** Hoá đơn VAT (PO 15/10/2026): 8%/10%, tổng do máy chủ tính, tổ chức khác nhận 404. */
@@ -65,6 +65,8 @@ describe("greeting-card order VAT", () => {
     const orderId = await quotedOrder(a, 3_300_000)
 
     expect(await codeOf(getOrderVat(b.ctx, orderId))).toBe("NOT_FOUND")
+    expect(await codeOf(getOrderSlip(b.ctx, orderId))).toBe("NOT_FOUND")
+    expect(await getOrderSlip(a.ctx, orderId)).toMatchObject({ productCode: "P0" })
     expect(await codeOf(setOrderVat(b.ctx, orderId, { enabled: true, rate: 10 }))).toBe("NOT_FOUND")
 
     const on = await setOrderVat(a.ctx, orderId, { enabled: true, rate: 10, companyName: "Cty Đông Nam", taxCode: "0123456789", email: "kt@dn.vn" })
