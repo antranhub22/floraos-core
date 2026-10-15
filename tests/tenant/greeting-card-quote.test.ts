@@ -81,6 +81,11 @@ describe("greeting-card quote (mẫu chưa niêm yết giá)", () => {
     expect(await codeOf(adminConfirmBrochurePayment(a.ctx, order.orderId, { amountVnd: 100_000 }))).toBe("CONFLICT")
     const outstanding = await new BrochureOrderRepository().listBrochureOrders(a.ctx, { payment: "OUTSTANDING", limit: 10 })
     expect(outstanding.map((o: { id: string }) => o.id)).toContain(order.orderId)
+    // Mở đúng đơn từ Hộp việc: lọc theo orderId bỏ qua bộ lọc tab, tổ chức khác không thấy
+    const focused = await new BrochureOrderRepository().listBrochureOrders(a.ctx, { orderId: order.orderId, payment: "PAID", limit: 10 })
+    expect(focused).toEqual([])
+    expect((await new BrochureOrderRepository().listBrochureOrders(a.ctx, { orderId: order.orderId, limit: 10 })).map((o: { id: string }) => o.id)).toEqual([order.orderId])
+    expect(await new BrochureOrderRepository().listBrochureOrders(b.ctx, { orderId: order.orderId, limit: 10 })).toEqual([])
   })
 
   it("cửa hàng báo giá → khách thấy QR đúng số tiền; không báo giá lại; tổ chức khác nhận 404", async () => {

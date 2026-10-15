@@ -14,7 +14,7 @@ import { CopyCustomerMessage } from "./copy-customer-message"
 import { PendingCancellationPanel } from "./pending-cancellation-panel"
 
 /** Tab Điều hành: việc cần chủ tiệm quyết (thu tiền, báo giá, tiền chưa khớp); cài đặt nằm trong ngăn riêng. */
-export function AdminBrochurePaymentTab() {
+export function AdminBrochurePaymentTab({ focusOrderId = null, onClearFocus }: { focusOrderId?: string | null; onClearFocus?: () => void } = {}) {
   const [filter, setFilter] = useState<OrderFilterId>("outstanding")
   const [action, setAction] = useState<OrderAction | null>(null)
   const [notice, setNotice] = useState<ActionResult | null>(null)
@@ -22,7 +22,10 @@ export function AdminBrochurePaymentTab() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Tìm theo tên khách / mã đơn / mã link / SĐT khách bỏ qua bộ lọc — để đối chiếu nhanh
   const term = search.trim()
-  const query = term.length >= 1 ? `q=${encodeURIComponent(term)}` : ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
+  // Mở từ Hộp việc: chỉ hiện đúng đơn đó, bất kể bộ lọc đang chọn (trước đây lọc "Còn phải thu" che mất đơn)
+  const query = focusOrderId
+    ? `orderId=${encodeURIComponent(focusOrderId)}`
+    : term.length >= 1 ? `q=${encodeURIComponent(term)}` : ORDER_FILTERS.find((f) => f.id === filter)?.query ?? ""
   const orders = usePagedList<AdminOrder>(`/api/v1/greeting-card/orders${query ? `?${query}` : ""}`)
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
   const policy = parsePaymentPolicy(org.data?.settings)
@@ -63,6 +66,12 @@ export function AdminBrochurePaymentTab() {
       )}
 
       <section className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
+        {focusOrderId && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/5 px-4 py-2.5 text-body-sm">
+            <span className="font-semibold text-foreground">Đang mở đơn từ Hộp việc</span>
+            <button type="button" onClick={onClearFocus} className="min-h-9 font-semibold text-primary hover:underline">Xem tất cả đơn</button>
+          </div>
+        )}
         <div className="p-4 border-b border-border flex flex-wrap items-center gap-2" role="tablist" aria-label="Lọc đơn">
           {ORDER_FILTERS.map((f) => (
             <button
@@ -70,7 +79,7 @@ export function AdminBrochurePaymentTab() {
               type="button"
               role="tab"
               aria-selected={filter === f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={() => { setFilter(f.id); onClearFocus?.() }}
               className={`px-3 h-8 rounded-lg text-caption font-bold border ${
                 filter === f.id ? "bg-primary text-white border-primary" : "border-border text-text-muted hover:bg-surface-muted"
               }`}
@@ -85,7 +94,7 @@ export function AdminBrochurePaymentTab() {
               aria-label="Tìm kiếm đơn hàng theo tên khách, mã đơn, số điện thoại"
               placeholder="Tìm tên khách, mã đơn, SĐT…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); onClearFocus?.() }}
               className="h-8 w-full rounded-lg border border-border bg-surface pl-8 pr-7 text-caption text-foreground placeholder:text-text-muted focus:border-primary focus:outline-hidden"
             />
             {search && (

@@ -113,6 +113,8 @@ export class BrochureOrderRepository {
       reported?: boolean | undefined
       /** Chỉ đơn đã giao (báo cáo đơn đã giao còn nợ khi đi cùng payment=OUTSTANDING) */
       delivered?: boolean | undefined
+      /** Chỉ đúng đơn này (mở từ Hộp việc) */
+      orderId?: string | undefined
       limit: number
       cursor?: string | undefined
     }
@@ -120,6 +122,7 @@ export class BrochureOrderRepository {
     const rows = await this.db.orders.findMany({
       where: scopedWhere(ctx, {
         source: "BROCHURE",
+        ...(options.orderId ? { id: options.orderId } : {}),
         ...(options.status ? { status: options.status } : {}),
         ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
         // Đơn chờ báo giá (tổng 0) cũng tính là "còn phải thu"
