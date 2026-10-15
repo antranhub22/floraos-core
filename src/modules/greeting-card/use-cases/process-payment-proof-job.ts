@@ -14,6 +14,7 @@ import {
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
 import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import type { TenantContext } from "@/core/tenancy"
+import { log } from "@/core/observability/log"
 
 export interface ProcessPaymentProofInput {
   assetId: string
@@ -102,9 +103,15 @@ export async function processPaymentProofVisionJob(
 
       if (aiResult.kind === "xong") {
         extracted = aiResult.output
+      } else {
+        // Trước đây im lặng → không ai biết AI đọc bill hỏng (PO 15/10/2026)
+        log.warn("greeting_card.payment_proof_ai_not_done", { organizationId, feature: "greeting-card", assetId, kind: aiResult.kind })
       }
-    } catch {
-      // Nếu gọi AI thất bại (vd môi trường local dev/offline), ghi nhận không đọc được
+    } catch (error) {
+      // Nếu gọi AI thất bại (vd thiếu khoá, môi trường offline), ghi nhận không đọc được
+      log.warn("greeting_card.payment_proof_ai_failed", {
+        organizationId, feature: "greeting-card", assetId, message: error instanceof Error ? error.message : String(error),
+      })
       extracted = null
     }
 
@@ -139,8 +146,11 @@ export async function processPaymentProofVisionJob(
     })
 
     return analysis
-  } catch {
-    // Không ném lỗi ra ngoài làm hỏng luồng gọi
+  } catch (error) {
+    // Không ném lỗi ra ngoài làm hỏng luồng gọi — nhưng phải để lại dấu vết
+    log.warn("greeting_card.payment_proof_job_failed", {
+      organizationId, feature: "greeting-card", assetId, message: error instanceof Error ? error.message : String(error),
+    })
     return null
   }
 }

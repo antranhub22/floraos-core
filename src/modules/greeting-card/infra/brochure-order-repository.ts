@@ -188,6 +188,7 @@ export class BrochureOrderRepository {
           select: {
             send_code: true,
             status: true,
+            payment_proof_asset_id: true,
             catalog: { select: { filters: true } },
           },
         },

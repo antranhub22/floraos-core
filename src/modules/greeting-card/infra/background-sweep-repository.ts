@@ -96,7 +96,8 @@ export class BackgroundSweepRepository {
     const orders = await this.db.orders.findMany({
       where: {
         source: "BROCHURE",
-        status: "DRAFT",
+        // Gồm cả đơn Điều phối đã tiếp nhận nhưng chưa ghi sổ thu (PO 15/10/2026) — trước đây chỉ DRAFT
+        status: { in: ["DRAFT", "CONFIRMED", "PROCESSING"] },
         paid_vnd: 0,
         total_vnd: { gt: 0 },
         greeting_sessions: {
