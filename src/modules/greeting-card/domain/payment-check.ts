@@ -29,6 +29,8 @@ export function paymentCheckOf(order: {
   pricing_rule_ref?: unknown
   items?: Array<{ metadata?: unknown; quantity?: number; unit_price_vnd?: number }>
   greeting_sessions?: Array<{ product_snapshot?: unknown }>
+  /** Thông tin mẫu dựng sẵn ở server (SSOT `orderProductView`) — có thì dùng thay cho tự đọc ảnh chụp mẫu. */
+  product?: { name: string; code: string | null; imageUrl: string | null }
 }): PaymentCheck {
   const snap = obj(order.greeting_sessions?.[0]?.product_snapshot)
   const item = order.items?.[0]
@@ -74,9 +76,9 @@ export function paymentCheckOf(order: {
         : `${promoTitle} (tặng kèm, không đổi tiền)`
 
   return {
-    productName: str(snap.name) ?? str(meta.name) ?? "Mẫu hoa",
-    productCode: str(snap.code) ?? str(meta.code),
-    imageUrl: str(snap.imageUrl) ?? str(meta.imageUrl),
+    productName: order.product?.name ?? str(snap.name) ?? str(meta.name) ?? "Mẫu hoa",
+    productCode: order.product ? order.product.code : str(snap.code) ?? str(meta.code),
+    imageUrl: order.product ? order.product.imageUrl : str(snap.imageUrl) ?? str(meta.imageUrl),
     variantName,
     listedPriceVnd: listed && listed > 0 ? listed : null,
     agreedTotalVnd: order.total_vnd,

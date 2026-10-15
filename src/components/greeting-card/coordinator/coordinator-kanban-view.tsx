@@ -73,7 +73,6 @@ export function CoordinatorKanbanView({
 
   const buildDetailTarget = (o: BrochureOrder, col: CoordinatorKanbanColDef): OrderDetailModalTarget => {
     const work = workOf.get(o.id)
-    const snapshot = o.greeting_sessions[0]?.product_snapshot || o.items[0]?.metadata
     return {
       orderId: o.id,
       orderCode: o.code,
@@ -86,9 +85,9 @@ export function CoordinatorKanbanView({
       deliveryDate: o.delivery_window?.date,
       deliveryTimeSlot: o.delivery_window?.timeSlot,
       cardMessage: o.card_message,
-      productName: snapshot?.name || o.items[0]?.description || "Hoa tươi theo mẫu",
-      productImageUrl: snapshot?.imageUrl,
-      flowersSummary: snapshot?.flowersSummary,
+      productName: o.product.name,
+      productImageUrl: o.product.imageUrl,
+      flowersSummary: o.product.flowersSummary,
       totalVnd: o.total_vnd,
       paidVnd: o.paid_vnd,
       balanceVnd: Math.max(0, o.total_vnd - o.paid_vnd),

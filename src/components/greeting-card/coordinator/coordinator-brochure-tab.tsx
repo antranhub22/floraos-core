@@ -66,7 +66,7 @@ export function CoordinatorBrochureTab() {
       o.delivery_address?.recipientName,
       o.delivery_address?.phone,
       o.items?.[0]?.description,
-      o.greeting_sessions?.[0]?.product_snapshot?.name,
+      o.product.name,
     ].some((v) => v?.toLowerCase().includes(term) || (cleanTerm && v?.toLowerCase().includes(cleanTerm)))
     return phoneMatch || textMatch
   }
@@ -232,9 +232,9 @@ export function CoordinatorBrochureTab() {
             deliveryDate: modal.order.delivery_window?.date,
             deliveryTimeSlot: modal.order.delivery_window?.timeSlot,
             cardMessage: modal.order.card_message,
-            productName: modal.order.greeting_sessions[0]?.product_snapshot?.name || modal.order.items[0]?.description || "Hoa tươi theo mẫu",
-            productImageUrl: modal.order.greeting_sessions[0]?.product_snapshot?.imageUrl,
-            flowersSummary: modal.order.greeting_sessions[0]?.product_snapshot?.flowersSummary,
+            productName: modal.order.product.name,
+            productImageUrl: modal.order.product.imageUrl,
+            flowersSummary: modal.order.product.flowersSummary,
             totalVnd: modal.order.total_vnd,
             paidVnd: modal.order.paid_vnd,
             balanceVnd: Math.max(0, modal.order.total_vnd - modal.order.paid_vnd),

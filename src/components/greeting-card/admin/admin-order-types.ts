@@ -11,6 +11,8 @@ export interface AdminOrder {
   greeting_sessions: Array<{ send_code: string; status: string; product_snapshot?: unknown }>
   items?: Array<{ metadata?: unknown; quantity?: number; unit_price_vnd?: number }>
   pricing_rule_ref?: unknown
+  /** Thông tin mẫu hoa dựng sẵn ở server (SSOT) — `paymentCheckOf` ưu tiên trường này. */
+  product?: import("@/modules/greeting-card/domain/order-product-view").OrderProductView
   payments: Array<{ id: string; kind: string; amount_vnd: number; collected_at: string; reference: string | null; note?: string | null }>
   qc_records?: Array<{ notes: string | null; created_at: string | Date }>
   created_at: string

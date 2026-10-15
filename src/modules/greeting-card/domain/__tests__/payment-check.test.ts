@@ -40,4 +40,13 @@ describe("paymentCheckOf", () => {
     })
     expect(c.reasons).toEqual(["Giảm giá được duyệt 5%: −50.000đ — Khách quen · Duyệt 5% thay vì 10%"])
   })
+
+  it("dùng thông tin mẫu dựng sẵn ở server (SSOT) thay cho ảnh chụp mẫu thiếu ảnh", () => {
+    const c = paymentCheckOf({
+      total_vnd: 468000,
+      greeting_sessions: [{ product_snapshot: { name: "Rosa 743", price: 468000 } }],
+      product: { name: "Rosa 743", code: "SP-743", imageUrl: "/kho/rosa.jpg" },
+    })
+    expect(c).toMatchObject({ productName: "Rosa 743", productCode: "SP-743", imageUrl: "/kho/rosa.jpg" })
+  })
 })
