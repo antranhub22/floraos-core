@@ -93,10 +93,11 @@ export async function runBackgroundSweep(
 
   // Bill khách đã gửi: chỉ tự xác nhận khi tiệm bật và AI đối soát khớp; còn lại chờ Điều hành duyệt
   for (const o of await repo.listPendingPaymentProofOrders(new Date(now.getTime() - MIN_AUTO_CONFIRM_PROOF_MS))) {
-    if (!shouldAutoConfirmProof(o, parsePaymentPolicy(o.settings), now)) continue
+    if (!shouldAutoConfirmProof(o, parsePaymentPolicy(o.settings), now) || o.analysisExpectedVnd === null) continue
     try {
       await adminConfirmBrochurePayment(systemContext(o.organizationId), o.id, {
         confirmationType: "AUTO_SYSTEM_15M",
+        expectedAmountVnd: o.analysisExpectedVnd,
         reference: "AUTO_SYSTEM_15M",
         note: "Hệ thống tự động xác nhận chuyển khoản (tiệm bật tự duyệt, bill khớp tài khoản và số tiền)",
       }, payments)

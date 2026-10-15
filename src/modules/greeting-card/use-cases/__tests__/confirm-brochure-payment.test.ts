@@ -179,5 +179,24 @@ describe("reportCustomerPayment & adminConfirmBrochurePayment with deposit & bal
         })
       )
     })
+
+    it("Tự duyệt bill: số phải thu đổi sau khi khách gửi bill (VAT, phụ phí...) → không ghi thu", async () => {
+      const mockOrders = {
+        findBrochureOrder: vi.fn().mockResolvedValue({
+          id: "order-1", organization_id: "org-1", total_vnd: 1_100_000, paid_vnd: 0, source_session_id: null,
+          pricing_rule_ref: null, production_status: "PENDING", delivery_status: "PENDING",
+        }),
+      } as unknown as BrochureOrderRepository
+      const mockPayments = { recordIncomingPayment: vi.fn() } as unknown as BrochurePaymentRepository
+      const mockRepo = {
+        getShopProfile: vi.fn().mockResolvedValue({ name: "Tiệm Hoa", settings: {} }),
+        findSessionById: vi.fn(),
+      } as unknown as GreetingCardRepository
+
+      await expect(
+        adminConfirmBrochurePayment(ctx, "order-1", { confirmationType: "AUTO_SYSTEM_15M", expectedAmountVnd: 1_000_000 }, mockPayments, mockOrders, mockRepo)
+      ).rejects.toMatchObject({ code: "CONFLICT" })
+      expect(mockPayments.recordIncomingPayment).not.toHaveBeenCalled()
+    })
   })
 })

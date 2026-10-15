@@ -79,6 +79,8 @@ export async function adminConfirmBrochurePayment(
     reference?: string | null | undefined
     note?: string | null | undefined
     confirmationType?: "MANUAL_ADMIN" | "AUTO_SYSTEM_15M" | undefined
+    /** Tự duyệt bill: số tiền AI đã đối chiếu lúc khách gửi bill — lệch số phải thu hiện tại thì KHÔNG ghi thu. */
+    expectedAmountVnd?: number | undefined
   } = {},
   payments = new BrochurePaymentRepository(),
   orders = new BrochureOrderRepository(),
@@ -101,6 +103,10 @@ export async function adminConfirmBrochurePayment(
   let amountVnd = input.amountVnd
   if (amountVnd === undefined) {
     amountVnd = expectedPayment(policy, total, paid).amountVnd
+  }
+  // Tổng đơn đổi sau khi khách gửi bill (VAT, phụ phí, giảm giá...) → bill không còn chứng minh số tiền này
+  if (input.expectedAmountVnd !== undefined && input.expectedAmountVnd !== amountVnd) {
+    throw conflict("Số tiền phải thu đã thay đổi sau khi khách gửi bill — cần Điều hành đối chiếu và duyệt tay")
   }
 
   // Tự động gán bằng chứng chuyển khoản do khách gửi nếu có

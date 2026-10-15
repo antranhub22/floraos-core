@@ -25,13 +25,13 @@ import type { BrochurePaymentRepository } from "../../infra/brochure-payment-rep
 
 const now = new Date("2026-10-14T10:00:00Z")
 
-function sweepRepo(settings: Record<string, unknown>, analysisStatus: string | null) {
+function sweepRepo(settings: Record<string, unknown>, analysisStatus: string | null, analysisExpectedVnd: number | null = 500_000) {
   return {
     failStaleSending: vi.fn().mockResolvedValue(0),
     listRetryable: vi.fn().mockResolvedValue([]),
     listUnpaidDrafts: vi.fn().mockResolvedValue([]),
     listPendingPaymentProofOrders: vi.fn().mockResolvedValue([
-      { id: "order-1", organizationId: "org-1", settings, reportedAt: new Date(now.getTime() - 20 * 60_000), analysisStatus },
+      { id: "order-1", organizationId: "org-1", settings, reportedAt: new Date(now.getTime() - 20 * 60_000), analysisStatus, analysisExpectedVnd },
     ]),
     listPendingSessions: vi.fn().mockResolvedValue([]),
     expireSession: vi.fn(),
@@ -65,6 +65,15 @@ describe("runBackgroundSweep — tự duyệt bill chuyển khoản", () => {
     const on = { brochure_policy: { auto_approve_payment_with_proof: true, auto_approve_payment_with_proof_minutes: 15 } }
     const res = await runBackgroundSweep(now, sweepRepo(on, "MATCHED"), payments)
     expect(adminConfirmBrochurePayment).toHaveBeenCalledTimes(1)
+    // Gửi kèm số tiền AI đã đối chiếu — tổng đơn đổi sau đó (VAT, phụ phí...) thì không tự ghi thu
+    expect(vi.mocked(adminConfirmBrochurePayment).mock.calls[0]?.[2]).toMatchObject({ expectedAmountVnd: 500_000 })
     expect(res.autoConfirmed).toBe(1)
+  })
+
+  it("bill cũ chưa lưu số tiền đối chiếu → không tự ghi nhận", async () => {
+    vi.mocked(adminConfirmBrochurePayment).mockClear()
+    const on = { brochure_policy: { auto_approve_payment_with_proof: true, auto_approve_payment_with_proof_minutes: 15 } }
+    await runBackgroundSweep(now, sweepRepo(on, "MATCHED", null), payments)
+    expect(adminConfirmBrochurePayment).not.toHaveBeenCalled()
   })
 })
