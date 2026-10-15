@@ -15,6 +15,11 @@ import { QUICK_BUDGETS } from "./quick-collection-options"
 import { QuickCollectionCriteriaPanel, type QuickCollectionCriteriaState } from "./quick-collection-criteria"
 import { QuickCollectionPreview } from "./quick-collection-preview"
 import { QuickCollectionShare } from "./quick-collection-share"
+import { useApi } from "@/components/greeting-card/greeting-api"
+import {
+  toQuickCollectionCandidate,
+  type QuickCollectionProductRow,
+} from "@/modules/catalog-links/domain/quick-collection-candidate"
 
 export interface QuickCollectionModalProps {
   open: boolean
@@ -71,6 +76,20 @@ export function QuickCollectionModal({
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // `products` từ caller chỉ là 100 mẫu mới nhất → mẫu cũ hơn (vd. bó hoa) không bao giờ lọt vào.
+  // Khi chọn dáng hoa thì hỏi thêm server theo category (giống picker "Thêm sản phẩm") rồi gộp lại.
+  const categoryRes = useApi<{ data: QuickCollectionProductRow[] }>(
+    open && category
+      ? `/api/v1/products?limit=100&status=ACTIVE&category=${encodeURIComponent(category)}`
+      : null
+  )
+  const candidates = useMemo<QuickCollectionCandidate[]>(() => {
+    const extra = (categoryRes.data?.data ?? []).map(toQuickCollectionCandidate)
+    if (extra.length === 0) return products
+    const seen = new Set(products.map((p) => p.id))
+    return [...products, ...extra.filter((p) => !seen.has(p.id))]
+  }, [products, categoryRes.data])
+
   // Compute live match
   const liveResult = useMemo<QuickCollectionResult>(() => {
     const selectedRanges = QUICK_BUDGETS
@@ -90,9 +109,9 @@ export function QuickCollectionModal({
       customerPhone: customerPhone.trim() || undefined,
       refreshSeed: refreshSeed > 0 ? refreshSeed : undefined,
     }
-    return generateQuickCollection(products, criteria)
+    return generateQuickCollection(candidates, criteria)
   }, [
-    products,
+    candidates,
     occasion,
     category,
     flowerType,
