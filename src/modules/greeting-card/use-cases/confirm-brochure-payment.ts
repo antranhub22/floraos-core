@@ -6,6 +6,7 @@ import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { expectedPayment, parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { policyForOrder, readPaymentPlan } from "../domain/payment-plan"
 import { depositAmountVnd } from "../domain/payment-schedule"
+import { balanceCollectionBlocker } from "../domain/balance-collection"
 import { loadPublicSession } from "./brochure-session-access"
 import { queueOrderNotification } from "./notify-customer"
 import { paymentNotifyEvent } from "../domain/customer-notifications"
@@ -259,12 +260,7 @@ export async function coordinatorConfirmDepositPayment(
   return result
 }
 
-/**
- * Phần còn lại (Lần 2) của đơn đặt cọc chỉ được ghi nhận khi khách đã báo chuyển khoản, hoặc
- * đơn đã tới bước được thu: thu trước giao → hoa xong và khách duyệt ảnh (tự duyệt sau 10 phút);
- * thu sau giao → đã giao thành công khi shipper thu tiền mặt; shipper không thu tiền mặt → thu bằng
- * chuyển khoản bất cứ lúc nào (PO 10/10 + 14/10/2026).
- */
+/** Phần còn lại (Lần 2) của đơn đặt cọc — luật chung ở `domain/balance-collection.ts`, 409 nếu chưa thu được. */
 function assertBalanceCollectible(
   order: {
     production_status: string
@@ -274,28 +270,17 @@ function assertBalanceCollectible(
   },
   policy: { requireFullBeforeDispatch: boolean; allowShipperCash?: boolean | undefined }
 ) {
-  if (order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")) return
-  // Shipper không thu tiền mặt (mặc định) → khách chuyển khoản lần 2 bất cứ lúc nào, Điều hành ghi nhận
-  // ngay; không chờ giao xong (tránh kẹt: chưa thu thì chưa giao, chưa giao thì chưa thu) (PO 14/10/2026)
-  if (!policy.requireFullBeforeDispatch && policy.allowShipperCash !== true) return
-  if (!policy.requireFullBeforeDispatch) {
-    if (order.delivery_status !== "DELIVERED") {
-      throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công.")
-    }
-    return
-  }
-  if (order.production_status !== "READY") {
-    throw conflict("Đơn hàng đã được ghi nhận tiền cọc. Phần còn lại chỉ được thu sau khi xưởng hoàn thành cắm hoa và khách xác nhận ảnh.")
-  }
-  const hasPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-  const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-  // Tiệm bỏ qua ảnh thành phẩm → không có ảnh nào để khách duyệt; hoa xong là đủ để thu,
-  // nếu không đơn kẹt vĩnh viễn (chưa thu thì chưa giao, chờ duyệt ảnh không bao giờ có) — soát 14/10/2026
-  if (!productPhotoQc) return
-  const isAutoApproved = !!productPhotoQc && Date.now() >= productPhotoQc.created_at.getTime() + 10 * 60_000
-  if (!hasPhotoApproved && !isAutoApproved) {
-    throw conflict("Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2.")
-  }
+  const blocker = balanceCollectionBlocker(
+    {
+      productionStatus: order.production_status,
+      deliveryStatus: order.delivery_status,
+      customerReported: order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED") ?? false,
+      qcRecords: order.qc_records ?? [],
+    },
+    policy,
+    Date.now()
+  )
+  if (blocker) throw conflict(blocker)
 }
 
 /**

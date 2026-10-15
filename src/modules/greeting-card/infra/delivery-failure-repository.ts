@@ -44,7 +44,7 @@ export class DeliveryFailureRepository {
       const moved = await tx.orders.updateMany({
         where: {
           id: order.id, organization_id: ctx.organizationId, status: { not: "CANCELLED" },
-          delivery_status: { in: ["DISPATCHED", "DELIVERING"] }, total_vnd: total,
+          delivery_status: { in: ["DISPATCHED", "DELIVERING"] }, total_vnd: total, paid_vnd: Number(order.paid_vnd),
         },
         data: {
           delivery_status: "FAILED",

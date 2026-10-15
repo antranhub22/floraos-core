@@ -67,7 +67,8 @@ export class DiscountRepository {
       if (input.approve) {
         if (newTotal < Number(order.paid_vnd)) throw conflict("Khách đã trả nhiều hơn giá sau giảm — hoàn tiền trước rồi mới giảm")
         const moved = await tx.orders.updateMany({
-          where: { id: order.id, organization_id: ctx.organizationId, total_vnd: order.total_vnd, status: { not: "CANCELLED" } },
+          // Khoá cả số đã thu: tiền vào cùng lúc thì `balance_vnd` và luật "không thấp hơn số đã thu" tính sai
+          where: { id: order.id, organization_id: ctx.organizationId, total_vnd: order.total_vnd, paid_vnd: order.paid_vnd, status: { not: "CANCELLED" } },
           data: {
             total_vnd: newTotal,
             balance_vnd: newTotal - Number(order.paid_vnd),
