@@ -17,6 +17,7 @@ import { useProductList } from "@/components/products/use-product-list"
 import { ProductCard, type ProductItem } from "@/components/products/product-card"
 import { ProductTableView } from "@/components/products/product-table-view"
 import { ProductSearchFilterBar } from "@/components/products/product-search-filter-bar"
+import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
 import {
   DEFAULT_FILTER_STATE,
   filterAndSortProducts,
@@ -88,11 +89,12 @@ export default function SanPhamPage() {
     return Array.from(set)
   }, [rawProducts])
 
+  const priceBudgets = usePriceBudgets()
   // Lọc và sắp xếp theo Dịp, Giá, Từ khoá, Danh mục
   const filteredProducts = useMemo(() => {
     if (!rawProducts) return []
-    return filterAndSortProducts(rawProducts, filters)
-  }, [rawProducts, filters])
+    return filterAndSortProducts(rawProducts, filters, priceBudgets)
+  }, [rawProducts, filters, priceBudgets])
 
   const handleResetFilters = () => {
     setFilters(DEFAULT_FILTER_STATE)

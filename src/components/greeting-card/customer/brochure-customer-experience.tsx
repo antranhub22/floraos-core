@@ -229,6 +229,7 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
               showTemplateSwitcher={false}
               templateId={(catalog.filters as Record<string, unknown> | null | undefined)?.templateId as string | undefined}
               displayFields={(catalog.filters as Record<string, unknown> | null | undefined)?.displayFields as OptionalDisplayField[] | undefined}
+              priceBudgets={(catalog.filters as Record<string, unknown> | null | undefined)?.priceBudgets as import("@/lib/product-filter").PriceBudget[] | undefined}
               products={products}
               catalogName={catalog.name}
               selectedProductId={snapshot?.id || session.selectedProductId || null}

@@ -14,7 +14,7 @@ import {
   readPriceBudgets,
   serializePriceBudgets,
   type PriceBudget,
-} from "@/lib/price-budgets"
+} from "@/lib/product-filter"
 
 const FIELD = "h-8 rounded-lg border border-border bg-surface px-2 text-body-sm"
 const toNum = (v: string): number | null => {
@@ -24,8 +24,8 @@ const toNum = (v: string): number | null => {
 const fmt = (n: number | null) => (n === null ? "" : n.toLocaleString("vi-VN"))
 
 /**
- * Khoảng giá lọc nhanh mẫu hoa (Điều hành tự đặt). Dùng ở "Lọc nhanh mẫu hoa",
- * "Tạo bộ sưu tập nhanh" và "Tư vấn theo ngân sách". Khoảng tính từ giá "Từ"
+ * Khoảng giá lọc nhanh (Điều hành tự đặt) — một bộ chung cho mọi màn lọc theo giá
+ * (SSOT `@/lib/product-filter`). Khoảng tính từ giá "Từ"
  * đến dưới giá "Đến"; để trống "Đến" = không giới hạn.
  */
 export function PriceBudgetsSection() {
@@ -83,7 +83,8 @@ export function PriceBudgetsSection() {
         <h3 className="text-title-sm font-extrabold text-foreground">Khoảng giá lọc nhanh mẫu hoa</h3>
       </div>
       <p className="text-body-sm text-text-muted">
-        Các nút khoảng giá khi tìm mẫu hoa, tạo bộ sưu tập nhanh và tư vấn theo ngân sách. Mỗi khoảng tính từ giá “Từ” đến
+        Một bộ khoảng giá dùng chung cho mọi chỗ lọc theo giá: trang Sản phẩm, Báo giá, lọc nhanh mẫu hoa, tạo bộ sưu tập
+        nhanh, tư vấn theo ngân sách và trang bộ sưu tập gửi khách. Mỗi khoảng tính từ giá “Từ” đến
         dưới giá “Đến”; để trống “Đến” nghĩa là không giới hạn.
       </p>
       {!budgets ? (

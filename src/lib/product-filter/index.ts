@@ -40,3 +40,19 @@ export {
   scoreProduct,
   rankProducts,
 } from "./product-filter-engine"
+
+// Khoảng giá lọc nhanh — một bộ chung cho mọi màn tìm/lọc, mỗi cửa hàng tự cấu hình
+export {
+  PRICE_BUDGETS_SETTINGS_KEY,
+  MAX_PRICE_BUDGETS,
+  DEFAULT_PRICE_BUDGETS,
+  formatPriceShort,
+  defaultBudgetLabel,
+  readPriceBudgets,
+  priceBudgetErrors,
+  serializePriceBudgets,
+  generatePriceBudgets,
+  toInclusiveRange,
+  inPriceBudget,
+} from "./price-budgets"
+export type { PriceBudget } from "./price-budgets"

@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SkeletonBlock } from "@/components/ui/skeleton"
+import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
+import { inPriceBudget } from "@/lib/product-filter"
 
 type ProductItem = {
   id: string
@@ -85,6 +87,7 @@ export default function BaoGiaPage() {
   const [activeTab, setActiveTab] = useState<"CUSTOMER" | "PARTNER">("CUSTOMER")
   const [dangTai, setDangTai] = useState(true)
   const [products, setProducts] = useState<ProductItem[]>([])
+  const priceBudgets = usePriceBudgets()
   const [budgetFilter, setBudgetFilter] = useState<string>("ALL")
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL")
   const [selectedIds, setSelectedIds] = useState<string[]>(["p1", "p3", "p4"])
@@ -146,10 +149,8 @@ export default function BaoGiaPage() {
 
   const filteredProducts = products.filter((p) => {
     if (categoryFilter !== "ALL" && p.category !== categoryFilter) return false
-    if (budgetFilter === "UNDER_500" && p.price >= 500000) return false
-    if (budgetFilter === "500_700" && (p.price < 500000 || p.price > 700000)) return false
-    if (budgetFilter === "700_1000" && (p.price < 700000 || p.price > 1000000)) return false
-    if (budgetFilter === "ABOVE_1000" && p.price <= 1000000) return false
+    const budget = priceBudgets.find((b) => b.id === budgetFilter)
+    if (budget && !inPriceBudget(p.price, budget)) return false
     return true
   })
 
@@ -449,13 +450,7 @@ export default function BaoGiaPage() {
                     <div>
                       <span className="text-caption text-text-muted block mb-1.5">Ngân sách mong muốn:</span>
                       <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { id: "ALL", label: "Tất cả mức giá" },
-                          { id: "UNDER_500", label: "Dưới 500K" },
-                          { id: "500_700", label: "500K – 700K" },
-                          { id: "700_1000", label: "700K – 1 Triệu" },
-                          { id: "ABOVE_1000", label: "Trên 1 Triệu" },
-                        ].map((b) => (
+                        {[{ id: "ALL", label: "Tất cả mức giá" }, ...priceBudgets].map((b) => (
                           <button
                             key={b.id}
                             type="button"

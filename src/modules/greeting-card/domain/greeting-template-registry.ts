@@ -13,6 +13,7 @@ import { enabledFieldsFor, readDisplaySettings, type OptionalDisplayField } from
 
 import { resolveAppliedPolicies, type PublicAppliedPolicies } from "./store-policy"
 import { parsePaymentPolicy, resolveRequirePaymentProof } from "./brochure-payment-policy"
+import { readPriceBudgets, type PriceBudget } from "@/lib/product-filter"
 
 export type { GreetingTemplateId, GreetingCardTemplateDef, TemplateCategory }
 export { GREETING_TEMPLATES }
@@ -48,6 +49,8 @@ export function toPublicCatalogFilters(
   displayFields: OptionalDisplayField[]
   appliedPolicies?: PublicAppliedPolicies
   requirePaymentProof: boolean
+  /** Khoảng giá lọc nhanh của cửa hàng — chỉ min/max/nhãn, không lộ khoá cài đặt khác. */
+  priceBudgets: PriceBudget[]
 } | null {
   const rawId = raw && typeof raw === "object" ? (raw as Record<string, unknown>).templateId : undefined
   const templateId = resolveGreetingTemplateId(typeof rawId === "string" ? rawId : null)
@@ -56,6 +59,7 @@ export function toPublicCatalogFilters(
   const paymentPolicy = parsePaymentPolicy(orgSettings)
   const requirePaymentProof = resolveRequirePaymentProof(paymentPolicy, raw)
   if (typeof rawId !== "string" && orgSettings === undefined) return null
-  return { templateId, displayFields, appliedPolicies, requirePaymentProof }
+  const settings = orgSettings && typeof orgSettings === "object" ? (orgSettings as Record<string, unknown>) : null
+  return { templateId, displayFields, appliedPolicies, requirePaymentProof, priceBudgets: readPriceBudgets(settings) }
 }
 

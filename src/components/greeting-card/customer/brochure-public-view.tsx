@@ -235,6 +235,7 @@ export function BrochurePublicView({ catalog, products, shipping }: Props) {
       showTemplateSwitcher={false}
       templateId={(catalog.filters as Record<string, unknown> | null)?.templateId as string | undefined}
       displayFields={(catalog.filters as Record<string, unknown> | null)?.displayFields as OptionalDisplayField[] | undefined}
+      priceBudgets={(catalog.filters as Record<string, unknown> | null)?.priceBudgets as import("@/lib/product-filter").PriceBudget[] | undefined}
       catalogName={catalog.name}
       products={products}
       selectedProductId={selected?.id ?? null}

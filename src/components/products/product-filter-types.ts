@@ -3,6 +3,8 @@
  * và các tiện ích chuẩn hóa tìm kiếm tiếng Việt cho Kho Sản Phẩm Mẫu Hoa FloraOS.
  */
 
+import { DEFAULT_PRICE_BUDGETS, inPriceBudget, type PriceBudget } from "@/lib/product-filter"
+
 export type OccasionId =
   | "all"
   | "chia_buon"
@@ -201,66 +203,20 @@ export const OCCASIONS: readonly OccasionDef[] = [
   },
 ]
 
-export type PriceRangeId =
-  | "all"
-  | "under_500k"
-  | "500k_1m"
-  | "1m_2m"
-  | "over_2m"
-  | "custom"
+/**
+ * Khoảng giá: "all", "custom" hoặc id một khoảng trong bộ chung của cửa hàng
+ * (`@/lib/product-filter` — cùng bộ với lọc nhanh mẫu hoa và trang khách).
+ */
+export type PriceRangeId = string
 
-export interface PriceRangeDef {
-  id: PriceRangeId
-  label: string
-  shortLabel: string
-  min: number | null
-  max: number | null
+/** Lựa chọn trong ô "Giá": Tất cả + các khoảng của cửa hàng + Tùy chọn. */
+export function priceRangeOptions(budgets: readonly PriceBudget[]): { id: PriceRangeId; label: string }[] {
+  return [
+    { id: "all", label: "Tất cả mức giá" },
+    ...budgets.map((b) => ({ id: b.id, label: b.label })),
+    { id: "custom", label: "Tùy chọn khoảng giá..." },
+  ]
 }
-
-export const PRICE_RANGES: readonly PriceRangeDef[] = [
-  {
-    id: "all",
-    label: "Tất cả mức giá",
-    shortLabel: "Tất cả giá",
-    min: null,
-    max: null,
-  },
-  {
-    id: "under_500k",
-    label: "Dưới 500.000 ₫",
-    shortLabel: "< 500k",
-    min: 0,
-    max: 500_000,
-  },
-  {
-    id: "500k_1m",
-    label: "500.000–1.000.000 ₫",
-    shortLabel: "500k - 1tr",
-    min: 500_000,
-    max: 1_000_000,
-  },
-  {
-    id: "1m_2m",
-    label: "1.000.000–2.000.000 ₫",
-    shortLabel: "1tr - 2tr",
-    min: 1_000_000,
-    max: 2_000_000,
-  },
-  {
-    id: "over_2m",
-    label: "Trên 2.000.000 ₫",
-    shortLabel: "> 2tr",
-    min: 2_000_000,
-    max: null,
-  },
-  {
-    id: "custom",
-    label: "Tùy chọn khoảng giá...",
-    shortLabel: "Khoảng giá tùy chọn",
-    min: null,
-    max: null,
-  },
-]
 
 export type SortOptionId =
   | "default"
@@ -366,7 +322,8 @@ export function matchProductPrice(
   price: number | null,
   priceRangeId: PriceRangeId,
   customMin: number | null,
-  customMax: number | null
+  customMax: number | null,
+  budgets: readonly PriceBudget[] = DEFAULT_PRICE_BUDGETS
 ): boolean {
   if (priceRangeId === "all") return true
 
@@ -377,19 +334,16 @@ export function matchProductPrice(
     return true
   }
 
-  const def = PRICE_RANGES.find((p) => p.id === priceRangeId)
+  const def = budgets.find((b) => b.id === priceRangeId)
   if (!def) return true
-
-  if (price === null) return false
-  if (def.min !== null && price < def.min) return false
-  if (def.max !== null && price > def.max) return false
-  return true
+  return inPriceBudget(price, def)
 }
 
 /** Lọc và sắp xếp danh sách sản phẩm */
 export function filterAndSortProducts<T extends MinimalProductItem>(
   products: T[],
-  filters: ProductFilterState
+  filters: ProductFilterState,
+  budgets: readonly PriceBudget[] = DEFAULT_PRICE_BUDGETS
 ): T[] {
   let result = products
 
@@ -430,7 +384,8 @@ export function filterAndSortProducts<T extends MinimalProductItem>(
         p.price_vnd,
         filters.priceRange,
         filters.customMinPrice,
-        filters.customMaxPrice
+        filters.customMaxPrice,
+        budgets
       )
     )
   }

@@ -1,7 +1,9 @@
 /**
  * Trợ giúp lướt bộ sưu tập phía khách: khoảng giá, mẫu tương tự, tin nhắn hỏi tiệm kèm mẫu.
- * Pure TypeScript.
+ * Pure TypeScript. Khoảng giá lấy từ bộ chung của cửa hàng (`@/lib/product-filter`).
  */
+
+import { DEFAULT_PRICE_BUDGETS, inPriceBudget, type PriceBudget } from "@/lib/product-filter"
 
 export interface BrowseProduct {
   id: string
@@ -22,25 +24,28 @@ export interface PriceRange {
   max: number | null
 }
 
-const RANGES: readonly PriceRange[] = [
-  { key: "duoi-500", label: "Dưới 500.000đ", min: 0, max: 500_000 },
-  { key: "500-1tr", label: "500.000đ – 1 triệu", min: 500_000, max: 1_000_000 },
-  { key: "1-2tr", label: "1 – 2 triệu", min: 1_000_000, max: 2_000_000 },
-  { key: "tren-2tr", label: "Trên 2 triệu", min: 2_000_000, max: null },
-]
+const toRanges = (budgets: readonly PriceBudget[]): PriceRange[] =>
+  budgets.map((b) => ({ key: b.id, label: b.label, min: b.min, max: b.max }))
 
 export function inPriceRange(price: number | null, range: PriceRange): boolean {
-  if (price === null) return false
-  return price >= range.min && (range.max === null || price < range.max)
+  return inPriceBudget(price, range)
 }
 
-/** Các khoảng giá có ít nhất một mẫu, kèm số mẫu. */
-export function priceRangesOf(products: readonly BrowseProduct[]): Array<PriceRange & { count: number }> {
-  return RANGES.map((r) => ({ ...r, count: products.filter((p) => inPriceRange(p.price, r)).length })).filter((r) => r.count > 0)
+/** Các khoảng giá (theo cấu hình cửa hàng) có ít nhất một mẫu, kèm số mẫu. */
+export function priceRangesOf(
+  products: readonly BrowseProduct[],
+  budgets: readonly PriceBudget[] = DEFAULT_PRICE_BUDGETS,
+): Array<PriceRange & { count: number }> {
+  return toRanges(budgets)
+    .map((r) => ({ ...r, count: products.filter((p) => inPriceRange(p.price, r)).length }))
+    .filter((r) => r.count > 0)
 }
 
-export function findPriceRange(key: string | null | undefined): PriceRange | null {
-  return RANGES.find((r) => r.key === key) ?? null
+export function findPriceRange(
+  key: string | null | undefined,
+  budgets: readonly PriceBudget[] = DEFAULT_PRICE_BUDGETS,
+): PriceRange | null {
+  return toRanges(budgets).find((r) => r.key === key) ?? null
 }
 
 /** Mẫu còn hàng giống nhất (cùng loại / dịp / màu, giá gần) — dùng khi mẫu đang xem tạm hết. */

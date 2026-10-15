@@ -14,13 +14,14 @@ import {
 } from "lucide-react"
 import {
   OCCASIONS,
-  PRICE_RANGES,
+  priceRangeOptions,
   SORT_OPTIONS,
   type OccasionId,
   type PriceRangeId,
   type ProductFilterState,
   type SortOptionId,
 } from "./product-filter-types"
+import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
 
 export interface ProductSearchFilterBarProps {
   filters: ProductFilterState
@@ -54,7 +55,8 @@ export function ProductSearchFilterBar({
   const [showCustomPrice, setShowCustomPrice] = useState(filters.priceRange === "custom")
 
   const activeOccasionDef = OCCASIONS.find((o) => o.id === filters.occasion)
-  const activePriceDef = PRICE_RANGES.find((p) => p.id === filters.priceRange)
+  const priceOptions = priceRangeOptions(usePriceBudgets())
+  const activePriceDef = priceOptions.find((p) => p.id === filters.priceRange)
 
   const hasActiveFilters =
     filters.search.trim() !== "" ||
@@ -196,7 +198,7 @@ export function ProductSearchFilterBar({
               aria-label="Chọn mức giá"
               className="bg-transparent text-caption font-semibold text-text outline-none cursor-pointer pr-1"
             >
-              {PRICE_RANGES.map((p) => (
+              {priceOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
                 </option>
@@ -338,7 +340,7 @@ export function ProductSearchFilterBar({
             <span className="inline-flex items-center gap-1 rounded-lg bg-primary/10 border border-primary/20 px-2 py-0.5 text-caption font-bold text-primary">
               Giá: {filters.priceRange === "custom"
                 ? `${(filters.customMinPrice ?? 0).toLocaleString("vi-VN")}đ - ${filters.customMaxPrice ? `${filters.customMaxPrice.toLocaleString("vi-VN")}đ` : "..."}`
-                : activePriceDef.shortLabel}
+                : activePriceDef.label}
               <button
                 type="button"
                 onClick={() => {

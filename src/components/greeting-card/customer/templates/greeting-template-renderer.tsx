@@ -33,6 +33,8 @@ interface GreetingTemplateRendererProps {
   embedded?: boolean | undefined
   /** Trường thông tin cửa hàng bật cho mẫu này (mặc định: tất cả) */
   displayFields?: readonly OptionalDisplayField[] | undefined
+  /** Khoảng giá lọc nhanh của cửa hàng (mặc định: bộ chung) */
+  priceBudgets?: readonly import("@/lib/product-filter").PriceBudget[] | undefined
 }
 
 export function GreetingTemplateRenderer({
@@ -46,6 +48,7 @@ export function GreetingTemplateRenderer({
   showTemplateSwitcher = false,
   embedded = false,
   displayFields = DEFAULT_ENABLED_FIELDS,
+  priceBudgets,
 }: GreetingTemplateRendererProps) {
   const [activeTemplate, setActiveTemplate] = useState<GreetingTemplateId>(() =>
     resolveGreetingTemplateId(templateId)
@@ -144,6 +147,7 @@ export function GreetingTemplateRenderer({
           selectedProductId={selectedProductId}
           initialCustomerName={initialCustomerName}
           promotionCta={appliedPolicies?.intakePromotionCta}
+          priceBudgets={priceBudgets}
           onSelectProduct={onSelectProduct}
           styleKey={activeTemplate}
         />

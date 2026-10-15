@@ -12,9 +12,19 @@ describe("collection-browse", () => {
 
   it("chỉ trả khoảng giá có mẫu; mẫu chưa có giá không thuộc khoảng nào", () => {
     const ranges = priceRangesOf([P("a", 300000), P("b", 450000), P("c", 1500000), P("d", null)])
-    expect(ranges.map((r) => [r.key, r.count])).toEqual([["duoi-500", 2], ["1-2tr", 1]])
-    expect(findPriceRange("1-2tr")?.max).toBe(2000000)
+    expect(ranges.map((r) => [r.key, r.count])).toEqual([["b1", 2], ["b4", 1]])
+    expect(findPriceRange("b3")?.max).toBe(1500000)
     expect(findPriceRange("la")).toBeNull()
+  })
+
+  it("dùng khoảng giá cửa hàng cấu hình, cận trên không tính", () => {
+    const shop = [
+      { id: "p1", label: "400k - <600k", min: 400000, max: 600000 },
+      { id: "p2", label: "Từ 600k", min: 600000, max: null },
+    ]
+    const ranges = priceRangesOf([P("a", 400000), P("b", 600000), P("c", 900000), P("d", 100000)], shop)
+    expect(ranges.map((r) => [r.key, r.count])).toEqual([["p1", 1], ["p2", 2]])
+    expect(findPriceRange("p2", shop)?.label).toBe("Từ 600k")
   })
 
   it("mẫu tương tự: bỏ chính nó và mẫu hết hàng, ưu tiên cùng loại và giá gần", () => {

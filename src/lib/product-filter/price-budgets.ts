@@ -116,3 +116,9 @@ export function generatePriceBudgets(from: number, to: number, step: number): Pr
 export function toInclusiveRange(b: PriceBudget): { min: number; max: number; label: string } {
   return { min: b.min, max: b.max === null ? Number.MAX_SAFE_INTEGER : b.max - 1, label: b.label }
 }
+
+/** Giá có thuộc khoảng không (`min ≤ giá < max`); giá `null` (liên hệ) không thuộc khoảng nào. */
+export function inPriceBudget(price: number | null | undefined, b: Pick<PriceBudget, "min" | "max">): boolean {
+  if (price === null || price === undefined) return false
+  return price >= b.min && (b.max === null || price < b.max)
+}

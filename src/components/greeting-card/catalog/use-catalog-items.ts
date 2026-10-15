@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import { filterProducts } from "@/lib/product-filter"
 import type { ProductFilterCriteria } from "@/lib/product-filter"
-import { toInclusiveRange } from "@/lib/price-budgets"
+import { toInclusiveRange } from "@/lib/product-filter"
 import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
 
 export type AvailableProduct = {

@@ -11,7 +11,7 @@ import {
   type QuickCollectionCriteria,
   type QuickCollectionResult,
 } from "@/modules/catalog-links/domain/quick-collection-engine"
-import { toInclusiveRange } from "@/lib/price-budgets"
+import { toInclusiveRange } from "@/lib/product-filter"
 import { usePriceBudgets } from "./use-price-budgets"
 import { QuickCollectionCriteriaPanel, type QuickCollectionCriteriaState } from "./quick-collection-criteria"
 import { QuickCollectionPreview } from "./quick-collection-preview"

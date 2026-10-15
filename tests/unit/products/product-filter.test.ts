@@ -78,27 +78,32 @@ describe("Bộ lọc sản phẩm Mẫu Hoa: Giá, Dịp & Tìm kiếm", () => {
     expect(matchProductOccasion(sampleProducts[2]!, "khai_truong")).toBe(false)
   })
 
-  it("matchProductPrice: lọc các phân khúc giá chuẩn xác", () => {
-    // Dưới 500k
-    expect(matchProductPrice(sampleProducts[2]!.price_vnd, "under_500k", null, null)).toBe(true)
-    expect(matchProductPrice(sampleProducts[3]!.price_vnd, "under_500k", null, null)).toBe(false)
+  it("matchProductPrice: lọc theo bộ khoảng giá chung (mặc định), cận trên không tính", () => {
+    // Dưới 500k (b1)
+    expect(matchProductPrice(sampleProducts[2]!.price_vnd, "b1", null, null)).toBe(true)
+    expect(matchProductPrice(sampleProducts[3]!.price_vnd, "b1", null, null)).toBe(false)
 
-    // 500k - 1tr
-    expect(matchProductPrice(sampleProducts[3]!.price_vnd, "500k_1m", null, null)).toBe(true)
-    expect(matchProductPrice(sampleProducts[4]!.price_vnd, "500k_1m", null, null)).toBe(false)
+    // 500k - 800k (b2)
+    expect(matchProductPrice(sampleProducts[3]!.price_vnd, "b2", null, null)).toBe(true)
 
-    // 1tr - 2tr
-    expect(matchProductPrice(sampleProducts[1]!.price_vnd, "1m_2m", null, null)).toBe(true)
-    expect(matchProductPrice(sampleProducts[4]!.price_vnd, "1m_2m", null, null)).toBe(true)
-    expect(matchProductPrice(sampleProducts[0]!.price_vnd, "1m_2m", null, null)).toBe(false)
-
-    // Trên 2tr
-    expect(matchProductPrice(sampleProducts[0]!.price_vnd, "over_2m", null, null)).toBe(true)
-    expect(matchProductPrice(sampleProducts[1]!.price_vnd, "over_2m", null, null)).toBe(false)
+    // 800k - 1.5tr (b3): 1.500.000 thuộc khoảng sau, không thuộc b3
+    expect(matchProductPrice(sampleProducts[4]!.price_vnd, "b3", null, null)).toBe(false)
+    expect(matchProductPrice(sampleProducts[4]!.price_vnd, "b4", null, null)).toBe(true)
+    expect(matchProductPrice(sampleProducts[0]!.price_vnd, "b4", null, null)).toBe(true)
 
     // Giá null không vào các khoảng giá cụ thể
-    expect(matchProductPrice(sampleProducts[5]!.price_vnd, "under_500k", null, null)).toBe(false)
+    expect(matchProductPrice(sampleProducts[5]!.price_vnd, "b1", null, null)).toBe(false)
     expect(matchProductPrice(sampleProducts[5]!.price_vnd, "all", null, null)).toBe(true)
+  })
+
+  it("matchProductPrice: dùng khoảng giá cửa hàng tự cấu hình", () => {
+    const shop = [
+      { id: "p1", label: "400k - <600k", min: 400_000, max: 600_000 },
+      { id: "p2", label: "Từ 1tr5", min: 1_500_000, max: null },
+    ]
+    expect(matchProductPrice(450_000, "p1", null, null, shop)).toBe(true)
+    expect(matchProductPrice(600_000, "p1", null, null, shop)).toBe(false)
+    expect(matchProductPrice(2_412_000, "p2", null, null, shop)).toBe(true)
   })
 
   it("filterAndSortProducts: lọc kết hợp từ khoá, dịp và giá", () => {
@@ -114,7 +119,7 @@ describe("Bộ lọc sản phẩm Mẫu Hoa: Giá, Dịp & Tìm kiếm", () => {
       ...DEFAULT_FILTER_STATE,
       occasion: "chia_buon",
       priceRange: "1m_2m",
-    })
+    }, [{ id: "1m_2m", label: "1tr - <2tr", min: 1_000_000, max: 2_000_000 }])
     expect(vieng1m2m.map((p) => p.code)).toEqual(["BST-Basic-CB-033"])
 
     // Sắp xếp giá tăng dần

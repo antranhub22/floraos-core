@@ -14,6 +14,7 @@ import { useSavedState } from "../use-saved-state"
 import { JourneyIntro } from "./swipe/journey-intro"
 import { UnavailablePanel } from "./swipe/unavailable-panel"
 import { useCustomerJourney } from "../journey-context"
+import { DEFAULT_PRICE_BUDGETS, type PriceBudget } from "@/lib/product-filter"
 import { customDesignMessage, findPriceRange, inPriceRange, priceRangesOf, productInquiryMessage } from "@/modules/greeting-card/domain/collection-browse"
 
 interface SwipeBrochureEngineProps {
@@ -21,6 +22,8 @@ interface SwipeBrochureEngineProps {
   catalogName: string
   selectedProductId: string | null
   initialCustomerName?: string | null | undefined
+  /** Khoảng giá lọc nhanh của cửa hàng (mặc định: bộ chung) */
+  priceBudgets?: readonly PriceBudget[] | undefined
   promotionCta?: { enabled: boolean; percent: number } | undefined
   onSelectProduct: (product: GreetingCatalogProduct) => void
   /** Số kiểu ("01"…"12") hoặc id mẫu */
@@ -68,6 +71,7 @@ export function SwipeBrochureEngine({
   selectedProductId,
   initialCustomerName,
   promotionCta,
+  priceBudgets = DEFAULT_PRICE_BUDGETS,
   onSelectProduct,
   styleKey = "01",
 }: SwipeBrochureEngineProps) {
@@ -77,7 +81,7 @@ export function SwipeBrochureEngine({
   const contact = useCustomerJourney()
   // Lọc theo khoảng giá (khách chưa ưng mẫu nào ở màn cuối)
   const [priceKey, setPriceKey] = useSavedState<string | null>(embedded ? "preview-price-filter" : "price-filter", null)
-  const range = findPriceRange(priceKey)
+  const range = useMemo(() => findPriceRange(priceKey, priceBudgets), [priceKey, priceBudgets])
   const visible = useMemo(() => (range ? products.filter((p) => inPriceRange(p.price, range)) : products), [products, range])
   // Tim / mẫu đang xem nhớ trên máy khách: tải lại, Back hay mở lại link vẫn giữ nguyên
   const j = useSwipeJourney(visible, catalogName, embedded)
@@ -228,7 +232,7 @@ export function SwipeBrochureEngine({
             onOrder={onSelectProduct}
             onRestart={j.restart}
             onRewind={j.previous}
-            priceRanges={priceRangesOf(products)}
+            priceRanges={priceRangesOf(products, priceBudgets)}
             onPickPriceRange={(key) => {
               setPriceKey(key)
               j.restart()

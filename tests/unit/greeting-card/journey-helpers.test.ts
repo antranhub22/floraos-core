@@ -40,7 +40,7 @@ describe("toPublicCatalogFilters", () => {
   it("chỉ gửi mẫu + trường hiển thị, bỏ bộ lọc nội bộ của bộ sưu tập", () => {
     const out = toPublicCatalogFilters({ templateId: "lookbook-grid", priceMax: 500000 })
     expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: all, requirePaymentProof: true })
-    expect(Object.keys(out ?? {}).sort()).toEqual(["appliedPolicies", "displayFields", "requirePaymentProof", "templateId"])
+    expect(Object.keys(out ?? {}).sort()).toEqual(["appliedPolicies", "displayFields", "priceBudgets", "requirePaymentProof", "templateId"])
     expect(JSON.stringify(out)).not.toContain("priceMax")
   })
   it("đọc cấu hình bật/tắt của cửa hàng cho đúng mẫu, bỏ khoá cài đặt khác", () => {
@@ -48,6 +48,12 @@ describe("toPublicCatalogFilters", () => {
     const out = toPublicCatalogFilters({ templateId: "lookbook-grid" }, settings)
     expect(out).toMatchObject({ templateId: "lookbook-grid", displayFields: ["dimensions"] })
     expect(JSON.stringify(out)).not.toContain("cho_phep_tu_duyet")
+  })
+  it("gửi khoảng giá lọc nhanh của cửa hàng (bộ chung), mặc định khi chưa cấu hình", () => {
+    const settings = { khoang_gia_loc_nhanh: [{ min: 400000, max: 600000 }, { min: 600000, max: null }] }
+    const out = toPublicCatalogFilters({ templateId: "lookbook-grid" }, settings)
+    expect(out?.priceBudgets.map((b) => [b.label, b.min, b.max])).toEqual([["400k - <600k", 400000, 600000], ["Từ 600k", 600000, null]])
+    expect(toPublicCatalogFilters({ templateId: "lookbook-grid" })?.priceBudgets).toHaveLength(4)
   })
   it("trả null khi không có templateId và không có cài đặt cửa hàng", () => {
     expect(toPublicCatalogFilters({ priceMax: 1 })).toBeNull()
