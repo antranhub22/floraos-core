@@ -9,6 +9,7 @@ import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-br
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { quoteBrochureOrder } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 import { getOrderVat, setOrderVat } from "@/modules/greeting-card/use-cases/order-vat"
+import { decideDiscount, requestDiscount } from "@/modules/greeting-card/use-cases/discount-requests"
 
 /** Hoá đơn VAT (PO 15/10/2026): 8%/10%, tổng do máy chủ tính, tổ chức khác nhận 404. */
 
@@ -82,5 +83,13 @@ describe("greeting-card order VAT", () => {
     const orderId = await quotedOrder(a, 1_000_000)
     await prisma.orders.update({ where: { id: orderId }, data: { total_vnd: 0, balance_vnd: 0 } })
     expect(await codeOf(setOrderVat(a.ctx, orderId, { enabled: true, rate: 10 }))).toBe("CONFLICT")
+  })
+
+  it("duyệt giảm giá trên đơn có VAT: giảm tính trên giá trước thuế, VAT tính lại", async () => {
+    const orderId = await quotedOrder(a, 3_300_000)
+    await setOrderVat(a.ctx, orderId, { enabled: true, rate: 10 })
+    const req = await requestDiscount(a.ctx, { orderId, ask: { amountVnd: 300_000 }, reason: "Khách quen" })
+    await decideDiscount(a.ctx, { requestId: req.id, approve: true, note: "" })
+    expect(await getOrderVat(a.ctx, orderId)).toMatchObject({ subtotalVnd: 3_000_000, vatAmountVnd: 300_000, totalVnd: 3_300_000 })
   })
 })

@@ -74,3 +74,31 @@ export function normalizeInvoiceInfo(input: Partial<Record<keyof VatInvoiceInfo,
     email: clean(input.email),
   }
 }
+
+export interface OrderVatColumns {
+  totalVnd: number
+  vatEnabled: boolean
+  vatRate: number
+  vatAmountVnd: number
+}
+
+/**
+ * Giá trước thuế đổi (giảm giá, phụ phí đổi lịch, phí giao lại) → tính lại VAT theo thuế suất
+ * đang chọn để `total_vnd` luôn = giá trước thuế + VAT. Đơn không VAT: tổng = giá trước thuế.
+ */
+export function retotalWithVat(newPreTaxVnd: number, order: Pick<OrderVatColumns, "vatEnabled" | "vatRate">): { totalVnd: number; vatAmountVnd: number } {
+  const preTax = Math.max(0, newPreTaxVnd)
+  const rate: VatRate = isVatRate(order.vatRate) ? order.vatRate : DEFAULT_VAT_RATE
+  const vatAmountVnd = order.vatEnabled ? vatAmountOf(preTax, rate) : 0
+  return { totalVnd: preTax + vatAmountVnd, vatAmountVnd }
+}
+
+/** Đọc cột VAT từ một dòng `orders` (Decimal → number). */
+export function vatColumnsOf(row: { total_vnd: unknown; vat_enabled?: boolean | null; vat_rate?: number | null; vat_amount_vnd?: unknown }): OrderVatColumns {
+  return {
+    totalVnd: Number(row.total_vnd),
+    vatEnabled: row.vat_enabled === true,
+    vatRate: row.vat_rate ?? DEFAULT_VAT_RATE,
+    vatAmountVnd: Number(row.vat_amount_vnd ?? 0),
+  }
+}

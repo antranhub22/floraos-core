@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyVat, normalizeInvoiceInfo, vatAmountOf, vatChangeBlocker } from "@/modules/greeting-card/domain/order-vat"
+import { applyVat, normalizeInvoiceInfo, retotalWithVat, vatAmountOf, vatChangeBlocker } from "@/modules/greeting-card/domain/order-vat"
 
 const base = { status: "CONFIRMED", totalVnd: 3_300_000, paidVnd: 1_600_000, vatAmountVnd: 0 }
 
@@ -30,5 +30,16 @@ describe("order VAT", () => {
     expect(normalizeInvoiceInfo({ companyName: "  Cty A ", taxCode: " 0123 456789 ", email: "" })).toEqual({
       companyName: "Cty A", taxCode: "0123456789", companyAddress: null, email: null,
     })
+  })
+})
+
+describe("retotalWithVat", () => {
+  it("giảm giá/phụ phí đổi giá trước thuế → VAT tính lại theo thuế suất", () => {
+    expect(retotalWithVat(3_000_000, { vatEnabled: true, vatRate: 10 })).toEqual({ totalVnd: 3_300_000, vatAmountVnd: 300_000 })
+    expect(retotalWithVat(3_000_000, { vatEnabled: true, vatRate: 8 })).toEqual({ totalVnd: 3_240_000, vatAmountVnd: 240_000 })
+  })
+
+  it("đơn không VAT giữ nguyên tổng = giá trước thuế", () => {
+    expect(retotalWithVat(3_000_000, { vatEnabled: false, vatRate: 10 })).toEqual({ totalVnd: 3_000_000, vatAmountVnd: 0 })
   })
 })

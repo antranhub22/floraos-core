@@ -1,3 +1,4 @@
+import { retotalWithVat, vatColumnsOf } from "../domain/order-vat"
 import type { Prisma } from "@/generated/prisma/client"
 import { conflict } from "@/core/http/errors"
 import { prisma } from "@/core/tenancy/infra/prisma"
@@ -18,12 +19,15 @@ export class DeliveryFailureRepository {
     order: {
       id: string; code: string; internal_note: string | null; delivery_status: string
       delivery_window: unknown; pricing_rule_ref: unknown; total_vnd: unknown; paid_vnd: unknown
+      vat_enabled?: boolean | null; vat_rate?: number | null; vat_amount_vnd?: unknown
     },
     input: { failure: DeliveryFailureRecord; feeVnd: number },
   ) {
     return this.db.$transaction(async (tx) => {
       const total = Number(order.total_vnd)
-      const newTotal = total + input.feeVnd
+      // Phí giao lại cộng vào giá trước thuế; VAT (nếu có) tính lại
+      const vat = vatColumnsOf(order)
+      const { totalVnd: newTotal, vatAmountVnd } = retotalWithVat(total - vat.vatAmountVnd + input.feeVnd, vat)
       const ref = obj(order.pricing_rule_ref)
       const manual = obj(ref.manualDiscount)
       const nextRef = input.feeVnd > 0
@@ -46,7 +50,7 @@ export class DeliveryFailureRepository {
           delivery_status: "FAILED",
           delivery_window: windowWithFailure(order.delivery_window, input.failure) as Prisma.InputJsonValue,
           internal_note: [order.internal_note, line].filter(Boolean).join("\n"),
-          ...(nextRef ? { total_vnd: newTotal, balance_vnd: newTotal - Number(order.paid_vnd), pricing_rule_ref: nextRef as Prisma.InputJsonValue } : {}),
+          ...(nextRef ? { total_vnd: newTotal, balance_vnd: newTotal - Number(order.paid_vnd), vat_amount_vnd: vatAmountVnd, pricing_rule_ref: nextRef as Prisma.InputJsonValue } : {}),
         },
       })
       if (moved.count === 0) throw conflict("Đơn vừa thay đổi, vui lòng tải lại")
