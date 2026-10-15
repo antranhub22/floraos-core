@@ -42,7 +42,17 @@ function MoreBadge({ count }: { count: number }) {
   )
 }
 
-function LogoMark({ logo, shopName, size }: { logo: string | null; shopName: string | null; size: number }) {
+/** Logo thật của tiệm: đặt trọn trong khung sáng (không cắt — logo chữ ngang vẫn đủ); chưa có logo → chữ cái đầu. */
+function LogoMark({ logo, shopName, size, wide }: { logo: string | null; shopName: string | null; size: number; wide?: boolean }) {
+  if (logo) {
+    const width = wide ? size * 2.6 : size
+    return (
+      <div style={{ display: "flex", padding: size * 0.12, borderRadius: size * 0.18, background: C.cream }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logo} width={width} height={size} style={{ objectFit: "contain" }} alt="" />
+      </div>
+    )
+  }
   return (
     <div
       style={{
@@ -52,19 +62,13 @@ function LogoMark({ logo, shopName, size }: { logo: string | null; shopName: str
         width: size,
         height: size,
         borderRadius: size / 2,
-        overflow: "hidden",
         background: "rgba(251,245,238,0.12)",
         border: `2px solid ${C.champ}`,
         color: C.champ,
         fontSize: size / 2,
       }}
     >
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} width={size} height={size} style={{ objectFit: "cover" }} alt="" />
-      ) : (
-        (shopName?.trim()[0] ?? "✿").toUpperCase()
-      )}
+      {(shopName?.trim()[0] ?? "✿").toUpperCase()}
     </div>
   )
 }
@@ -105,7 +109,7 @@ function EmptyGallery({ logo, shopName }: { logo: string | null; shopName: strin
         backgroundImage: `radial-gradient(circle at 70% 30%, #7A2238 0%, #3A0F1C 55%, ${C.ink} 100%)`,
       }}
     >
-      <LogoMark logo={logo} shopName={shopName} size={150} />
+      <LogoMark logo={logo} shopName={shopName} size={130} wide />
     </div>
   )
 }
@@ -133,8 +137,9 @@ export function renderCatalogCollage(data: CatalogCollageData, init?: ResponseIn
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 34, background: C.bar }} />
 
         <div style={{ position: "absolute", left: 64, top: 66, display: "flex", alignItems: "center", gap: 16 }}>
-          <LogoMark logo={data.logo} shopName={data.shopName} size={58} />
-          {data.shopName && <div style={{ fontSize: 22, letterSpacing: 3, textTransform: "uppercase" }}>{data.shopName}</div>}
+          <LogoMark logo={data.logo} shopName={data.shopName} size={64} wide />
+          {/* Logo thường đã có tên tiệm — chỉ viết tên khi chưa có logo */}
+          {!data.logo && data.shopName && <div style={{ fontSize: 22, letterSpacing: 3, textTransform: "uppercase" }}>{data.shopName}</div>}
         </div>
 
         <div style={{ position: "absolute", left: 64, top: 170, width: 470, display: "flex", flexDirection: "column", gap: 20 }}>
