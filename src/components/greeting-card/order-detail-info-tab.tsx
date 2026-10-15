@@ -6,6 +6,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
 import { OrderPaymentProofView } from "./order-payment-proof-view"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
+import { DEPOSIT_PENDING_APPROVAL_NOTE, isDepositPendingApproval } from "@/modules/greeting-card/domain/deposit-acknowledgement"
 
 export interface OrderDetailInfoTabProps {
   target: OrderDetailModalTarget
@@ -14,6 +15,13 @@ export interface OrderDetailInfoTabProps {
 export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
   const isPaid = (target.paidVnd ?? 0) >= (target.totalVnd ?? 0) && (target.totalVnd ?? 0) > 0
   const isDeposit = (target.paidVnd ?? 0) > 0 && !isPaid
+  const depositPendingApproval = isDepositPendingApproval({
+    status: target.status ?? "",
+    productionStatus: target.productionStatus,
+    totalVnd: target.totalVnd ?? 0,
+    paidVnd: target.paidVnd ?? 0,
+    customerReported: Boolean(target.paymentProofUrl) || target.customerReportedPaid === true,
+  })
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,6 +137,11 @@ export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
             {isPaid ? "Đã thanh toán đủ" : isDeposit ? "Đã thanh toán một phần (Cọc)" : "Chưa thanh toán"}
           </span>
         </div>
+        {depositPendingApproval && (
+          <p role="status" className="mt-1 rounded-xl border border-warning/30 bg-warning-bg/40 p-2.5 text-caption font-bold text-warning-text">
+            ⚠️ {DEPOSIT_PENDING_APPROVAL_NOTE}
+          </p>
+        )}
         {isDeposit && (target.balanceVnd ?? 0) > 0 && (
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warning/30 bg-warning-bg/40 p-2.5">
             <span className="text-caption font-bold text-warning-text">

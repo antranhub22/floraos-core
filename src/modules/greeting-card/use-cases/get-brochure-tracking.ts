@@ -12,6 +12,7 @@ import { latestFailureForCustomer } from "../domain/delivery-failure"
 import { parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { orderPaymentSummary } from "../domain/payment-summary"
 import { paymentInstructionsFor } from "./payment-instructions"
+import { customerVisiblePaidVnd } from "../domain/deposit-acknowledgement"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
@@ -123,8 +124,16 @@ export async function getBrochureTracking(
   const orgSettings = (order as { organization?: { settings?: unknown } }).organization?.settings
   const slaConfig = parseStepSla(orgSettings)
   const timeline = calculateExpectedStepTimeline(deliveryWindow.date, deliveryWindow.timeSlot, slaConfig)
-  const money = { totalVnd: Number(order.total_vnd), paidVnd: Number(order.paid_vnd), pricingRuleRef: order.pricing_rule_ref }
   const policy = parsePaymentPolicy(orgSettings)
+  const ledgerPaidVnd = Number(order.paid_vnd)
+  // Điều phối đã tiếp nhận đơn có bill mà Điều hành chưa ghi sổ → khách vẫn thấy đã nhận khoản Lần 1 (PO 15/10/2026)
+  const customerReported = order.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED" || Boolean(s.payment_proof_asset_id))
+  const paidVnd = customerVisiblePaidVnd(
+    { status: order.status, productionStatus: order.production_status, totalVnd: Number(order.total_vnd), paidVnd: ledgerPaidVnd, customerReported, pricingRuleRef: order.pricing_rule_ref },
+    policy.depositPercent,
+  )
+  const acknowledgedOnly = paidVnd !== ledgerPaidVnd
+  const money = { totalVnd: Number(order.total_vnd), paidVnd, pricingRuleRef: order.pricing_rule_ref }
   const payment = orderPaymentSummary(
     { ...money, status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
     policy.depositPercent,
@@ -140,8 +149,8 @@ export async function getBrochureTracking(
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
       totalVnd: Number(order.total_vnd),
-      paidVnd: Number(order.paid_vnd),
-      balanceVnd: Number(order.balance_vnd),
+      paidVnd,
+      balanceVnd: acknowledgedOnly ? Math.max(0, money.totalVnd - paidVnd) : Number(order.balance_vnd),
       /** `false` = đang xem bản rút gọn; nhập 4 số cuối SĐT người đặt để xem đầy đủ. */
       verified,
       cardMessage: verified ? order.card_message : null,
@@ -166,6 +175,8 @@ export async function getBrochureTracking(
         requirePaymentProof: resolveRequirePaymentProof(policy, catalogFilters),
         balanceInstructions: (() => {
           if (order.status === "CANCELLED" || payment.remainingVnd <= 0) return null
+          // Cọc mới được Điều phối xác nhận: chưa đòi phần còn lại cho tới khi đến hạn
+          if (acknowledgedOnly && !payment.balanceDue) return null
           // Thu trước giao + đang chờ khách duyệt ảnh (và đã cọc) → hoãn hiện QR lần 2
           if (policy.requireFullBeforeDispatch && photoApproval.status === "PENDING" && payment.paidVnd > 0) return null
           return paymentInstructionsFor(orgSettings, money, order.code)

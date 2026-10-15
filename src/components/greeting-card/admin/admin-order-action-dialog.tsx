@@ -91,6 +91,26 @@ export function AdminOrderActionDialog({
   const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Điều hành cảnh báo khoản Lần 1 khách đã báo nhưng tiền chưa về (PO 15/10/2026)
+  const canRejectReported = type === "collect" && order.paid_vnd === 0 && (isReported || Boolean(order.paymentProofUrl))
+  const [rejecting, setRejecting] = useState(false)
+  const [rejectReason, setRejectReason] = useState("")
+
+  async function rejectReported() {
+    if (busy) return
+    setBusy(true)
+    setError(null)
+    try {
+      await apiSend(`/api/v1/greeting-card/orders/${order.id}/reject-reported-payment`, "POST", {
+        ...(rejectReason.trim() ? { reason: rejectReason.trim() } : {}),
+      }, "Không gửi được cảnh báo")
+      onDone({ message: `Đã cảnh báo chưa nhận được tiền cho đơn ${order.code}. Trang của khách quay lại chờ chuyển khoản.` })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Thao tác không thành công")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   let dialogTitle: string = TITLES[type]
   let amountLabel = "Số tiền đã nhận (đ)"
@@ -235,7 +255,25 @@ export function AdminOrderActionDialog({
             />
           </label>
         )}
+        {canRejectReported && rejecting && (
+          <div role="alert" className="p-3.5 rounded-xl bg-danger-bg border border-danger/30 flex flex-col gap-2">
+            <span className="font-bold text-caption text-danger">Chưa nhận được tiền khách báo chuyển?</span>
+            <p className="text-body-sm text-foreground/80">Trang của khách sẽ quay lại chờ chuyển khoản và hiện lại mã QR. Sự việc được ghi vào lịch sử đơn.</p>
+            <input value={rejectReason} maxLength={500} onChange={(e) => setRejectReason(e.target.value)} placeholder="Lý do (vd: bill sai tài khoản, chuyển thiếu)" aria-label="Lý do chưa nhận được tiền" className={FIELD} />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setRejecting(false)} disabled={busy}>Quay lại</Button>
+              <Button type="button" variant="secondary" onClick={() => void rejectReported()} disabled={busy} className="bg-danger hover:bg-danger/90 text-white">
+                {busy ? "Đang xử lý..." : "Xác nhận chưa nhận được tiền"}
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="flex justify-end gap-2">
+          {canRejectReported && !rejecting && (
+            <Button type="button" variant="outline" onClick={() => setRejecting(true)} className="mr-auto text-danger border-danger/40">
+              <AlertTriangle size={14} aria-hidden="true" /> Chưa nhận được tiền
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={onClose}>Đóng</Button>
           <Button
             type="submit"
