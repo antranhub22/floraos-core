@@ -1,6 +1,7 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
+import { resolveCoordinatorId } from "../domain/coordinator-owner"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
@@ -58,28 +59,19 @@ export class BrochureOrderRepository {
         coordination: { select: { coordinator_id: true } },
         assignments: { take: 1, select: { assignee_id: true, assigned_by: true }, orderBy: { assigned_at: "desc" as const } },
         events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
+        qc_records: { select: { inspector_id: true } },
       },
       orderBy: [{ created_at: "asc" }, { id: "asc" }],
       take: options.max,
     })
     const userIds = rows
-      .flatMap((o) => [
-        o.greeting_sessions[0]?.sale_id,
-        o.coordination?.coordinator_id,
-        o.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id,
-        o.assignments[0]?.assigned_by,
-      ])
+      .flatMap((o) => [o.greeting_sessions[0]?.sale_id, resolveCoordinatorId(o)])
       .filter((id): id is string => Boolean(id))
     const names = await this.memberNames(ctx, userIds)
 
     return rows.map((o) => {
       const saleId = o.greeting_sessions[0]?.sale_id ?? null
-      const rawCoordId =
-        o.coordination?.coordinator_id ||
-        o.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id ||
-        o.assignments[0]?.assigned_by ||
-        null
-      const coordinatorId = rawCoordId ?? null
+      const coordinatorId = resolveCoordinatorId(o)
       const saleName = saleId ? names.get(saleId) ?? "Nhân viên đã rời" : "Chưa gán"
       const coordinatorName = coordinatorId ? names.get(coordinatorId) ?? "Nhân viên đã rời" : "Chưa gán"
 

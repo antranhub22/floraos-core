@@ -16,6 +16,7 @@ import {
 } from "../domain/tracking-pipeline-types"
 import { dismissalOf } from "../domain/dismissal-policy"
 import { orderProductView, productImagesFor } from "./order-product-views"
+import { resolveCoordinatorId } from "../domain/coordinator-owner"
 
 /** Trường JSON lỏng (ảnh chụp mẫu, địa chỉ, khung giờ, metadata ghi chú) — đọc phòng thủ, không `any`. */
 type LooseJson = {
@@ -170,12 +171,7 @@ export async function loadTrackingDataset(
       ["ASSIGNED", "ARRANGING", "QUALITY_CHECK", "READY", "DONE"].includes(order.production_status) ||
       ["DISPATCHED", "DELIVERING", "DELIVERED", "FAILED"].includes(order.delivery_status)
 
-    const rawCoordId =
-      order.coordination?.coordinator_id ||
-      order.events.find((e) => (e.axis === "production" || e.axis === "delivery") && e.actor_id)?.actor_id ||
-      order.qc_records[0]?.inspector_id ||
-      order.assignments[0]?.assigned_by ||
-      null
+    const rawCoordId = resolveCoordinatorId(order)
 
     const coordinatorId = rawCoordId ? ownerOf(rawCoordId) ?? rawCoordId : null
     const coordinatorName = coordinatorId
