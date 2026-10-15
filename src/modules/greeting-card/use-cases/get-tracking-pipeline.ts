@@ -15,6 +15,7 @@ import {
   type TrackingStepState,
 } from "../domain/tracking-pipeline-types"
 import { dismissalOf } from "../domain/dismissal-policy"
+import { orderProductView, productImagesFor } from "./order-product-views"
 
 /** Trường JSON lỏng (ảnh chụp mẫu, địa chỉ, khung giờ, metadata ghi chú) — đọc phòng thủ, không `any`. */
 type LooseJson = {
@@ -143,13 +144,12 @@ export async function loadTrackingDataset(
   ].filter((id): id is string => typeof id === "string" && id.length > 0)
 
   const proofUrls = await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
-  const productIdOf = (o: (typeof orders)[number]) => o.items[0]?.product_id ?? o.greeting_sessions[0]?.selected_product_id ?? ""
-  const productImages = await repo.productMainImages(ctx, [...orders.map(productIdOf), ...activeSessions.map((s) => s.selected_product_id ?? "")])
+  const productImages = await productImagesFor(ctx, [...orders, ...activeSessions.map((s) => ({ items: [], greeting_sessions: [s] }))], repo)
 
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
     const session = order.greeting_sessions[0]
-    const snapshot = session?.product_snapshot ? loose(session.product_snapshot) : loose(order.items[0]?.metadata)
+    const product = orderProductView(order, productImages, "Mẫu hoa Thẻ chào")
     const deliveryAddress = loose(order.delivery_address)
     const deliveryWindow = loose(order.delivery_window)
 
@@ -224,9 +224,9 @@ export async function loadTrackingDataset(
       deliveryFailed: order.delivery_status === "FAILED",
       saleName: saleNameOf(session?.sale_id),
       cardMessage: order.card_message ?? null,
-      productName: snapshot?.name || order.items[0]?.description || "Mẫu hoa Thẻ chào",
-      productPrice: Number(snapshot?.price || order.items[0]?.unit_price_vnd || 0),
-      productImageUrl: snapshot?.imageUrl || productImages.get(productIdOf(order)) || null,
+      productName: product.name,
+      productPrice: product.price,
+      productImageUrl: product.imageUrl,
       totalVnd: Number(order.total_vnd || 0),
       paidVnd: Number(order.paid_vnd || 0),
       balanceVnd: Number(order.balance_vnd || 0),
@@ -266,7 +266,7 @@ export async function loadTrackingDataset(
     // Link riêng chưa sao chép = chưa gửi khách: chưa tính giờ "khách chưa mở"
     const notSent = session.status === "CREATED" && facts.kind === "PERSONAL" && !facts.copiedAt
     const startedAt = session.status === "CREATED" && facts.copiedAt ? facts.copiedAt : sessionStepStartedAt(session)
-    const snapshot = loose(session.product_snapshot)
+    const product = orderProductView({ items: [], greeting_sessions: [session] }, productImages, "Chưa chốt mẫu")
     const currentStepId = resolveSessionStep({
       status: session.status,
       opened_at: session.opened_at,
@@ -289,7 +289,7 @@ export async function loadTrackingDataset(
       }
     })
 
-    const sessionDismissal = dismissalOf((snapshot as Record<string, unknown>)._dismissal)
+    const sessionDismissal = dismissalOf((loose(session.product_snapshot) as Record<string, unknown>)._dismissal)
     const isSessionCancelled = sessionDismissal?.status === "APPROVED" || session.revoked_at !== null || (session.expires_at !== null && session.expires_at <= now)
     const sessionCancelReason = sessionDismissal?.status === "APPROVED" ? sessionDismissal.reason || "Đã bỏ hiển thị"
       : !isSessionCancelled ? null
@@ -313,12 +313,12 @@ export async function loadTrackingDataset(
       deliveryDate: null,
       saleName: saleNameOf(session.sale_id),
       cardMessage: null,
-      productName: snapshot?.name || "Chưa chốt mẫu",
-      productPrice: Number(snapshot?.price || 0),
-      productImageUrl: snapshot?.imageUrl || productImages.get(session.selected_product_id ?? "") || null,
-      totalVnd: Number(snapshot?.price || 0),
+      productName: product.name,
+      productPrice: product.price,
+      productImageUrl: product.imageUrl,
+      totalVnd: product.price,
       paidVnd: 0,
-      balanceVnd: Number(snapshot?.price || 0),
+      balanceVnd: product.price,
       currentStepId,
       currentStepTitle: isSessionCancelled
         ? (sessionCancelReason ?? "Link đã huỷ / hết hạn")

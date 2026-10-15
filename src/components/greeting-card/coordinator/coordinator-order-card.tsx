@@ -9,6 +9,7 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
 import { WorkStatus } from "@/components/greeting-card/work/work-status"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { OrderProductView } from "@/modules/greeting-card/domain/order-product-view"
 import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
 import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
 import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
@@ -38,6 +39,8 @@ export interface BrochureOrder {
   pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
   saleId?: string | null; saleName?: string | null; coordinatorId?: string | null; coordinatorName?: string | null
   payment_proof_url?: string | null; payment_proof_balance_url?: string | null; created_at: string
+  /** Thông tin mẫu hoa dựng sẵn ở server (SSOT) — chỉ đọc trường này để hiện mẫu. */
+  product: OrderProductView
 }
 
 export type ModalState =
@@ -83,7 +86,7 @@ export function CoordinatorOrderCard({
   workflowPolicy?: BrochureWorkflowPolicy | undefined
 }) {
   const session = order.greeting_sessions[0]
-  const snapshot = session?.product_snapshot || order.items[0]?.metadata
+  const { product } = order
   const recipient = order.delivery_address?.recipientName || "Khách nhận"
   const phone = order.delivery_address?.phone || ""
   const address = order.delivery_address?.street || ""
@@ -157,8 +160,8 @@ export function CoordinatorOrderCard({
       {/* Product */}
       <div className="flex gap-3.5 items-start">
         <FlowerImage
-          src={snapshot?.imageUrl}
-          alt={snapshot?.name || "Mẫu hoa"}
+          src={product.imageUrl}
+          alt={product.name}
           sizes="80px"
           fallback="icon"
           className="w-20 h-20 rounded-xl border border-border shrink-0"
@@ -166,7 +169,7 @@ export function CoordinatorOrderCard({
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="text-caption text-text-muted font-medium">Mẫu khách chọn:</div>
           <div className="text-body font-bold text-foreground truncate">
-            {snapshot?.name || order.items[0]?.description || "Hoa tươi theo mẫu"}
+            {product.name}
           </div>
           <div className="flex flex-wrap gap-2 mt-0.5">
             <span className="text-caption px-2 py-0.5 rounded-full bg-surface-muted text-text-muted border border-border">

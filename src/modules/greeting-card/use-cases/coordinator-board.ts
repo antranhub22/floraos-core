@@ -3,7 +3,7 @@ import { log } from "@/core/observability/log"
 import { COORDINATOR_BOARD_MAX, DONE_VISIBLE_MS, sortByDelivery } from "../domain/coordinator-board"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
-import { withOrderProductImages } from "./order-product-images"
+import { withOrderProduct } from "./order-product-views"
 import { resolveSaleScope } from "./order-scope"
 
 /**
@@ -42,6 +42,6 @@ export async function getCoordinatorBoard(ctx: TenantContext, input: { date?: st
       : null,
   }))
 
-  // Ảnh chụp mẫu thiếu ảnh → bù ảnh hiện tại trong kho (cùng nguồn với bảng theo dõi)
-  return { data: sortByDelivery(await withOrderProductImages(ctx, rowsWithProof)), truncated }
+  // `product`: thông tin mẫu hoa dựng một chỗ (SSOT, cùng nguồn với bảng theo dõi)
+  return { data: sortByDelivery(await withOrderProduct(ctx, rowsWithProof)), truncated }
 }

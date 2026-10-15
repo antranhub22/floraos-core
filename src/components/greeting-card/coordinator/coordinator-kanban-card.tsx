@@ -40,7 +40,7 @@ export function CoordinatorKanbanCard({
   onOpenDetail,
   workflowPolicy,
 }: CoordinatorKanbanCardProps) {
-  const snapshot = o.greeting_sessions[0]?.product_snapshot || o.items[0]?.metadata
+  const { product } = o
   const isStuck = work?.stuck?.owner === "COORDINATOR"
 
   const isUrgent = isUrgentOrder({
@@ -136,15 +136,15 @@ export function CoordinatorKanbanCard({
 
         <div className="flex gap-2 items-center w-full">
           <FlowerImage
-            src={snapshot?.imageUrl}
-            alt={snapshot?.name || "Mẫu"}
+            src={product.imageUrl}
+            alt={product.name}
             sizes="40px"
             fallback="icon"
             className="w-10 h-10 rounded-lg border border-border shrink-0"
           />
           <div className="flex-1 min-w-0">
             <p className="text-caption font-semibold text-foreground truncate">
-              {snapshot?.name || o.items[0]?.description || "Hoa tươi theo mẫu"}
+              {product.name}
             </p>
             <p className="text-caption text-text-muted truncate">
               Nhận: {o.delivery_address?.recipientName || "Khách nhận"}
