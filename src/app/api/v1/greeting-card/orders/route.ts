@@ -23,10 +23,11 @@ export const GET = handle(async (request) => {
   const { limit, cursor } = parseListQuery(url)
   const q = url.searchParams.get("q")?.trim().slice(0, 40) || undefined
   const reported = url.searchParams.get("reported") === "1"
+  const delivered = url.searchParams.get("delivered") === "1"
 
   const repo = new BrochureOrderRepository()
   const saleId = (await resolveSaleScope(ctx)) ?? undefined
-  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, limit, cursor })
+  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, delivered, limit, cursor })
 
   // Batch-resolve ảnh chuyển khoản và kết quả phân tích AI (tránh N+1) — chỉ ký asset của đúng tổ chức
   const proofAssetIds = rows

@@ -7,8 +7,9 @@ import { CoordinatorActionModal } from "./coordinator-action-modal"
 import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coordinator-order-card"
 import { CoordinatorKanbanView } from "./coordinator-kanban-view"
 import { useApi } from "@/components/greeting-card/greeting-api"
+import { PendingCancellationPanel } from "@/components/greeting-card/admin/pending-cancellation-panel"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import { parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
+import { canBypassDeliveryPhoto, canBypassFinishedPhoto, parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import { BrochureOrderDetailModal } from "@/components/greeting-card/brochure-order-detail-modal"
@@ -21,7 +22,7 @@ function vnDate(addDays = 0): string {
   return new Date(Date.now() + addDays * 86_400_000).toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" })
 }
 
-export function CoordinatorBrochureTab() {
+export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { canDecideInTransitCancel?: boolean } = {}) {
   // Bảng việc: MỌI đơn còn việc (không cắt trang), máy chủ đã xếp theo ngày + giờ giao gần nhất
   const [day, setDay] = useState<string>("")
   const [search, setSearch] = useState<string>("")
@@ -83,6 +84,8 @@ export function CoordinatorBrochureTab() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Đề xuất huỷ đơn đang giao — Điều phối được duyệt (PO 15/10/2026) */}
+      {canDecideInTransitCancel && <PendingCancellationPanel />}
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm">
         <div>
@@ -258,6 +261,7 @@ export function CoordinatorBrochureTab() {
         <CoordinatorActionModal
           key={`${modal.type}:${modal.orderId}`}
           modal={modal}
+          allowSkipPhoto={{ "product-photo": canBypassFinishedPhoto(workflowPolicy), "recipient-photo": canBypassDeliveryPhoto(workflowPolicy) }}
           onClose={() => setModal({ type: "none" })}
           onDone={() => {
             setModal({ type: "none" })

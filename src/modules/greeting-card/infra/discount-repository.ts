@@ -1,3 +1,4 @@
+import { retotalWithVat, vatColumnsOf } from "../domain/order-vat"
 import { randomUUID } from "node:crypto"
 import type { Prisma } from "@/generated/prisma/client"
 import { conflict, notFound } from "@/core/http/errors"
@@ -18,11 +19,12 @@ export class DiscountRepository {
   async orderBase(ctx: TenantContext, orderId: string) {
     const o = await this.db.orders.findFirst({
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
-      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, pricing_rule_ref: true },
+      select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, pricing_rule_ref: true, vat_amount_vnd: true },
     })
     if (!o) return null
     const manual = obj(obj(o.pricing_rule_ref).manualDiscount)
-    const base = typeof manual.baseTotalVnd === "number" ? manual.baseTotalVnd : Number(o.total_vnd)
+    // Gốc tính giảm là giá TRƯỚC thuế — VAT không bị tính phần trăm giảm
+    const base = typeof manual.baseTotalVnd === "number" ? manual.baseTotalVnd : Number(o.total_vnd) - Number(o.vat_amount_vnd)
     return { id: o.id, code: o.code, status: o.status, totalVnd: Number(o.total_vnd), paidVnd: Number(o.paid_vnd), baseTotalVnd: base }
   }
 
@@ -51,15 +53,17 @@ export class DiscountRepository {
       if (payload.status !== "PENDING") throw conflict("Yêu cầu này đã được xử lý")
       const order = await tx.orders.findFirst({
         where: scopedWhere(ctx, { id: req.order_id }),
-        select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, pricing_rule_ref: true },
+        select: { id: true, code: true, status: true, total_vnd: true, paid_vnd: true, pricing_rule_ref: true, vat_enabled: true, vat_rate: true, vat_amount_vnd: true },
       })
       if (!order) throw notFound()
       if (input.approve && order.status === "CANCELLED") throw conflict("Đơn đã huỷ, không áp giảm giá được")
 
       const ref = obj(order.pricing_rule_ref)
       const prevManual = obj(ref.manualDiscount)
-      const base = typeof prevManual.baseTotalVnd === "number" ? prevManual.baseTotalVnd : Number(order.total_vnd)
-      const newTotal = base - input.approvedVnd
+      // Giảm giá tính trên giá TRƯỚC thuế; VAT (nếu có) tính lại trên giá sau giảm
+      const vat = vatColumnsOf(order)
+      const base = typeof prevManual.baseTotalVnd === "number" ? prevManual.baseTotalVnd : vat.totalVnd - vat.vatAmountVnd
+      const { totalVnd: newTotal, vatAmountVnd } = retotalWithVat(base - input.approvedVnd, vat)
       if (input.approve) {
         if (newTotal < Number(order.paid_vnd)) throw conflict("Khách đã trả nhiều hơn giá sau giảm — hoàn tiền trước rồi mới giảm")
         const moved = await tx.orders.updateMany({
@@ -67,6 +71,7 @@ export class DiscountRepository {
           data: {
             total_vnd: newTotal,
             balance_vnd: newTotal - Number(order.paid_vnd),
+            vat_amount_vnd: vatAmountVnd,
             pricing_rule_ref: {
               ...ref,
               manualDiscount: {

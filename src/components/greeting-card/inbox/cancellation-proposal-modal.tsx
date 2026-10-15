@@ -5,6 +5,8 @@ import { AlertTriangle, Loader2, X, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiSend } from "@/components/greeting-card/greeting-api"
 import {
+  IN_TRANSIT_CANCEL_WARNING,
+  isInTransit,
   CANCELLATION_TYPE_LABEL,
   type CancellationType,
   validateCancellationProposal,
@@ -15,6 +17,8 @@ interface Props {
   orderCode: string
   totalVnd: number
   paidVnd: number
+  /** Đơn đang giao → hiện cảnh báo shipper đang trên đường */
+  deliveryStatus?: string | null | undefined
   onClose: () => void
   onSuccess: () => void
 }
@@ -24,6 +28,7 @@ export function CancellationProposalModal({
   orderCode,
   totalVnd,
   paidVnd,
+  deliveryStatus,
   onClose,
   onSuccess,
 }: Props) {
@@ -110,6 +115,9 @@ export function CancellationProposalModal({
           <strong className="text-success">{paidVnd.toLocaleString("vi-VN")}đ</strong>
         </p>
 
+        {isInTransit(deliveryStatus) && (
+          <p role="alert" className="rounded-xl bg-warning-bg p-3 text-body-sm font-semibold text-warning-text">⚠ {IN_TRANSIT_CANCEL_WARNING}. Đề xuất cần Điều hành hoặc Điều phối khác duyệt.</p>
+        )}
         {error && (
           <div role="alert" className="p-3 mb-4 rounded-xl bg-danger-bg text-danger text-body-sm font-semibold">
             {error}

@@ -10,10 +10,11 @@ import {
   DELIVERY_FAILURE_LABEL, deliveryFailureError, parseRedeliveryFee, redeliveryFeeFor, type DeliveryFailureReason,
 } from "../domain/delivery-failure"
 import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
+import { orderPhotoApproval, photoApprovalDispatchBlocker } from "../domain/photo-approval"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
 import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
-import { canRoleApproveDeposit, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
+import { canBypassDeliveryPhoto, canBypassFinishedPhoto, canRoleApproveDeposit, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -42,7 +43,20 @@ async function loadForAction(
     paidVnd: Number(order.paid_vnd),
   })
   if (moneyBlocker) throw conflict(moneyBlocker)
+  if (action === "dispatch-shipping") {
+    const approval = orderPhotoApproval(order, shop.settings, policy.productPhotoReviewMinutes, new Date())
+    const waiting = photoApprovalDispatchBlocker(approval)
+    if (waiting) throw conflict(waiting)
+  }
   return order
+}
+
+
+/** Gói Nghiêm ngặt bắt buộc ảnh — gọi thẳng API bỏ qua ảnh cũng bị chặn (PO 15/10/2026). */
+async function assertSkipAllowed(ctx: TenantContext, kind: "product" | "recipient") {
+  const workflow = parseBrochureWorkflowPolicy((await new GreetingCardRepository().getShopProfile(ctx.organizationId)).settings)
+  const allowed = kind === "product" ? canBypassFinishedPhoto(workflow) : canBypassDeliveryPhoto(workflow)
+  if (!allowed) throw conflict(kind === "product" ? "Tiệm bắt buộc ảnh thành phẩm — không bỏ qua được" : "Tiệm bắt buộc ảnh bàn giao — không bỏ qua được")
 }
 
 /** Đầu vào ảnh: `assetIds` (1–5 ảnh + 0–2 video) hoặc `assetId` (client cũ, một ảnh), hoặc bỏ qua nếu giao gấp. */
@@ -89,6 +103,7 @@ export async function uploadBrochureProductPhoto(
 ) {
   const order = await loadForAction(ctx, orderId, "product-photo", repo)
   if (input.skipPhoto) {
+    await assertSkipAllowed(ctx, "product")
     const result = await repo.applyProgress(ctx, order, {
       eventType: "PRODUCT_PHOTO_SKIPPED",
       productionStatus: "READY",
@@ -131,6 +146,7 @@ export async function uploadBrochureRecipientPhoto(
 ) {
   const order = await loadForAction(ctx, orderId, "recipient-photo", repo)
   if (input.skipPhoto) {
+    await assertSkipAllowed(ctx, "recipient")
     const result = await repo.applyProgress(ctx, order, {
       eventType: "RECIPIENT_PHOTO_SKIPPED",
       deliveryStatus: "DELIVERED",

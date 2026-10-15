@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   canProposeCancellation,
-  decisionCapabilities,
+  canDecideCancellation,
   resolveRefundVnd,
   validateCancellationProposal,
 } from "@/modules/greeting-card/domain/cancellation-request"
@@ -23,28 +23,40 @@ describe("resolveRefundVnd — máy chủ tự tính số hoàn", () => {
   })
 })
 
-describe("decisionCapabilities — trần cứng điều hành", () => {
+describe("canDecideCancellation — duyệt huỷ không chuyển tiền (PO 15/10/2026)", () => {
   const caps = GREETING_CARD_CAPABILITY
-  it("hủy đơn đòi R6, hoàn tiền đòi R10, hủy + hoàn đòi cả hai", () => {
-    expect(decisionCapabilities("CANCEL_ONLY", caps)).toEqual(["R6"])
-    expect(decisionCapabilities("PARTIAL_REFUND", caps)).toEqual(["R10"])
-    expect(decisionCapabilities("FULL_REFUND", caps)).toEqual(["R6", "R10"])
+  const who = (codes: string[], userId = "u1") => ({ capabilities: new Set(codes), userId })
+  it("huỷ đơn cần R6; chỉ hoàn một phần cần R10", () => {
+    expect(canDecideCancellation("CANCEL_ONLY", who(["R6"]), { inTransit: false, requesterId: "s" }, caps)).toBeNull()
+    expect(canDecideCancellation("FULL_REFUND", who(["R6"]), { inTransit: false, requesterId: "s" }, caps)).toBeNull()
+    expect(canDecideCancellation("PARTIAL_REFUND", who(["R6"]), { inTransit: false, requesterId: "s" }, caps)).not.toBeNull()
+    expect(canDecideCancellation("PARTIAL_REFUND", who(["R10"]), { inTransit: false, requesterId: "s" }, caps)).toBeNull()
+  })
+  it("đơn đang giao: Điều phối (R5) duyệt được, nhưng không tự duyệt đề xuất của mình", () => {
+    expect(canDecideCancellation("CANCEL_ONLY", who(["R5"]), { inTransit: false, requesterId: "s" }, caps)).not.toBeNull()
+    expect(canDecideCancellation("FULL_REFUND", who(["R5"]), { inTransit: true, requesterId: "s" }, caps)).toBeNull()
+    expect(canDecideCancellation("CANCEL_ONLY", who(["R5"], "s"), { inTransit: true, requesterId: "s" }, caps)).toContain("chính mình")
   })
 })
 
 describe("canProposeCancellation & rào chắn trước khi cắm hoa", () => {
+  it("đơn đang giao vẫn đề xuất huỷ được (cần người duyệt, PO 15/10/2026)", () => {
+    expect(canProposeCancellation({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "DELIVERING" }).allowed).toBe(true)
+    expect(canProposeCancellation({ status: "PROCESSING", productionStatus: "READY", deliveryStatus: "PENDING" }).allowed).toBe(true)
+  })
+
   it("cho phép đề xuất khi đơn WAITING (chưa cắm hoa)", () => {
     expect(canProposeCancellation({ status: "CONFIRMED", productionStatus: "WAITING" }).allowed).toBe(true)
     expect(canProposeCancellation({ status: "CONFIRMED" }).allowed).toBe(true)
   })
 
-  it("chặn đề xuất khi đơn đang cắm hoa (ARRANGING) hoặc đã cắm xong (READY)", () => {
+  it("chặn đề xuất khi thợ đang cắm (ARRANGING); đã cắm xong chưa giao (READY) thì được (PO 15/10/2026)", () => {
     const arranging = canProposeCancellation({ status: "CONFIRMED", productionStatus: "ARRANGING" })
     expect(arranging.allowed).toBe(false)
     expect(arranging.reason).toMatch(/cắm/i)
 
     const ready = canProposeCancellation({ status: "CONFIRMED", productionStatus: "READY" })
-    expect(ready.allowed).toBe(false)
+    expect(ready.allowed).toBe(true)
   })
 
   it("chặn đề xuất khi đơn đã giao hoàn tất hoặc đã hủy", () => {

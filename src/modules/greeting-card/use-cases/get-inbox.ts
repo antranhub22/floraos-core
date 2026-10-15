@@ -13,6 +13,7 @@ import { describeDiscount, parseMaxDiscountPercent, type DiscountPayload } from 
 import { getCurrentOrganization } from "@/modules/organization/use-cases/get-current-organization"
 import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
 import { changeRequestActions } from "./order-change"
+import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 
 export interface InboxThread {
   key: string
@@ -77,8 +78,8 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
       const due = r.payload.followUp?.refundDueVnd ?? 0
       actions.unshift({
         id: `cancel-follow-up:${r.id}`, kind: "CANCELLATION_FOLLOW_UP",
-        title: due > 0 ? `Đơn tự huỷ — cần hoàn ${due.toLocaleString("vi-VN")}đ cho khách` : "Đơn tự huỷ — cần liên hệ khách",
-        detail: `Đơn #${item?.orderCode ?? r.payload.orderCode} · quá hạn chưa duyệt đề xuất từ chối nhận đơn`,
+        title: due > 0 ? `Cần hoàn tiền ${due.toLocaleString("vi-VN")}đ cho khách` : "Đơn tự huỷ — cần liên hệ khách",
+        detail: `Đơn #${item?.orderCode ?? r.payload.orderCode} · ${r.payload.autoApproved ? "tự huỷ do quá hạn chưa duyệt đề xuất từ chối nhận đơn" : "đề xuất huỷ/hoàn đã duyệt — chuyển tiền rồi bấm xác nhận"}`,
         orderId: r.order_id, sessionId: item?.sessionId || null, customerName: item?.customerName ?? null,
         imageUrl: item?.productImageUrl ?? null, tab: "payment", urgency: 2600,
         followUp: { requestId: r.id, refundDueVnd: due, reason: r.payload.reason },
@@ -103,6 +104,23 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
       actions.unshift({
         id: "unmatched", kind: "UNMATCHED_PAYMENTS", title: `${unmatched.length >= 50 ? "50+" : unmatched.length} khoản tiền vào chưa khớp đơn`,
         detail: "Gắn từng khoản vào đúng đơn", orderId: null, sessionId: null, customerName: null, imageUrl: null, tab: "payment", urgency: 2000,
+      })
+    }
+  }
+
+  // Đơn đã giao còn nợ ngoài cửa sổ 7 ngày của bảng theo dõi — nhắc tới khi thu đủ (mục 3, PO 15/10/2026)
+  if (role === "ADMIN" || role === "SALE") {
+    const seen = new Set(actions.map((a) => a.id))
+    const debts = await new BrochureOrderRepository().listDeliveredWithDebt(ctx, role === "SALE" ? ctx.userId : scope)
+    for (const d of debts) {
+      const id = `collect-post-delivery:${d.orderId}`
+      if (seen.has(id)) continue
+      const days = Math.max(0, Math.floor((now.getTime() - d.deliveredAt.getTime()) / 86_400_000))
+      actions.push({
+        id, kind: "COLLECT_POST_DELIVERY_BALANCE", title: "Thu phần tiền còn lại sau giao",
+        detail: `Đơn ${d.code} · Còn nợ ${d.balanceVnd.toLocaleString("vi-VN")} đ · đã giao ${days} ngày`,
+        orderId: d.orderId, sessionId: d.sessionId, customerName: d.customerName, imageUrl: null,
+        tab: role === "ADMIN" ? "payment" : "sales", urgency: 420 + Math.min(days, 30),
       })
     }
   }

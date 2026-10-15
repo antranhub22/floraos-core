@@ -43,7 +43,13 @@ const CONFIG = {
 } as const
 
 /** Hộp thoại một tác vụ xưởng: ghi chú (florist, ship), tải ảnh (thành phẩm, người nhận), hoặc đề xuất hủy đơn. */
-export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: ActiveModal; onClose: () => void; onDone: () => void }) {
+export function CoordinatorActionModal({ modal, onClose, onDone, allowSkipPhoto }: {
+  modal: ActiveModal
+  onClose: () => void
+  onDone: () => void
+  /** Gói Nghiêm ngặt bắt buộc ảnh → ẩn "Bỏ qua ảnh" (máy chủ cũng chặn) */
+  allowSkipPhoto?: Record<"product-photo" | "recipient-photo", boolean> | undefined
+}) {
   if (modal.type === "cancel-proposal") {
     return (
       <CancellationProposalModal
@@ -51,6 +57,7 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
         orderCode={modal.orderCode}
         totalVnd={modal.totalVnd}
         paidVnd={modal.paidVnd}
+        deliveryStatus={modal.deliveryStatus}
         onClose={onClose}
         onSuccess={onDone}
       />
@@ -89,17 +96,19 @@ export function CoordinatorActionModal({ modal, onClose, onDone }: { modal: Acti
       />
     )
   }
-  return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} />
+  return <CoordinatorTaskModal modal={modal} onClose={onClose} onDone={onDone} allowSkipPhoto={allowSkipPhoto} />
 }
 
 function CoordinatorTaskModal({
   modal,
   onClose,
   onDone,
+  allowSkipPhoto,
 }: {
   modal: Exclude<ActiveModal, { type: "cancel-proposal" } | { type: "delivery-failed" } | { type: "substitute" } | { type: "accept-order" } | { type: "reject-order" } | { type: "confirm-balance" } | { type: "confirm-deposit" }>
   onClose: () => void
   onDone: () => void
+  allowSkipPhoto?: Record<"product-photo" | "recipient-photo", boolean> | undefined
 }) {
   const cfg = CONFIG[modal.type]
   const Icon = cfg.icon
@@ -169,6 +178,7 @@ function CoordinatorTaskModal({
             orderId={modal.orderId}
             endpoint={cfg.photo.endpoint}
             label={cfg.photo.label}
+            allowSkip={allowSkipPhoto?.[cfg.photo.endpoint] ?? true}
             onSuccess={onDone}
             onCancel={onClose}
           />

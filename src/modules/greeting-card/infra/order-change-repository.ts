@@ -1,3 +1,4 @@
+import { retotalWithVat, vatColumnsOf } from "../domain/order-vat"
 import { randomUUID } from "node:crypto"
 import type { Prisma } from "@/generated/prisma/client"
 import { conflict, notFound } from "@/core/http/errors"
@@ -29,6 +30,7 @@ const EDITABLE_PRODUCTION = ["WAITING", "ASSIGNED"] as const
 const ORDER_SELECT = {
   id: true, organization_id: true, code: true, status: true, production_status: true, delivery_status: true,
   delivery_window: true, delivery_address: true, card_message: true, pricing_rule_ref: true, total_vnd: true, paid_vnd: true,
+  vat_enabled: true, vat_rate: true, vat_amount_vnd: true,
 } as const
 
 /**
@@ -117,6 +119,7 @@ export class OrderChangeRepository {
 
       let feeDeltaVnd = 0
       let newTotal = Number(order.total_vnd)
+      let newVatVnd = Number(order.vat_amount_vnd)
       if (input.approve) {
         const lock = changeLockReason({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
         if (lock) throw conflict(lock)
@@ -142,7 +145,11 @@ export class OrderChangeRepository {
         const quote = quoteFactsOf(ref)
         const zoneDeltaVnd = zoneChanged ? shippingFeeDelta(quote, zoneFee, input.shipping) : 0
         feeDeltaVnd = zoneDeltaVnd + holidayDeltaVnd
-        newTotal = Number(order.total_vnd) + feeDeltaVnd
+        // Phụ phí cộng vào giá trước thuế; VAT (nếu có) tính lại
+        const vat = vatColumnsOf(order)
+        const retotal = retotalWithVat(vat.totalVnd - vat.vatAmountVnd + feeDeltaVnd, vat)
+        newTotal = retotal.totalVnd
+        newVatVnd = retotal.vatAmountVnd
         const manual = obj(ref.manualDiscount)
         const nextRef = {
           ...ref,
@@ -169,7 +176,7 @@ export class OrderChangeRepository {
             delivery_window: cols.delivery_window as Prisma.InputJsonValue,
             delivery_address: cols.delivery_address as unknown as Prisma.InputJsonValue,
             card_message: cols.card_message,
-            ...(feeDeltaVnd > 0 ? { total_vnd: newTotal, balance_vnd: newTotal - Number(order.paid_vnd) } : {}),
+            ...(feeDeltaVnd > 0 ? { total_vnd: newTotal, balance_vnd: newTotal - Number(order.paid_vnd), vat_amount_vnd: newVatVnd } : {}),
             pricing_rule_ref: nextRef as Prisma.InputJsonValue,
           },
         })

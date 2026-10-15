@@ -4,6 +4,7 @@ import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { CancellationRepository } from "@/modules/greeting-card/infra/cancellation-repository"
+import { isInTransit } from "@/modules/greeting-card/domain/cancellation-request"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 import { roleOf } from "@/modules/greeting-card/domain/internal-message"
 import { assertOrderInScope } from "@/modules/greeting-card/use-cases/order-scope"
@@ -47,14 +48,19 @@ export const POST = handle(async (req: Request) => {
 
 /**
  * `GET /api/v1/greeting-card/cancellation-requests`
- * Danh sách đề xuất đang chờ duyệt — chỉ Điều hành (R6 hủy đơn hoặc R10 hoàn tiền).
+ * Danh sách đề xuất đang chờ duyệt — Điều hành (R6 hủy đơn hoặc R10 hoàn tiền); Điều phối (R5) chỉ thấy
+ * đề xuất huỷ đơn đang giao, là loại mình được duyệt (PO 15/10/2026).
  */
 export const GET = handle(async (req: Request) => {
   const { ctx } = await requireTenantContext(req)
-  const { orderCancel, paymentRefund } = GREETING_CARD_CAPABILITY
-  if (!ctx.capabilities.has(orderCancel) && !ctx.capabilities.has(paymentRefund)) {
+  const { orderCancel, paymentRefund, deliveryManage } = GREETING_CARD_CAPABILITY
+  const admin = ctx.capabilities.has(orderCancel) || ctx.capabilities.has(paymentRefund)
+  if (!admin && !ctx.capabilities.has(deliveryManage)) {
     throw new AppError("CAPABILITY_DENIED", `Thiếu năng lực ${orderCancel}`, { capability: orderCancel })
   }
   const pending = await new CancellationRepository().listPending(ctx)
-  return jsonResponse({ data: pending })
+  const visible = admin
+    ? pending
+    : pending.filter((r) => isInTransit(r.delivery_status) && (r.payload as { type?: string } | null)?.type !== "PARTIAL_REFUND")
+  return jsonResponse({ data: visible })
 })

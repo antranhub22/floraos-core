@@ -55,11 +55,11 @@ export class BrochureOrderRepository {
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,
-        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, selected_product_id: true, sale_id: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, product_snapshot: true, selected_product_id: true, sale_id: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true, catalog: { select: { filters: true } } } },
         coordination: { select: { coordinator_id: true } },
         assignments: { take: 1, select: { assignee_id: true, assigned_by: true }, orderBy: { assigned_at: "desc" as const } },
         events: { select: { axis: true, created_at: true, actor_id: true, reason: true }, orderBy: { created_at: "desc" as const } },
-        qc_records: { select: { inspector_id: true } },
+        qc_records: { select: { inspector_id: true, notes: true, created_at: true } },
       },
       orderBy: [{ created_at: "asc" }, { id: "asc" }],
       take: options.max,
@@ -111,6 +111,8 @@ export class BrochureOrderRepository {
       q?: string | undefined
       /** Chỉ đơn khách đã bấm "Tôi đã chuyển khoản" */
       reported?: boolean | undefined
+      /** Chỉ đơn đã giao (báo cáo đơn đã giao còn nợ khi đi cùng payment=OUTSTANDING) */
+      delivered?: boolean | undefined
       limit: number
       cursor?: string | undefined
     }
@@ -126,7 +128,9 @@ export class BrochureOrderRepository {
           : {}),
         ...(options.payment === "PAID" ? { balance_vnd: { lte: 0 }, total_vnd: { gt: 0 } } : {}),
         ...(options.reported ? { greeting_sessions: { some: { status: "PAYMENT_REPORTED" as const, ...(options.saleId ? { sale_id: options.saleId } : {}) } } } : {}),
-        ...(options.q ? { AND: [{ OR: searchConditions(options.q) }] } : {}),
+        ...(options.q || options.delivered
+          ? { AND: [...(options.q ? [{ OR: searchConditions(options.q) }] : []), ...(options.delivered ? [{ OR: [{ delivery_status: "DELIVERED" as const }, { status: "COMPLETED" as const }] }] : [])] }
+          : {}),
       }),
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
@@ -149,12 +153,33 @@ export class BrochureOrderRepository {
     }))
   }
 
+  /** Đơn đã giao mà còn nợ (mọi thời điểm, không chỉ 7 ngày như bảng theo dõi) — mục 3, PO 15/10/2026. */
+  async listDeliveredWithDebt(ctx: TenantContext, saleId: string | null, take = 200) {
+    const rows = await this.db.orders.findMany({
+      where: scopedWhere(ctx, {
+        source: "BROCHURE",
+        NOT: { status: "CANCELLED" as const },
+        OR: [{ delivery_status: "DELIVERED" as const }, { status: "COMPLETED" as const }],
+        balance_vnd: { gt: 0 },
+        ...(saleId ? { greeting_sessions: { some: { sale_id: saleId } } } : {}),
+      }),
+      select: { id: true, code: true, balance_vnd: true, updated_at: true, customer: { select: { name: true } }, greeting_sessions: { select: { id: true, sale_id: true, customer_name: true }, take: 1 } },
+      orderBy: { updated_at: "asc" },
+      take,
+    })
+    return rows.map((o) => ({
+      orderId: o.id, code: o.code, balanceVnd: Number(o.balance_vnd), deliveredAt: o.updated_at,
+      saleId: o.greeting_sessions[0]?.sale_id ?? null, sessionId: o.greeting_sessions[0]?.id ?? null,
+      customerName: o.customer?.name ?? o.greeting_sessions[0]?.customer_name ?? "Khách",
+    }))
+  }
+
   async findBrochureOrder(ctx: TenantContext, orderId: string) {
     return this.db.orders.findFirst({
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
       include: {
         qc_records: { select: { notes: true, created_at: true } },
-        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true, catalog: { select: { filters: true } } } },
       },
     })
   }

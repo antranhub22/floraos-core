@@ -123,13 +123,15 @@ export class BackgroundSweepRepository {
     return orders.map((o) => {
       const session = o.greeting_sessions[0]
       const asset = assets.find((a) => a.id === session?.payment_proof_asset_id && a.organization_id === o.organization_id)
-      const analysis = (asset?.metadata as { ai_analysis?: { status?: unknown } } | null)?.ai_analysis
+      const analysis = (asset?.metadata as { ai_analysis?: { status?: unknown; expectedAmountVnd?: unknown } } | null)?.ai_analysis
       return {
         id: o.id,
         organizationId: o.organization_id,
         settings: o.organization.settings,
         reportedAt: session?.updated_at ?? null,
         analysisStatus: typeof analysis?.status === "string" ? analysis.status : null,
+        /** Số tiền AI đã đối chiếu với bill — tự duyệt chỉ khi vẫn khớp số phải thu hiện tại. */
+        analysisExpectedVnd: typeof analysis?.expectedAmountVnd === "number" ? analysis.expectedAmountVnd : null,
       }
     })
   }

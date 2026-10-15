@@ -5,6 +5,8 @@ import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { withOrderProduct } from "./order-product-views"
 import { resolveSaleScope } from "./order-scope"
+import { orderPhotoApproval } from "../domain/photo-approval"
+import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
 
 /**
  * `GET /greeting-card/coordinator-board` — toàn bộ đơn còn việc cho bảng Điều phối, xếp theo ngày +
@@ -32,8 +34,12 @@ export async function getCoordinatorBoard(ctx: TenantContext, input: { date?: st
     ? await new GreetingCardRepository().getAssetsStorageMap(ctx.organizationId, proofAssetIds)
     : new Map<string, string>()
 
+  // Chờ khách duyệt ảnh thành phẩm (mục 4, PO 15/10/2026): Điều phối thấy đếm ngược trước khi giao ship
+  const shopSettings = (await new GreetingCardRepository().getShopProfile(ctx.organizationId)).settings
+  const reviewMinutes = parsePaymentPolicy(shopSettings).productPhotoReviewMinutes
   const rowsWithProof = rows.map((o) => ({
     ...o,
+    photo_approval: orderPhotoApproval(o, shopSettings, reviewMinutes, now),
     payment_proof_url: o.greeting_sessions[0]?.payment_proof_asset_id
       ? (proofUrls.get(o.greeting_sessions[0].payment_proof_asset_id) ?? null)
       : null,

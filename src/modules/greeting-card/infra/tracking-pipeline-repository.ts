@@ -3,6 +3,7 @@ import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 import { BROWSING_EVENT_TYPES } from "../domain/customer-journey-events"
 import { signStorageUrl } from "@/modules/assets/infra/storage-signing"
+import { driveThumbProxySrc } from "../domain/drive-thumb"
 
 /** Bỏ các bước lướt mẫu vụn của khách — bảng theo dõi chỉ cần mốc nghiệp vụ. */
 const MILESTONE_EVENTS = { event_type: { notIn: [...BROWSING_EVENT_TYPES] } }
@@ -150,9 +151,11 @@ export class TrackingPipelineRepository {
     if (ids.length === 0) return new Map()
     const rows = await this.db.products.findMany({
       where: scopedWhere(ctx, { id: { in: ids } }),
-      select: { id: true, attributes: true, images: { where: { role: "MAIN" }, take: 1, select: { asset_id: true } } },
+      // Ảnh chính trước; mẫu chưa đặt ảnh chính thì lấy ảnh đầu tiên của mẫu (thư viện, catalog...)
+      select: { id: true, attributes: true, images: { orderBy: { position: "asc" }, take: 10, select: { asset_id: true, role: true } } },
     })
-    const assetIds = rows.flatMap((r) => r.images.map((i) => i.asset_id))
+    const firstImage = (r: (typeof rows)[number]) => r.images.find((i) => i.role === "MAIN") ?? r.images[0]
+    const assetIds = rows.flatMap((r) => { const img = firstImage(r); return img ? [img.asset_id] : [] })
     const assets = assetIds.length
       ? await this.db.assets.findMany({ where: scopedWhere(ctx, { id: { in: assetIds } }), select: { id: true, storage_key: true } })
       : []
@@ -160,9 +163,13 @@ export class TrackingPipelineRepository {
     const exp = Date.now() + 86_400_000
     const out = new Map<string, string>()
     for (const r of rows) {
-      const key = r.images[0] ? keyOf.get(r.images[0].asset_id) : undefined
-      const attrUrl = (r.attributes as { imageUrl?: unknown } | null)?.imageUrl
-      const url = key ? `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}` : typeof attrUrl === "string" && attrUrl ? attrUrl : null
+      const img = firstImage(r)
+      const key = img ? keyOf.get(img.asset_id) : undefined
+      const attrs = (r.attributes as { imageUrl?: unknown; drive_link?: unknown } | null) ?? {}
+      const attrUrl = typeof attrs.imageUrl === "string" && attrs.imageUrl ? attrs.imageUrl : null
+      // Sản phẩm nhập từ Excel thường chỉ có link Google Drive — dùng ảnh xem trước qua proxy như bộ sưu tập
+      const driveUrl = typeof attrs.drive_link === "string" ? driveThumbProxySrc(attrs.drive_link) : null
+      const url = key ? `/api/v1/storage/${key}?exp=${exp}&sig=${signStorageUrl(key, exp)}` : attrUrl ?? driveUrl
       if (url) out.set(r.id, url)
     }
     return out

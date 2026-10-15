@@ -3,6 +3,7 @@
  * dựng `product` bằng hàm này, giao diện chỉ đọc `product`, không tự chọn giữa ảnh chụp mẫu và dòng đơn.
  * Pure TypeScript.
  */
+import { driveThumbProxySrc } from "./drive-thumb"
 
 export interface OrderProductView {
   productId: string | null
@@ -34,10 +35,20 @@ export function orderProductId(source: OrderProductSource): string | null {
 }
 
 /**
+ * Link ảnh trong kho được ký có hạn (`/api/v1/storage/...?exp=`). Ảnh chụp mẫu lưu nguyên link lúc khách
+ * chọn, nên sau hạn ký (7 ngày) link chết — coi như không có để rơi về ảnh hiện tại trong kho.
+ */
+function liveImageUrl(url: string | null, nowMs: number): string | null {
+  if (!url || !url.includes("/api/v1/storage/")) return url
+  const exp = Number(/[?&]exp=(\d+)/.exec(url)?.[1])
+  return Number.isFinite(exp) && exp <= nowMs ? null : url
+}
+
+/**
  * Ưu tiên: ảnh chụp mẫu lúc khách chọn → metadata dòng đơn → ảnh hiện tại trong kho (`images`, theo productId)
  * — đơn tạo tay hoặc mẫu chọn trước khi có ảnh vẫn hiện được ảnh cho mọi vai trò.
  */
-export function orderProductView(source: OrderProductSource, images: ReadonlyMap<string, string>, fallbackName = "Hoa tươi theo mẫu"): OrderProductView {
+export function orderProductView(source: OrderProductSource, images: ReadonlyMap<string, string>, fallbackName = "Hoa tươi theo mẫu", now = new Date()): OrderProductView {
   const snap = obj(source.greeting_sessions[0]?.product_snapshot)
   const item = source.items[0]
   const meta = obj(item?.metadata)
@@ -46,7 +57,10 @@ export function orderProductView(source: OrderProductSource, images: ReadonlyMap
     productId,
     name: str(snap.name) ?? str(meta.name) ?? str(item?.description) ?? fallbackName,
     code: str(snap.code) ?? str(meta.code),
-    imageUrl: str(snap.imageUrl) ?? str(meta.imageUrl) ?? (productId ? images.get(productId) ?? null : null),
+    // Cuối cùng: link Google Drive của mẫu (sản phẩm nhập từ Excel chưa có ảnh trong kho)
+    imageUrl: liveImageUrl(str(snap.imageUrl), now.getTime()) ?? liveImageUrl(str(meta.imageUrl), now.getTime())
+      ?? (productId ? images.get(productId) ?? null : null)
+      ?? driveThumbProxySrc(str(snap.driveLink)) ?? driveThumbProxySrc(str(meta.driveLink)),
     price: num(snap.price) ?? num(meta.price) ?? num(item?.unit_price_vnd) ?? 0,
     flowersSummary: str(snap.flowersSummary) ?? str(meta.flowersSummary),
   }

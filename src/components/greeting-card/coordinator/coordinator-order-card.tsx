@@ -1,5 +1,6 @@
 "use client"
 
+import { PhotoApprovalNote, photoWaitBlocker, type PhotoApprovalState } from "./photo-approval-note"
 import React from "react"
 import { MapPin, Calendar, UserCheck, Truck, Image as ImageIcon, CheckCircle2, Camera, ExternalLink, PackageX, Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,6 @@ import { CoordinatorCardDecisionBlocks } from "./coordinator-card-decision-block
 import { DEPOSIT_PENDING_APPROVAL_NOTE, isDepositPendingApproval } from "@/modules/greeting-card/domain/deposit-acknowledgement"
 import {
   isUrgentOrder,
-  canBypassFinishedPhoto,
   shouldBlockDispatchForBalance,
   type BrochureWorkflowPolicy,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
@@ -42,6 +42,8 @@ export interface BrochureOrder {
   payment_proof_url?: string | null; payment_proof_balance_url?: string | null; created_at: string
   /** Thông tin mẫu hoa dựng sẵn ở server (SSOT) — chỉ đọc trường này để hiện mẫu. */
   product: OrderProductView
+  /** Chờ khách duyệt ảnh thành phẩm trước khi giao ship */
+  photo_approval?: PhotoApprovalState | null
 }
 
 export type ModalState =
@@ -54,7 +56,7 @@ export type ModalState =
   | { type: "substitute"; orderId: string; orderCode: string }
   | { type: "accept-order"; orderId: string; orderCode: string }
   | { type: "reject-order"; orderId: string; orderCode: string }
-  | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number }
+  | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number; deliveryStatus?: string }
   | { type: "confirm-balance"; orderId: string; orderCode: string; balanceVnd: number; proofUrl: string | null }
   | { type: "confirm-deposit"; orderId: string; orderCode: string; depositVnd: number | null; proofUrl: string | null }
   | { type: "detail"; order: BrochureOrder }
@@ -102,26 +104,21 @@ export function CoordinatorOrderCard({
   const depositPending = isDepositPendingApproval({ status: order.status, productionStatus: order.production_status, totalVnd: order.total_vnd, paidVnd: order.paid_vnd, customerReported: session?.status === "PAYMENT_REPORTED" || Boolean(work?.paymentProofUrl) })
   const isDelivered = order.delivery_status === "DELIVERED" || order.status === "COMPLETED"
 
-  const isUrgent = isUrgentOrder({
-    deliveryDate: order.delivery_window?.date,
-    deliveryTimeSlot: order.delivery_window?.timeSlot,
-  })
-  const canSkipPhoto = workflowPolicy ? canBypassFinishedPhoto(workflowPolicy, isUrgent) : policy.requireProductPhotoQC === false
+  const isUrgent = isUrgentOrder({ deliveryDate: order.delivery_window?.date, deliveryTimeSlot: order.delivery_window?.timeSlot })
 
+  // Giao ship khi chưa qua bước ảnh: theo cài đặt ảnh QC của tiệm, khớp kiểm tra ở máy chủ
   const blockerOf = (action: CoordinatorAction) =>
     coordinatorActionBlocker(
       action,
-      {
-        status: order.status,
-        productionStatus: order.production_status,
-        deliveryStatus: order.delivery_status,
-      },
-      { skipPhoto: canSkipPhoto },
+      { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
+      { skipPhoto: policy.requireProductPhotoQC === false },
     ) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
+    ?? (action === "dispatch-shipping" ? photoWaitBlocker(order.photo_approval, now) : null)
 
   return (
     <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
       {work && <WorkStatus item={work} me="COORDINATOR" now={now} />}
+      <PhotoApprovalNote approval={order.photo_approval} now={now} />
       {/* Top bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -336,7 +333,7 @@ export function CoordinatorOrderCard({
 
           <button
             type="button"
-            onClick={() => onOpen({ type: "cancel-proposal", orderId: order.id, orderCode: order.code, totalVnd: order.total_vnd, paidVnd: order.paid_vnd })}
+            onClick={() => onOpen({ type: "cancel-proposal", orderId: order.id, orderCode: order.code, totalVnd: order.total_vnd, paidVnd: order.paid_vnd, deliveryStatus: order.delivery_status })}
             className="col-span-2 text-caption text-text-muted hover:text-danger hover:underline text-center pt-1 transition-colors"
           >
             Đề xuất Hủy / Hoàn tiền đơn này

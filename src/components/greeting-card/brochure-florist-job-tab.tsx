@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react"
 import { Clock, Printer, Copy, Check, Sparkles, MapPin, Eye, EyeOff, Layers, MessageSquare, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useApi } from "@/components/greeting-card/greeting-api"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
 import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { CoordinatorAcceptRejectModal } from "./coordinator/coordinator-accept-reject-modal"
@@ -25,8 +26,11 @@ export function BrochureFloristJobTab({
   onAcceptedOrRejected,
 }: BrochureFloristJobTabProps) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const defaultFee = Math.round((target.totalVnd ?? 0) * 0.5)
-  const [suggestedCraftFee, setSuggestedCraftFee] = useState<number>(defaultFee)
+  // Giá gia công tính trên giá trước VAT — VAT không làm tăng tiền công thợ
+  const { data: vatData } = useApi<{ data: { subtotalVnd: number } }>(target.orderId ? `/api/v1/greeting-card/orders/${target.orderId}/vat` : null)
+  const defaultFee = Math.round((vatData?.data.subtotalVnd ?? target.totalVnd ?? 0) * 0.5)
+  const [feeOverride, setSuggestedCraftFee] = useState<number | null>(null)
+  const suggestedCraftFee = feeOverride ?? defaultFee
   const [floristNote, setFloristNote] = useState<string>("")
   const [maskPhone, setMaskPhone] = useState(true)
   const [copiedImage, setCopiedImage] = useState(false)
@@ -113,7 +117,7 @@ export function BrochureFloristJobTab({
       <div className="flex flex-col gap-4">
         {/* Top Header & Actions (Thanh tác vụ điều phối, không đưa vào ảnh gửi thợ) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface p-4 rounded-2xl border border-border">
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-caption font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                 Thẻ Gia Công Cắm Hoa
@@ -122,12 +126,12 @@ export function BrochureFloristJobTab({
                 #{target.orderCode || target.sendCode}
               </span>
             </div>
-            <h3 className="text-body font-extrabold text-foreground mt-1">
+            <h3 className="text-body font-extrabold text-foreground mt-1 break-words [overflow-wrap:anywhere] line-clamp-2">
               {target.productName || "Hoa tươi theo mẫu"}
             </h3>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 [&_button]:whitespace-nowrap">
             <Button type="button" variant="outline" size="sm" onClick={handleCopyText} className="text-caption gap-1.5 h-8 font-semibold text-foreground">
               {copiedText ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
               <span>{copiedText ? "Đã chép text" : "Copy text Zalo"}</span>
@@ -144,7 +148,7 @@ export function BrochureFloristJobTab({
             )}
             <Button type="button" variant="ghost" size="sm" onClick={() => window.print()} className="h-8 text-caption gap-1 text-text-muted">
               <Printer size={13} />
-              <span className="hidden sm:inline">In PDF</span>
+              <span>In PDF</span>
             </Button>
           </div>
         </div>
@@ -191,11 +195,11 @@ export function BrochureFloristJobTab({
 
               {/* Target Ready Time Badge */}
               <div className="p-3 rounded-2xl bg-danger-bg/60 border border-danger/25 flex items-center justify-between text-caption">
-                <span className="font-bold text-danger flex items-center gap-1.5">
+                <span className="font-bold text-danger flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                   <Clock size={15} />
                   Hạn cắm xong:
                 </span>
-                <span className="font-extrabold text-danger text-body-sm">
+                <span className="font-extrabold text-danger text-body-sm text-right">
                   {target.deliveryTimeSlot || "Trong ngày"}
                   {target.deliveryDate ? ` · ${target.deliveryDate}` : ""}
                 </span>
@@ -224,13 +228,13 @@ export function BrochureFloristJobTab({
             </div>
 
             {/* Column 2 & 3: Details, Materials & Recipient */}
-            <div className="md:col-span-2 flex flex-col gap-3.5 justify-between">
+            <div className="md:col-span-2 min-w-0 flex flex-col gap-3.5 justify-between">
               {/* Product Title */}
               <div className="p-3.5 rounded-2xl bg-surface-alt/50 border border-border/80">
                 <span className="text-caption font-bold text-text-muted uppercase tracking-wider block mb-1">
                   Mẫu sản phẩm thực hiện
                 </span>
-                <h3 className="text-body font-black text-foreground">
+                <h3 className="text-body font-black text-foreground break-words [overflow-wrap:anywhere]">
                   {target.productName || "Hoa tươi theo mẫu"}
                 </h3>
               </div>

@@ -235,46 +235,49 @@ export function KanbanCard({
             )}
           </button>
 
-          {/* Chân thẻ: SLA & Nhân viên & Tác vụ nhanh */}
-          <div className="flex items-center justify-between gap-1.5 pt-0.5 border-t border-border/40 w-full">
-            <div className="min-w-0">
-              <SlaBadge item={item} compact />
+          {/* Chân thẻ — 2 hàng để không đè nhau ở cột hẹp: (1) trạng thái thời gian + tác vụ nhanh, (2) người phụ trách */}
+          <div className="flex w-full flex-col gap-1 border-t border-border/40 pt-1">
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="min-w-0 flex-1 truncate">
+                <SlaBadge item={item} compact />
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {/* Nút sao chép link 1-chạm */}
+                {item.sendCode && (
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    title={copied ? "Đã sao chép link khách!" : "Sao chép link khách"}
+                    aria-label="Sao chép link khách"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-surface text-text-muted hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {copied ? <Check size={12} className="text-success" aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+                  </button>
+                )}
+
+                {/* Nút Bỏ hiển thị (chỉ khi đơn còn active và chưa dismiss) */}
+                {!isDismissed && !isPending && onDismiss && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDismiss(item) }}
+                    title="Bỏ hiển thị đơn này"
+                    aria-label="Bỏ hiển thị đơn"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-surface text-text-muted hover:border-danger hover:text-danger transition-colors cursor-pointer"
+                  >
+                    <EyeOff size={12} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Nút sao chép link 1-chạm */}
-              {item.sendCode && (
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  title={copied ? "Đã sao chép link khách!" : "Sao chép link khách"}
-                  aria-label="Sao chép link khách"
-                  className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-surface text-text-muted hover:border-primary hover:text-primary transition-colors cursor-pointer"
-                >
-                  {copied ? <Check size={11} className="text-success" aria-hidden="true" /> : <Copy size={11} aria-hidden="true" />}
-                </button>
-              )}
-
-              {/* Nút Bỏ hiển thị (chỉ khi đơn còn active và chưa dismiss) */}
-              {!isDismissed && !isPending && onDismiss && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onDismiss(item) }}
-                  title="Bỏ hiển thị đơn này"
-                  aria-label="Bỏ hiển thị đơn"
-                  className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-surface text-text-muted hover:border-danger hover:text-danger transition-colors cursor-pointer"
-                >
-                  <EyeOff size={11} aria-hidden="true" />
-                </button>
-              )}
-
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
               {/* Tag Sale phụ trách — màu nhận diện theo ID */}
               <span
-                className={`inline-flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-caption font-medium ${saleColor.bg} ${saleColor.border} ${saleColor.text}`}
+                className={`inline-flex min-w-0 max-w-full items-center gap-0.5 rounded border px-1.5 py-0.5 text-caption font-medium ${saleColor.bg} ${saleColor.border} ${saleColor.text}`}
                 title={`Sale: ${item.saleName || "Chưa gán"} (${formatStaffCode(item.saleId ?? undefined)})`}
               >
                 <UserCheck size={10} className="shrink-0" aria-hidden="true" />
-                <span className="max-w-[60px] truncate font-bold">
+                <span className="truncate font-bold">
                   {item.saleName || formatStaffCode(item.saleId ?? undefined)}
                 </span>
               </span>
@@ -282,13 +285,11 @@ export function KanbanCard({
               {/* Tag Điều phối (nếu có) */}
               {item.coordinatorName && (
                 <span
-                  className="inline-flex items-center gap-0.5 rounded bg-info-bg border border-info-border px-1.5 py-0.5 text-caption font-medium text-info-text"
+                  className="inline-flex min-w-0 max-w-full items-center gap-0.5 rounded bg-info-bg border border-info-border px-1.5 py-0.5 text-caption font-medium text-info-text"
                   title={`Điều phối: ${item.coordinatorName}`}
                 >
                   <Sparkles size={10} className="shrink-0" aria-hidden="true" />
-                  <span className="max-w-[60px] truncate font-bold">
-                    {item.coordinatorName}
-                  </span>
+                  <span className="truncate font-bold">{item.coordinatorName}</span>
                 </span>
               )}
             </div>
