@@ -1243,6 +1243,16 @@ model orders {
   delivery_window  Json? // ngày và khung giờ đã hẹn
   delivery_address Json?
 
+  /// Hoá đơn VAT (PO 15/10/2026). Bật VAT → total_vnd = giá trước thuế + vat_amount_vnd.
+  /// Máy chủ tính, không ai sửa tay. vat_rate chỉ 8 hoặc 10 (%).
+  vat_enabled         Boolean @default(false)
+  vat_rate            Int     @default(10)
+  vat_amount_vnd      Decimal @default(0) @db.Decimal(14, 2)
+  vat_company_name    String?
+  vat_tax_code        String?
+  vat_company_address String?
+  vat_email           String?
+
   created_by String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

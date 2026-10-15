@@ -52,4 +52,15 @@ describe("buildCustomerOrderSlipText", () => {
   it("tự tính còn lại khi thiếu balanceVnd", () => {
     expect(buildCustomerOrderSlipText({ totalVnd: 1_000_000, paidVnd: 400_000 })).toContain("Còn lại: 600k")
   })
+
+  it("có VAT thì ghi giá trước thuế + tiền VAT và các ô xuất hoá đơn", () => {
+    const text = buildCustomerOrderSlipText({
+      totalVnd: 3_630_000, paidVnd: 1_600_000, vatAmountVnd: 330_000, vatRate: 10,
+      vatCompanyName: "Cty Đông Nam", vatTaxCode: "0123456789",
+    })
+    expect(text).toContain("Giá: 3tr3 + 330k xuất hoá đơn (VAT 10%)")
+    expect(text).toContain("Còn lại: 2tr030")
+    expect(text).toContain("Mã số thuế: 0123456789")
+    expect(text).not.toContain("Email nhận hoá đơn")
+  })
 })

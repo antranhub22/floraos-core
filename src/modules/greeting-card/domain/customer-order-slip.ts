@@ -18,6 +18,13 @@ export interface CustomerOrderSlipInput {
   deliveryAddress?: string | null | undefined
   recipientName?: string | null | undefined
   customerName?: string | null | undefined
+  /** VAT đã cộng vào totalVnd (0 = không xuất hoá đơn). */
+  vatAmountVnd?: number | null | undefined
+  vatRate?: number | null | undefined
+  vatCompanyName?: string | null | undefined
+  vatTaxCode?: string | null | undefined
+  vatCompanyAddress?: string | null | undefined
+  vatEmail?: string | null | undefined
 }
 
 export interface CustomerOrderSlipLine {
@@ -57,15 +64,29 @@ export function buildCustomerOrderSlipLines(input: CustomerOrderSlipInput): Cust
     .filter(Boolean)
     .join(" ")
 
+  const vat = Math.max(0, input.vatAmountVnd ?? 0)
+  const price = vat > 0
+    ? `${formatCompactVnd(total - vat)} + ${formatCompactVnd(vat)} xuất hoá đơn${input.vatRate ? ` (VAT ${input.vatRate}%)` : ""}`
+    : formatCompactVnd(total)
+
   const groups: CustomerOrderSlipLine[][] = [
     [
-      { label: "Giá", value: formatCompactVnd(total) },
+      { label: "Giá", value: price },
       { label: "Đã thanh toán", value: formatCompactVnd(paid) },
       { label: "Còn lại", value: formatCompactVnd(balance) },
     ],
     [{ label: "Mẫu", value: [input.productName || "Hoa tươi theo mẫu", input.flowersSummary ? `(${input.flowersSummary})` : null].filter(Boolean).join(" ") }],
     [{ label: "Nội dung", value: input.cardMessage?.trim() || "gửi sau" }],
   ]
+  if (vat > 0) {
+    const invoice: CustomerOrderSlipLine[] = [
+      { label: "Tên công ty", value: input.vatCompanyName },
+      { label: "Mã số thuế", value: input.vatTaxCode },
+      { label: "Địa chỉ xuất hoá đơn", value: input.vatCompanyAddress },
+      { label: "Email nhận hoá đơn", value: input.vatEmail },
+    ].filter((l): l is CustomerOrderSlipLine => Boolean(l.value))
+    if (invoice.length > 0) groups.push(invoice)
+  }
   const created = formatDayMonth(input.createdAt)
   if (created) groups.push([{ label: "Ngày tạo đơn", value: created }])
   groups.push(

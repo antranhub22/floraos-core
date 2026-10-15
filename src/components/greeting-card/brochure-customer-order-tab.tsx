@@ -3,6 +3,8 @@
 import React, { useState } from "react"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useApi } from "@/components/greeting-card/greeting-api"
+import { OrderVatForm, type OrderVatData } from "./order-vat-form"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
 import {
   buildCustomerOrderSlipLines,
@@ -12,11 +14,27 @@ import {
 /** Thẻ Đơn Khách hàng — phiếu xác nhận đơn gửi khách (có giá bán, đã thu, còn lại). */
 export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalTarget }) {
   const [copied, setCopied] = useState(false)
-  const groups = buildCustomerOrderSlipLines(target)
+  const { data, mutate } = useApi<{ data: OrderVatData }>(target.orderId ? `/api/v1/greeting-card/orders/${target.orderId}/vat` : null)
+  const vat = data?.data
+  const slip = vat
+    ? {
+        ...target,
+        totalVnd: vat.totalVnd,
+        paidVnd: vat.paidVnd,
+        balanceVnd: vat.balanceVnd,
+        vatAmountVnd: vat.vatAmountVnd,
+        vatRate: vat.vatRate,
+        vatCompanyName: vat.companyName,
+        vatTaxCode: vat.taxCode,
+        vatCompanyAddress: vat.companyAddress,
+        vatEmail: vat.email,
+      }
+    : target
+  const groups = buildCustomerOrderSlipLines(slip)
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildCustomerOrderSlipText(target))
+      await navigator.clipboard.writeText(buildCustomerOrderSlipText(slip))
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     } catch { /* Trình duyệt chặn clipboard — người dùng chép tay */ }
@@ -53,6 +71,8 @@ export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalT
           </dl>
         ))}
       </div>
+
+      {vat && <OrderVatForm key={`${vat.vatEnabled}-${vat.vatRate}-${vat.totalVnd}`} vat={vat} onSaved={(next) => void mutate({ data: next }, { revalidate: false })} />}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react"
 import { Clock, Printer, Copy, Check, Sparkles, MapPin, Eye, EyeOff, Layers, MessageSquare, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useApi } from "@/components/greeting-card/greeting-api"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
 import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import { CoordinatorAcceptRejectModal } from "./coordinator/coordinator-accept-reject-modal"
@@ -25,8 +26,11 @@ export function BrochureFloristJobTab({
   onAcceptedOrRejected,
 }: BrochureFloristJobTabProps) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const defaultFee = Math.round((target.totalVnd ?? 0) * 0.5)
-  const [suggestedCraftFee, setSuggestedCraftFee] = useState<number>(defaultFee)
+  // Giá gia công tính trên giá trước VAT — VAT không làm tăng tiền công thợ
+  const { data: vatData } = useApi<{ data: { subtotalVnd: number } }>(target.orderId ? `/api/v1/greeting-card/orders/${target.orderId}/vat` : null)
+  const defaultFee = Math.round((vatData?.data.subtotalVnd ?? target.totalVnd ?? 0) * 0.5)
+  const [feeOverride, setSuggestedCraftFee] = useState<number | null>(null)
+  const suggestedCraftFee = feeOverride ?? defaultFee
   const [floristNote, setFloristNote] = useState<string>("")
   const [maskPhone, setMaskPhone] = useState(true)
   const [copiedImage, setCopiedImage] = useState(false)
