@@ -44,7 +44,7 @@ describe("buildCustomerOrderSlipText", () => {
     })
     expect(text).toContain("Nhân viên tư vấn: Linh")
     expect(text).toContain("Còn lại: 2tr030")
-    expect(text).toContain("Nội dung: gửi sau")
+    expect(text).toContain("Nội dung thiệp: gửi sau")
     expect(text).toContain("Ngày tạo đơn: 22/5")
     expect(text).toContain("Ngày giao hàng: 25/5 (8h giao đến)")
   })
@@ -62,5 +62,18 @@ describe("buildCustomerOrderSlipText", () => {
     expect(text).toContain("Còn lại: 2tr030")
     expect(text).toContain("Mã số thuế: 0123456789")
     expect(text).not.toContain("Email nhận hoá đơn")
+  })
+})
+
+describe("Thẻ Đơn Khách hàng — mã sản phẩm và ghi chú khách", () => {
+  it("có mã sản phẩm, nội dung thiệp và ghi chú khách nhập lúc đặt", () => {
+    const text = buildCustomerOrderSlipText({
+      orderCode: "DH1", productName: "Châu lan", productCode: "BST-034", cardMessage: "Chúc mừng khai trương",
+      customerNote: "Gói giấy tông hồng", deliveryNote: "Gọi trước 15 phút",
+    })
+    expect(text).toContain("Mã sản phẩm: BST-034")
+    expect(text).toContain("Nội dung thiệp: Chúc mừng khai trương")
+    expect(text).toContain("Ghi chú cho tiệm: Gói giấy tông hồng")
+    expect(text).toContain("Ghi chú giao hàng: Gọi trước 15 phút")
   })
 })

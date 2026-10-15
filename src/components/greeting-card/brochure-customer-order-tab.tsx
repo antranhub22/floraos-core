@@ -5,6 +5,8 @@ import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { OrderVatForm, type OrderVatData } from "./order-vat-form"
+import { CopyProductImageButton } from "./copy-product-image-button"
+import type { OrderSlipExtras } from "@/modules/greeting-card/domain/order-slip-extras"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
 import {
   buildCustomerOrderSlipLines,
@@ -14,7 +16,7 @@ import {
 /** Thẻ Đơn Khách hàng — phiếu xác nhận đơn gửi khách (có giá bán, đã thu, còn lại). */
 export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalTarget }) {
   const [copied, setCopied] = useState(false)
-  const { data, mutate } = useApi<{ data: OrderVatData }>(target.orderId ? `/api/v1/greeting-card/orders/${target.orderId}/vat` : null)
+  const { data, mutate } = useApi<{ data: OrderVatData & Partial<OrderSlipExtras> }>(target.orderId ? `/api/v1/greeting-card/orders/${target.orderId}/vat` : null)
   const vat = data?.data
   const slip = vat
     ? {
@@ -28,6 +30,9 @@ export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalT
         vatTaxCode: vat.taxCode,
         vatCompanyAddress: vat.companyAddress,
         vatEmail: vat.email,
+        productCode: vat.productCode,
+        customerNote: vat.customerNote,
+        deliveryNote: vat.deliveryNote,
       }
     : target
   const groups = buildCustomerOrderSlipLines(slip)
@@ -49,10 +54,13 @@ export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalT
           </span>
           <p className="mt-1 text-caption text-text-muted">Gửi khách để xác nhận lại đơn, giá và lịch giao.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <CopyProductImageButton imageUrl={vat?.productImageUrl ?? target.productImageUrl} driveLink={vat?.productDriveLink} />
         <Button type="button" variant="outline" size="sm" onClick={handleCopy} className="h-8 shrink-0 gap-1.5 whitespace-nowrap text-caption font-semibold text-foreground">
           {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
           <span>{copied ? "Đã chép text" : "Copy text Zalo"}</span>
         </Button>
+        </div>
       </div>
 
       <div className="rounded-3xl border border-border bg-surface p-5 text-foreground shadow-md">

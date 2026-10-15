@@ -64,6 +64,14 @@ export interface BrochureOrderDetailModalProps {
   onCancellationProposed?: (() => void) | undefined
 }
 
+type DetailTab = "info" | "timeline" | "customer" | "florist"
+const TABS: { key: DetailTab; label: string }[] = [
+  { key: "info", label: "Thông tin đơn hàng" },
+  { key: "timeline", label: "Lịch sử đơn hàng" },
+  { key: "customer", label: "Thẻ đơn khách hàng" },
+  { key: "florist", label: "Thẻ gia công" },
+]
+
 export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCancellationProposed }: BrochureOrderDetailModalProps) {
   const [activeTab, setActiveTab] = useState<"info" | "timeline" | "customer" | "florist">("info")
   useEffect(() => {
@@ -155,46 +163,22 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
           </div>
         </div>
 
-        {/* Tab switcher: Chi tiết & Sơ đồ lịch sử & Thẻ gia công */}
-        <div className="flex overflow-x-auto border-b border-border px-5 pt-2 [&>button]:whitespace-nowrap">
-          <button
-            type="button"
-            onClick={() => setActiveTab("info")}
-            className={`border-b-2 px-4 py-2 text-body-sm font-bold transition-colors ${
-              activeTab === "info" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
-            }`}
-          >
-            Thông tin đơn hàng
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("timeline")}
-            className={`border-b-2 px-4 py-2 text-body-sm font-bold transition-colors ${
-              activeTab === "timeline" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
-            }`}
-          >
-            Lịch sử đơn hàng
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("customer")}
-            className={`border-b-2 px-4 py-2 text-body-sm font-bold transition-colors ${
-              activeTab === "customer" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
-            }`}
-          >
-            Thẻ đơn khách hàng
-          </button>
-          {canShowFloristJob && (
+        {/* Tab switcher: Chi tiết · Lịch sử · Thẻ đơn khách · Thẻ gia công — mọi tab cùng khung, không co/đè chữ */}
+        <div role="tablist" className="flex shrink-0 items-stretch gap-1 overflow-x-auto border-b border-border px-5">
+          {TABS.filter((t) => t.key !== "florist" || canShowFloristJob).map((t) => (
             <button
+              key={t.key}
               type="button"
-              onClick={() => setActiveTab("florist")}
-              className={`border-b-2 px-4 py-2 text-body-sm font-bold transition-colors flex items-center gap-1.5 ${
-                activeTab === "florist" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
+              role="tab"
+              aria-selected={activeTab === t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`-mb-px inline-flex min-h-11 shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-body-sm font-bold leading-none transition-colors ${
+                activeTab === t.key ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
               }`}
             >
-              Thẻ gia công
+              {t.label}
             </button>
-          )}
+          ))}
         </div>
 
         {/* Modal Body */}
