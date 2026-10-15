@@ -10,6 +10,7 @@ import { OrderDetailFooter } from "./order-detail-footer"
 import { StaffNametagGroup } from "./staff-nametag"
 import { OrderDetailInfoTab } from "./order-detail-info-tab"
 import { BrochureFloristJobTab } from "./brochure-florist-job-tab"
+import { BrochureCustomerOrderTab } from "./brochure-customer-order-tab"
 
 export interface OrderDetailModalTarget {
   orderId?: string | null | undefined
@@ -63,7 +64,7 @@ export interface BrochureOrderDetailModalProps {
 }
 
 export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCancellationProposed }: BrochureOrderDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<"info" | "timeline" | "florist">("info")
+  const [activeTab, setActiveTab] = useState<"info" | "timeline" | "customer" | "florist">("info")
   useEffect(() => {
     if (!target) return
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
@@ -154,7 +155,7 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
         </div>
 
         {/* Tab switcher: Chi tiết & Sơ đồ lịch sử & Thẻ gia công */}
-        <div className="flex border-b border-border px-5 pt-2">
+        <div className="flex overflow-x-auto border-b border-border px-5 pt-2 [&>button]:whitespace-nowrap">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
@@ -172,6 +173,15 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
             }`}
           >
             Lịch sử đơn hàng
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("customer")}
+            className={`border-b-2 px-4 py-2 text-body-sm font-bold transition-colors ${
+              activeTab === "customer" ? "border-primary text-primary" : "border-transparent text-text-muted hover:text-foreground"
+            }`}
+          >
+            Thẻ đơn khách hàng
           </button>
           {canShowFloristJob && (
             <button
@@ -203,6 +213,8 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
               totalVnd={target.totalVnd}
               paidVnd={target.paidVnd}
             />
+          ) : activeTab === "customer" ? (
+            <BrochureCustomerOrderTab target={target} />
           ) : activeTab === "florist" ? (
             <BrochureFloristJobTab
               target={target}

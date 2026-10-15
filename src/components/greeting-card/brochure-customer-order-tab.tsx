@@ -1,0 +1,58 @@
+"use client"
+
+import React, { useState } from "react"
+import { Check, Copy } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
+import {
+  buildCustomerOrderSlipLines,
+  buildCustomerOrderSlipText,
+} from "@/modules/greeting-card/domain/customer-order-slip"
+
+/** Thẻ Đơn Khách hàng — phiếu xác nhận đơn gửi khách (có giá bán, đã thu, còn lại). */
+export function BrochureCustomerOrderTab({ target }: { target: OrderDetailModalTarget }) {
+  const [copied, setCopied] = useState(false)
+  const groups = buildCustomerOrderSlipLines(target)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(buildCustomerOrderSlipText(target))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch { /* Trình duyệt chặn clipboard — người dùng chép tay */ }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4">
+        <div className="min-w-0">
+          <span className="text-caption font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+            Thẻ Đơn Khách hàng
+          </span>
+          <p className="mt-1 text-caption text-text-muted">Gửi khách để xác nhận lại đơn, giá và lịch giao.</p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleCopy} className="h-8 shrink-0 gap-1.5 whitespace-nowrap text-caption font-semibold text-foreground">
+          {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
+          <span>{copied ? "Đã chép text" : "Copy text Zalo"}</span>
+        </Button>
+      </div>
+
+      <div className="rounded-3xl border border-border bg-surface p-5 text-foreground shadow-md">
+        <div className="border-b border-border/60 pb-3">
+          <h3 className="text-body font-extrabold">Xác nhận đơn hàng #{target.orderCode || target.sendCode || "---"}</h3>
+          {target.saleName && <p className="text-body-sm text-text-muted">Nhân viên tư vấn: <strong className="text-foreground">{target.saleName}</strong></p>}
+        </div>
+        {groups.map((group, i) => (
+          <dl key={i} className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-1 border-b border-dashed border-border/60 py-3 last:border-b-0 text-body-sm">
+            {group.map((line) => (
+              <React.Fragment key={line.label}>
+                <dt className="text-text-muted">{line.label}:</dt>
+                <dd className="min-w-0 font-semibold break-words [overflow-wrap:anywhere]">{line.value}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        ))}
+      </div>
+    </div>
+  )
+}
