@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { KeyRound, Lock, Unlock } from "lucide-react"
+import { KeyRound, Lock, Trash2, Unlock } from "lucide-react"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { TemporaryPasswordNotice } from "./temporary-password-notice"
@@ -13,16 +13,18 @@ async function send(url: string, method: string, body: unknown, fallback: string
   return json?.data
 }
 
-/** Đặt lại mật khẩu (`A7`) và tạm khoá/mở lại (`A5`) một nhân viên — có hỏi lại trước khi làm. */
+/** Đặt lại mật khẩu (`A7`), tạm khoá/mở lại (`A5`) và xoá (`F4`) một nhân viên — có hỏi lại trước khi làm. */
 export function MemberAccountActions({
   member,
   canResetPassword,
   canToggleActive,
+  canRemove = false,
   onChanged,
 }: {
   member: { id: string; name: string | null; email: string; status: string }
   canResetPassword: boolean
   canToggleActive: boolean
+  canRemove?: boolean
   onChanged: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -59,6 +61,24 @@ export function MemberAccountActions({
     }
   }
 
+  const doRemove = async () => {
+    if (!window.confirm(`Xoá tài khoản ${who} khỏi tiệm? Người này bị đăng xuất ngay và không vào tiệm được nữa. Đơn hàng, dữ liệu cũ vẫn giữ nguyên.`)) return
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/v1/members/${member.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        throw new Error(json?.error?.message || "Không xoá được tài khoản")
+      }
+      onChanged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không xoá được tài khoản")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <>
       {canResetPassword && (
@@ -71,6 +91,12 @@ export function MemberAccountActions({
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void doToggle()} aria-label={`${suspended ? "Mở khoá" : "Tạm khoá"} ${who}`}>
           {suspended ? <Unlock size={15} /> : <Lock size={15} />}
           <span>{suspended ? "Mở khoá" : "Tạm khoá"}</span>
+        </Button>
+      )}
+      {canRemove && (
+        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void doRemove()} aria-label={`Xoá tài khoản ${who}`} className="text-danger">
+          <Trash2 size={15} />
+          <span>Xoá</span>
         </Button>
       )}
       {error && <span role="alert" className="block text-caption text-danger">{error}</span>}

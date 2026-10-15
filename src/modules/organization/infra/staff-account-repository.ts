@@ -65,4 +65,16 @@ export class StaffAccountRepository {
       }
     })
   }
+
+  /** Gỡ thành viên khỏi tổ chức và thu hồi ngay các phiên của người đó ở tổ chức này (tài khoản `users` giữ nguyên). */
+  async removeMembership(ctx: TenantContext, membershipId: string, userId: string): Promise<boolean> {
+    return this.db.$transaction(async (tx) => {
+      const result = await tx.memberships.deleteMany({ where: scopedWhere(ctx, { id: membershipId }) })
+      await tx.sessions.updateMany({
+        where: { user_id: userId, organization_id: ctx.organizationId, revoked_at: null },
+        data: { revoked_at: new Date() },
+      })
+      return result.count > 0
+    })
+  }
 }

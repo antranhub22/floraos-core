@@ -247,6 +247,7 @@ export default function QuanLyThanhVienPage() {
           canManageRole={canManageRole}
           canResetPassword={can("A7")}
           canToggleActive={can("A5")}
+          canRemove={canRemove}
           currentUserId={currentUserId}
           onChanged={() => void fetchData()}
           onSelectMember={setChangeRoleTarget}

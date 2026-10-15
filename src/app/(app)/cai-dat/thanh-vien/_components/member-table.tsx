@@ -25,6 +25,8 @@ interface MemberTableProps {
   /** `A7` đặt lại mật khẩu, `A5` tạm khoá/mở — trần cứng Điều hành. */
   canResetPassword: boolean
   canToggleActive: boolean
+  /** `F4` xoá nhân viên khỏi tiệm — trần cứng Điều hành. */
+  canRemove: boolean
   currentUserId: string | null
   onChanged: () => void
   onSelectMember: (target: {
@@ -44,6 +46,7 @@ export function MemberTable({
   canManageRole,
   canResetPassword,
   canToggleActive,
+  canRemove,
   currentUserId,
   onChanged,
   onSelectMember,
@@ -136,6 +139,7 @@ export function MemberTable({
                       member={{ id: m.id, name: m.user.name, email: m.user.email, status: m.status }}
                       canResetPassword={canResetPassword}
                       canToggleActive={canToggleActive}
+                      canRemove={canRemove}
                       onChanged={onChanged}
                     />
                   )}
