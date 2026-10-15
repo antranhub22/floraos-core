@@ -15,7 +15,13 @@ export function jsonResponse(
       headers.append(key, value)
     }
   }
-  return new Response(JSON.stringify(body), { status: init?.status ?? 200, headers })
+  const status = init?.status ?? 200
+  // 204/205/304 không được có body — `new Response("null", { status: 204 })` ném TypeError → 500 sau khi đã ghi xong.
+  if (status === 204 || status === 205 || status === 304) {
+    headers.delete("content-type")
+    return new Response(null, { status, headers })
+  }
+  return new Response(JSON.stringify(body), { status, headers })
 }
 
 export function errorResponse(error: unknown): Response {
