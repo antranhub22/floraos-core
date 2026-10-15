@@ -143,6 +143,8 @@ export async function loadTrackingDataset(
   ].filter((id): id is string => typeof id === "string" && id.length > 0)
 
   const proofUrls = await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
+  const productIdOf = (o: (typeof orders)[number]) => o.items[0]?.product_id ?? o.greeting_sessions[0]?.selected_product_id ?? ""
+  const productImages = await repo.productMainImages(ctx, [...orders.map(productIdOf), ...activeSessions.map((s) => s.selected_product_id ?? "")])
 
   // 1. Process Orders
   const orderItems: TrackingPipelineItem[] = orders.map((order) => {
@@ -224,7 +226,7 @@ export async function loadTrackingDataset(
       cardMessage: order.card_message ?? null,
       productName: snapshot?.name || order.items[0]?.description || "Mẫu hoa Thẻ chào",
       productPrice: Number(snapshot?.price || order.items[0]?.unit_price_vnd || 0),
-      productImageUrl: snapshot?.imageUrl || null,
+      productImageUrl: snapshot?.imageUrl || productImages.get(productIdOf(order)) || null,
       totalVnd: Number(order.total_vnd || 0),
       paidVnd: Number(order.paid_vnd || 0),
       balanceVnd: Number(order.balance_vnd || 0),
@@ -313,7 +315,7 @@ export async function loadTrackingDataset(
       cardMessage: null,
       productName: snapshot?.name || "Chưa chốt mẫu",
       productPrice: Number(snapshot?.price || 0),
-      productImageUrl: snapshot?.imageUrl || null,
+      productImageUrl: snapshot?.imageUrl || productImages.get(session.selected_product_id ?? "") || null,
       totalVnd: Number(snapshot?.price || 0),
       paidVnd: 0,
       balanceVnd: Number(snapshot?.price || 0),
