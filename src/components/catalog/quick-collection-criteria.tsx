@@ -4,7 +4,8 @@ import React from "react"
 import { DollarSign, Sparkles, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { GREETING_TEMPLATE_LIST } from "@/modules/greeting-card/domain/greeting-template-registry"
-import { COMMON_CATEGORIES, COMMON_COLORS, COMMON_FLOWERS, COMMON_OCCASIONS, QUICK_BUDGETS } from "./quick-collection-options"
+import { COMMON_CATEGORIES, COMMON_COLORS, COMMON_FLOWERS, COMMON_OCCASIONS } from "./quick-collection-options"
+import { usePriceBudgets } from "./use-price-budgets"
 
 export interface QuickCollectionCriteriaState {
   customerName: string
@@ -28,6 +29,7 @@ export function QuickCollectionCriteriaPanel({
   value: QuickCollectionCriteriaState
   onChange: (patch: Partial<QuickCollectionCriteriaState>) => void
 }) {
+  const priceBudgets = usePriceBudgets()
   const { customerName, customerPhone, occasion, category, flowerType, colorTone, selectedBudgetIds, priceMin, priceMax, productLimit, templateId } = value
   const handleToggleBudget = (id: string) =>
     onChange({ selectedBudgetIds: selectedBudgetIds.includes(id) ? selectedBudgetIds.filter((item) => item !== id) : [...selectedBudgetIds, id] })
@@ -73,7 +75,7 @@ export function QuickCollectionCriteriaPanel({
             Khoảng giá (chọn nhiều khung)
           </label>
           <div className="flex items-center gap-1">
-            {QUICK_BUDGETS.map((qb) => {
+            {priceBudgets.map((qb) => {
               const isSelected = selectedBudgetIds.includes(qb.id)
               return (
                 <button

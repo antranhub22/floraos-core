@@ -5,6 +5,7 @@ import { Search, Sparkles, Copy, Check, TrendingUp, Filter } from "lucide-react"
 import { Dialog } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
 import {
   matchProductsByBudget,
   type BudgetMatchCriteria,
@@ -70,19 +71,13 @@ const SAMPLE_PRODUCTS: ProductMatchCandidate[] = [
   },
 ]
 
-const QUICK_BUDGETS = [
-  { label: "Dưới 500k", min: 250_000, max: 500_000 },
-  { label: "500k - 800k", min: 500_000, max: 800_000 },
-  { label: "800k - 1.2tr", min: 800_000, max: 1_200_000 },
-  { label: "Trên 1.2tr", min: 1_200_000, max: 2_500_000 },
-]
-
 export function BudgetMatchingModal({
   open,
   onOpenChange,
   onSelectProduct,
   customCandidates,
 }: BudgetMatchingModalProps) {
+  const priceBudgets = usePriceBudgets()
   const [minPrice, setMinPrice] = useState<number>(500_000)
   const [maxPrice, setMaxPrice] = useState<number>(800_000)
   const [occasion, setOccasion] = useState<string>("Sinh nhật")
@@ -144,16 +139,16 @@ export function BudgetMatchingModal({
               Tiêu chí ngân sách & người nhận
             </div>
             <div className="flex items-center gap-1.5">
-              {QUICK_BUDGETS.map((qb) => (
+              {priceBudgets.map((qb) => (
                 <button
                   type="button"
-                  key={qb.label}
+                  key={qb.id}
                   onClick={() => {
                     setMinPrice(qb.min)
-                    setMaxPrice(qb.max)
+                    setMaxPrice(qb.max ?? qb.min * 2)
                   }}
                   className={`px-2 py-0.5 rounded text-caption font-medium transition border ${
-                    minPrice === qb.min && maxPrice === qb.max
+                    minPrice === qb.min && maxPrice === (qb.max ?? qb.min * 2)
                       ? "border-primary bg-primary/10 text-primary font-bold"
                       : "border-border bg-surface text-muted hover:border-primary/30"
                   }`}
