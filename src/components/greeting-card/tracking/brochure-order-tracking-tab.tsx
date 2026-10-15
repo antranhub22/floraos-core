@@ -28,7 +28,6 @@ export function BrochureOrderTrackingTab() {
   const me = useApi<{ user: { id: string }; capabilities: string[] }>("/api/v1/auth/me")
   const { mutate } = useSWRConfig()
   const [state, setState] = useState<TrackingViewState>(DEFAULT_STATE)
-  const [selected, setSelected] = useState<TrackingViewItem | null>(null)
   const [notesFor, setNotesFor] = useState<TrackingViewItem | null>(null)
   const [detailFor, setDetailFor] = useState<TrackingViewItem | null>(null)
   const [dismissFor, setDismissFor] = useState<TrackingViewItem | null>(null)
@@ -41,8 +40,8 @@ export function BrochureOrderTrackingTab() {
   const change = (patch: Partial<TrackingViewState>) => setState((s) => ({ ...s, ...patch }))
   const applyView = (v: SavedView) =>
     setState({ ...DEFAULT_STATE, columns: state.columns, ...v.state, ...(v.scope === "me" && me.data ? { saleId: me.data.user.id } : {}) })
-  // Mở một đơn: sang Timeline của đúng đơn đó (giữ bộ lọc)
-  const open = (i: TrackingViewItem) => { setSelected(i); change({ view: "timeline" }) }
+  // Mở một đơn: hiện Thẻ đơn hàng (lịch sử nằm trong tab "Lịch sử đơn hàng" của thẻ)
+  const open = (i: TrackingViewItem) => setDetailFor(i)
   const refresh = () => void mutate((key) => typeof key === "string" && key.includes("/api/v1/greeting-card/tracking") || (Array.isArray(key) && String(key[0]).includes("/api/v1/greeting-card/tracking")))
 
   // Lịch tự chọn khoảng ngày; bộ lọc ngày giao chỉ gửi kèm khi không xem lịch
@@ -68,10 +67,7 @@ export function BrochureOrderTrackingTab() {
           qs={qs}
           state={state}
           onChange={change}
-          selected={selected}
-          onSelect={setSelected}
-          onMessage={setNotesFor}
-          onDetail={(i) => setDetailFor(i)}
+          onOpen={open}
         />
       )}
       {state.view === "dashboard" && <DashboardView qs={qs} />}
