@@ -5,6 +5,7 @@ import { Search, Plus, Trash2, Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
+import { ExcludeCatalogsFilter } from "./exclude-catalogs-filter"
 
 type CatalogItem = {
   id: string
@@ -132,15 +133,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
         <div className="rounded-2xl border border-border bg-surface-muted p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <p className="text-body-sm font-bold text-text">Chọn từ kho sản phẩm</p>
-            <button
-              type="button"
-              onClick={() => {
-                setShowPicker(false)
-              }}
-              className="text-caption text-text-muted hover:text-text font-medium underline"
-            >
-              Đóng
-            </button>
+            <button type="button" onClick={() => setShowPicker(false)} className="text-caption text-text-muted hover:text-text font-medium underline">Đóng</button>
           </div>
 
           {/* Search */}
@@ -158,6 +151,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
             />
           </div>
 
+          <ExcludeCatalogsFilter currentCatalogId={catalogId} selected={ci.excludedCatalogIds} onChange={ci.setExcludedCatalogIds} loading={ci.excludeLoading} hiddenCount={ci.excludedHiddenCount} />
           {/* Quick Search Filters (Khoảng giá, Dịp tặng, Dáng hoa, Loại hoa, Tone màu) */}
           <div className="p-2.5 rounded-xl border border-border bg-surface space-y-2">
             <div className="flex items-center justify-between">
