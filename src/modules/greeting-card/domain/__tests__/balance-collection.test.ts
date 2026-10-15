@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { balanceCollectionBlocker, PHOTO_AUTO_APPROVE_MS, type BalanceCollectionOrder } from "../balance-collection"
+import { balanceCollectionBlocker, coordinatorBalanceConfirmBlocker, PHOTO_AUTO_APPROVE_MS, type BalanceCollectionOrder } from "../balance-collection"
 
 const NOW = Date.parse("2026-10-15T10:00:00Z")
 const base: BalanceCollectionOrder = { productionStatus: "ARRANGING", deliveryStatus: "PENDING", customerReported: false, qcRecords: [] }
@@ -39,5 +39,17 @@ describe("balanceCollectionBlocker — thu phần còn lại (Lần 2)", () => {
     expect(balanceCollectionBlocker(ready, BEFORE_DISPATCH, Date.parse(photoAt) + PHOTO_AUTO_APPROVE_MS)).toBeNull()
     const approved = { ...ready, qcRecords: [...ready.qcRecords, { notes: "CUSTOMER_PHOTO_APPROVED", created_at: new Date(NOW) }] }
     expect(balanceCollectionBlocker(approved, BEFORE_DISPATCH, NOW)).toBeNull()
+  })
+})
+
+describe("coordinatorBalanceConfirmBlocker — Điều phối tự xác nhận Lần 2", () => {
+  it("tiệm bắt Điều hành duyệt + Lần 2 chỉ Điều hành → chặn (nút không hiện)", () => {
+    expect(coordinatorBalanceConfirmBlocker({ requireAdminDepositApproval: true, isUrgent: false, balanceTrigger: "PAYMENT_ONLY" })).toMatch(/chỉ Điều hành/)
+  })
+
+  it("đơn hoả tốc, tiệm không bắt Điều hành duyệt, hoặc cho Điều phối xác nhận → được", () => {
+    expect(coordinatorBalanceConfirmBlocker({ requireAdminDepositApproval: true, isUrgent: true, balanceTrigger: "PAYMENT_ONLY" })).toBeNull()
+    expect(coordinatorBalanceConfirmBlocker({ requireAdminDepositApproval: false, isUrgent: false, balanceTrigger: "PAYMENT_ONLY" })).toBeNull()
+    expect(coordinatorBalanceConfirmBlocker({ requireAdminDepositApproval: true, isUrgent: false, balanceTrigger: "PAYMENT_OR_COORDINATOR" })).toBeNull()
   })
 })

@@ -11,6 +11,8 @@ import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-li
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { runBackgroundSweep } from "@/modules/greeting-card/use-cases/background-sweep"
+import { BrochurePaymentRepository } from "@/modules/greeting-card/infra/brochure-payment-repository"
+import { refundBrochureOrder } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 
 /**
  * PO 14/10/2026: Điều phối từ chối nhận đơn mà Điều hành không phản hồi kịp hạn → hệ thống tự huỷ,
@@ -75,5 +77,31 @@ describe("greeting-card: tự huỷ đơn khi đề xuất từ chối nhận đ
     await repo.complete(a.ctx, requestId, "Đã gọi báo khách")
     expect(await repo.listPending(a.ctx)).toEqual([])
     await expect(repo.complete(a.ctx, requestId, "")).rejects.toMatchObject({ code: "CONFLICT" })
+  })
+
+  it("khoản hoàn chờ ở 'Cần hoàn tiền' không ghi được lần nữa bằng nút Hoàn tiền của sổ thu (không hoàn trùng)", async () => {
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-2", name: "Bó 2", attributes: { price: 500_000 } })
+    const catalog = await new GreetingCardRepository().createCatalog(a.ctx, { code: "bo-2", name: "Bộ 2", productIds: [product.id], createdBy: a.userId })
+    const link = await createSendLink(a.ctx, { catalogId: catalog.id })
+    await selectBrochureProduct(link.sendCode, product.id)
+    const { orderId } = await submitBrochureOrder(link.sendCode, ORDER)
+    const paid = await new BrochurePaymentRepository().recordIncomingPayment(a.ctx, orderId, {
+      amountVnd: 200_000, method: "BANK_TRANSFER", reference: "CK-1", note: "Cọc",
+    })
+    const proposal = await new CancellationRepository().createProposal(a.ctx, {
+      orderId, senderRole: "COORDINATOR",
+      proposal: { type: "FULL_REFUND", reason: "Xưởng hết hoa", refundAmountVnd: paid.paidVnd },
+    })
+    await new CancellationRepository().decide(a.ctx, { requestId: proposal.id, approve: true, note: "Đồng ý" })
+
+    const followUps = new CancellationFollowUpRepository()
+    expect((await followUps.pendingRefundsByOrder(a.ctx, [orderId])).get(orderId)).toBe(200_000)
+    expect((await followUps.pendingRefundsByOrder(b.ctx, [orderId])).size).toBe(0)
+    await expect(refundBrochureOrder(a.ctx, orderId, { amountVnd: 200_000, reason: "Hoàn cọc" })).rejects.toMatchObject({ code: "CONFLICT" })
+
+    await followUps.complete(a.ctx, proposal.id, "Đã chuyển trả khách")
+    const refunds = await prisma.order_payments.findMany({ where: { order_id: orderId, kind: "REFUND" } })
+    expect(refunds.map((p) => Number(p.amount_vnd))).toEqual([200_000])
+    expect(Number((await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })).paid_vnd)).toBe(0)
   })
 })

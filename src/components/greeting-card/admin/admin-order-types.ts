@@ -22,6 +22,8 @@ export interface AdminOrder {
   /** URL ảnh chuyển khoản Lần 2 (Phần còn lại) do khách tải lên — đã ký, hết hạn sau 1h. */
   paymentProofBalanceUrl?: string | null | undefined
   paymentProofBalanceAnalysis?: import("@/modules/greeting-card/domain/payment-proof-analysis").PaymentProofAnalysisResult | null | undefined
+  /** Khoản hoàn đang chờ ở "Cần hoàn tiền" (Hộp việc) — có thì không ghi hoàn trực tiếp ở bảng. */
+  pending_refund_vnd?: number | null | undefined
 }
 
 export type OrderAction = { type: "quote" | "collect" | "cancel" | "refund"; order: AdminOrder }

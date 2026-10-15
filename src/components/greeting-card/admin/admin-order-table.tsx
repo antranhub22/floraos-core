@@ -212,7 +212,11 @@ export function AdminOrderTable({
                       )
                     )}
 
-                    {o.paid_vnd > 0 && (
+                    {o.pending_refund_vnd != null ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-warning-bg text-warning border border-warning/30" title="Khoản hoàn của đề xuất huỷ đã duyệt — đánh dấu đã hoàn ở Hộp việc, mục Cần hoàn tiền">
+                        <RotateCcw size={12} aria-hidden="true" /> Chờ hoàn {vnd(o.pending_refund_vnd)} · xử lý ở Hộp việc
+                      </span>
+                    ) : o.paid_vnd > 0 && (
                       <Button type="button" size="sm" variant="outline" onClick={() => onAction({ type: "refund", order: o })} className="h-8 text-caption gap-1">
                         <RotateCcw size={13} /> Hoàn tiền
                       </Button>

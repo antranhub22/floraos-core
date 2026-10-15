@@ -4,6 +4,7 @@ import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { BrochureOrderRepository, ORDER_STATUSES } from "@/modules/greeting-card/infra/brochure-order-repository"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
+import { CancellationFollowUpRepository } from "@/modules/greeting-card/infra/cancellation-follow-up-repository"
 import { parseListQuery, toPage } from "@/modules/greeting-card/contracts/list-query"
 import { resolveSaleScope } from "@/modules/greeting-card/use-cases/order-scope"
 import { withOrderProduct } from "@/modules/greeting-card/use-cases/order-product-views"
@@ -43,6 +44,9 @@ export const GET = handle(async (request) => {
     ? await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, proofAssetIds)
     : new Map<string, { url: string; analysis?: unknown }>()
 
+  // Đơn có khoản hoàn chờ ở "Cần hoàn tiền" — bảng Điều hành ẩn nút Hoàn tiền để không ghi trùng
+  const pendingRefunds = await new CancellationFollowUpRepository().pendingRefundsByOrder(ctx, rows.map((o) => o.id))
+
   const rowsWithProof = rows.map((o) => {
     const proof1 = o.greeting_sessions[0]?.payment_proof_asset_id
       ? proofAssetsMap.get(o.greeting_sessions[0].payment_proof_asset_id)
@@ -57,6 +61,7 @@ export const GET = handle(async (request) => {
       paymentProofAnalysis: proof1?.analysis ?? null,
       paymentProofBalanceUrl: proof2?.url ?? null,
       paymentProofBalanceAnalysis: proof2?.analysis ?? null,
+      pending_refund_vnd: pendingRefunds.get(o.id) ?? null,
     }
   })
 

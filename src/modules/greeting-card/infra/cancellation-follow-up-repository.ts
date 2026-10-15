@@ -65,6 +65,29 @@ export class CancellationFollowUpRepository {
   }
 
   /**
+   * Khoản hoàn đang chờ ở "Cần hoàn tiền" theo từng đơn (đơn → số tiền). Đơn có khoản này không được ghi
+   * hoàn trực tiếp ở sổ thu — nếu không cùng một khoản hoàn bị ghi hai lần.
+   */
+  async pendingRefundsByOrder(ctx: TenantContext, orderIds: readonly string[]): Promise<Map<string, number>> {
+    if (orderIds.length === 0) return new Map()
+    const rows = await this.db.greeting_messages.findMany({
+      where: scopedWhere(ctx, {
+        kind: "CANCELLATION_REQUEST",
+        order_id: { in: [...new Set(orderIds)] },
+        payload: { path: ["followUp", "status"], equals: "PENDING" },
+      }),
+      select: { order_id: true, payload: true },
+    })
+    const due = new Map<string, number>()
+    for (const r of rows) {
+      const payload = obj(r.payload) as unknown as CancellationPayload
+      if (!r.order_id || !needsFollowUp(payload) || !payload.followUp) continue
+      due.set(r.order_id, (due.get(r.order_id) ?? 0) + Math.max(0, Math.round(payload.followUp.refundDueVnd)))
+    }
+    return due
+  }
+
+  /**
    * Điều hành xác nhận đã xử lý xong: nếu còn tiền phải hoàn thì lúc này mới ghi khoản REFUND vào
    * sổ thu (tiền đã thật sự chuyển). Hai người bấm cùng lúc → chỉ một bên ghi.
    */

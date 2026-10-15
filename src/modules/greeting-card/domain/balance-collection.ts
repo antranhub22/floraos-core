@@ -44,3 +44,19 @@ export function balanceCollectionBlocker(order: BalanceCollectionOrder, policy: 
   if (nowMs >= new Date(productPhoto.created_at).getTime() + PHOTO_AUTO_APPROVE_MS) return null
   return "Đơn hàng đang chờ khách duyệt ảnh thành phẩm trước khi giao. Chưa thể ghi nhận thanh toán lần 2."
 }
+
+/**
+ * Điều phối được tự xác nhận khoản Lần 2 không? Chặn khi tiệm bắt Điều hành duyệt tiền VÀ người xác nhận
+ * Lần 2 là "chỉ Điều hành" (`PAYMENT_ONLY`, theo bộ sưu tập nếu có ghi đè) — trừ đơn hoả tốc.
+ * Dùng chung cho route `/confirm-balance` và nút trên thẻ Điều phối (trước đây nút vẫn hiện rồi báo lỗi).
+ */
+export function coordinatorBalanceConfirmBlocker(input: {
+  requireAdminDepositApproval: boolean
+  isUrgent: boolean
+  balanceTrigger: "PAYMENT_ONLY" | "PAYMENT_OR_COORDINATOR"
+}): string | null {
+  if (!input.requireAdminDepositApproval || input.isUrgent) return null
+  return input.balanceTrigger === "PAYMENT_ONLY"
+    ? "Cài đặt của cửa hàng yêu cầu chỉ Điều hành mới được xác nhận thanh toán lần 2"
+    : null
+}

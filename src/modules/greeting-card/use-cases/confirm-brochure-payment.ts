@@ -3,6 +3,7 @@ import { notFound, unprocessable, conflict } from "@/core/http/errors"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
+import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-repository"
 import { expectedPayment, parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
 import { policyForOrder, readPaymentPlan } from "../domain/payment-plan"
 import { depositAmountVnd } from "../domain/payment-schedule"
@@ -157,9 +158,14 @@ export async function refundBrochureOrder(
   ctx: TenantContext,
   orderId: string,
   input: { amountVnd: number; reason: string },
-  payments = new BrochurePaymentRepository()
+  payments = new BrochurePaymentRepository(),
+  followUps = new CancellationFollowUpRepository()
 ) {
   await assertOrderInScope(ctx, orderId)
+  // Khoản hoàn của đề xuất huỷ đã duyệt được ghi ở "Cần hoàn tiền" (Hộp việc) — ghi thêm ở đây là ghi trùng
+  if ((await followUps.pendingRefundsByOrder(ctx, [orderId])).has(orderId)) {
+    throw conflict("Đơn này đang có khoản hoàn chờ xử lý ở Hộp việc (mục Cần hoàn tiền) — đánh dấu đã hoàn ở đó để không ghi trùng")
+  }
   return payments.refund(ctx, orderId, { amountVnd: input.amountVnd, reason: input.reason.trim() })
 }
 

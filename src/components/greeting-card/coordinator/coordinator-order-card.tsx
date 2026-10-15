@@ -35,7 +35,7 @@ export interface BrochureOrder {
   delivery_address: { recipientName?: string; phone?: string; street?: string; notes?: string; mapUrl?: string } | null
   delivery_window: { date?: string; timeSlot?: string; failures?: unknown } | null
   items: Array<{ id: string; description: string; quantity: number; unit_price_vnd: number; metadata?: { name?: string; imageUrl?: string; flowersSummary?: string | null } }>
-  greeting_sessions: Array<{ id: string; send_code: string; product_snapshot?: { name?: string; imageUrl?: string; flowersSummary?: string | null }; status?: string }>
+  greeting_sessions: Array<{ id: string; send_code: string; product_snapshot?: { name?: string; imageUrl?: string; flowersSummary?: string | null }; status?: string; catalog?: { filters?: unknown } | null }>
   customer?: { id?: string; code?: string; name?: string; phone?: string } | null
   pricing_rule_ref?: { policies?: { promotion?: { title?: string } | null } | null } | null
   saleId?: string | null; saleName?: string | null; coordinatorId?: string | null; coordinatorName?: string | null
