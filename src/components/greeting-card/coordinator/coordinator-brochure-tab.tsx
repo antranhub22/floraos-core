@@ -220,8 +220,9 @@ export function CoordinatorBrochureTab() {
             orderId: modal.order.id,
             orderCode: modal.order.code,
             sendCode: modal.order.greeting_sessions[0]?.send_code,
-            customerName: workOf.get(modal.order.id)?.customerName,
-            customerPhone: workOf.get(modal.order.id)?.customerPhone,
+            // Đơn ngoài phạm vi bảng theo dõi (đơn xong quá 7 ngày, vượt giới hạn) → đọc khách từ chính đơn
+            customerName: workOf.get(modal.order.id)?.customerName ?? (modal.order.customer?.name || modal.order.delivery_address?.recipientName),
+            customerPhone: workOf.get(modal.order.id)?.customerPhone ?? (modal.order.customer?.phone || modal.order.delivery_address?.phone),
             saleId: workOf.get(modal.order.id)?.saleId ?? modal.order.saleId,
             saleName: workOf.get(modal.order.id)?.saleName ?? modal.order.saleName,
             coordinatorId: workOf.get(modal.order.id)?.coordinatorId ?? modal.order.coordinatorId,
