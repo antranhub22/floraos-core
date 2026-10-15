@@ -1,4 +1,6 @@
 import type { Metadata } from "next"
+import { linkPreviewText } from "@/modules/greeting-card/domain/link-preview-text"
+import { getPublicGreetingCatalog } from "@/modules/greeting-card/use-cases/get-public-greeting-catalog"
 import { shareLinkPreview } from "@/modules/greeting-card/use-cases/share-links"
 import { ShareLinkRedirect } from "@/components/greeting-card/share/share-link-redirect"
 import { LinkUnavailable } from "@/components/greeting-card/customer/link-unavailable"
@@ -11,8 +13,15 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const preview = await shareLinkPreview((await params).code.toUpperCase())
   if (!preview) return { title: "Bộ Sưu Tập Mẫu Hoa" }
-  const title = `${preview.name} — Bộ Sưu Tập Mẫu Hoa`
-  const description = preview.description ?? `Xem bộ sưu tập hoa tươi ${preview.name}`
+  // Cùng tiêu đề/mô tả với link /b/: tên bộ sưu tập · tên tiệm, số mẫu và giá thấp nhất
+  const data = await getPublicGreetingCatalog(preview.catalogId)
+  const active = data.status === "ACTIVE" ? data : null
+  const { title, description } = linkPreviewText({
+    catalogName: preview.name,
+    shopName: active?.shop?.name ?? null,
+    catalogDescription: preview.description,
+    prices: active?.products.map((p) => p.price) ?? [],
+  })
   return {
     title,
     description,
