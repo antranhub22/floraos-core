@@ -13,7 +13,7 @@ import { CHANGE_NOTE_MAX, type OrderChangeInput, type OrderChangeSnapshot } from
 import { AddressFields } from "./address-fields"
 import { DeliveryTimePicker } from "./delivery-time-picker"
 
-const INPUT = "w-full h-12 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+const INPUT = "w-full min-w-0 h-11 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground placeholder:text-body placeholder:text-text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/20"
 const LABEL = "block text-body-sm font-bold text-foreground mb-1"
 const EMPTY_PARTS: AddressParts = { houseNumber: "", street: "", ward: "", province: "" }
 
@@ -102,7 +102,7 @@ export function OrderChangeForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor={`${uid}-date`} className={LABEL}>Ngày giao</label>
-          <input id={`${uid}-date`} type="date" min={earliestDeliveryDate(shipping)} value={v.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={INPUT} />
+          <input id={`${uid}-date`} type="date" min={earliestDeliveryDate(shipping)} value={v.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={`${INPUT} appearance-none text-left`} />
         </div>
         <div>
           <label htmlFor={`${uid}-slot`} className={LABEL}>Giờ giao</label>

@@ -35,9 +35,9 @@ interface BrochureOrderFormProps {
   onSubmit: (input: CustomerOrderSubmitInput) => Promise<void>
 }
 
-// Chữ trong ô ≥ 16px (`text-title`) để iPhone không tự phóng to khi khách chạm vào ô
+// Chữ khách gõ ≥ 16px (`text-title`) để iPhone không tự phóng to; chữ gợi ý nhỏ, nhạt hơn cho đỡ rối mắt
 const INPUT =
-  "w-full h-12 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+  "w-full min-w-0 h-11 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground placeholder:text-body placeholder:text-text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/20"
 
 export function BrochureOrderForm({
   productSnapshot,
@@ -292,7 +292,7 @@ export function BrochureOrderForm({
               max={maxDate}
               value={deliveryDate}
               id={`${uid}-deliveryDate`} onChange={(e) => setDeliveryDate(e.target.value)}
-              className={INPUT}
+              className={`${INPUT} appearance-none text-left`}
             />
           </div>
           <div>
