@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { linkPreviewText } from "@/modules/greeting-card/domain/link-preview-text"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { brochureViewer } from "@/modules/greeting-card/use-cases/brochure-owner"
@@ -33,11 +34,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  const title = `${data.catalog.name} · ${data.shop.name}`
-  const prices = data.products.map((p) => p.price).filter((p): p is number => typeof p === "number" && p > 0)
-  const fromPrice = prices.length ? `, giá từ ${Math.min(...prices).toLocaleString("vi-VN")}đ` : ""
-  const description =
-    data.catalog.description || `${data.products.length} mẫu hoa tươi${fromPrice}. Chạm để xem và đặt hoa.`
+  const { title, description } = linkPreviewText({
+    catalogName: data.catalog.name,
+    shopName: data.shop.name,
+    catalogDescription: data.catalog.description,
+    prices: data.products.map((p) => p.price),
+  })
 
   return {
     title,
