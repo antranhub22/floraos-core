@@ -6,55 +6,37 @@ import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
 import type { StepSegment, TimelineEvent } from "@/modules/greeting-card/domain/tracking-timeline"
 import type { TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 import { ListView } from "./list-view"
-import { codeOf, StaffNametagGroup } from "./tracking-bits"
 import type { TrackingViewState } from "./tracking-view-state"
 
 const when = (s: string) => new Date(s).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
 
-/** Dòng thời gian: chọn một đơn/link ở danh sách → từng bước đã qua so với thời gian chuẩn + mọi sự kiện. */
-export function TimelineView({ qs, state, onChange, selected, onSelect, onMessage, onDetail }: {
+/** Dòng thời gian: danh sách đơn/link — bấm một đơn để mở Thẻ đơn hàng (lịch sử nằm trong tab "Lịch sử đơn hàng"). */
+export function TimelineView({ qs, state, onChange, onOpen }: {
   qs: string; state: TrackingViewState; onChange: (p: Partial<TrackingViewState>) => void
-  selected: TrackingViewItem | null; onSelect: (i: TrackingViewItem | null) => void; onMessage: (i: TrackingViewItem) => void
-  onDetail?: (i: TrackingViewItem) => void
+  onOpen: (i: TrackingViewItem) => void
 }) {
-  if (!selected) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p className="text-body-sm text-text-muted">Chọn một đơn hoặc link để xem toàn bộ hành trình.</p>
-        <ListView qs={qs} state={state} onChange={onChange} onOpen={onSelect} />
-      </div>
-    )
-  }
-  const ref = selected.orderId ? `orderId=${selected.orderId}` : `sessionId=${selected.sessionId}`
-  return <TimelineDetail refQs={ref} item={selected} onBack={() => onSelect(null)} onMessage={() => onMessage(selected)} onDetail={onDetail ? () => onDetail(selected) : undefined} />
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-body-sm text-text-muted">Chọn một đơn hoặc link để mở thẻ đơn hàng.</p>
+      <ListView qs={qs} state={state} onChange={onChange} onOpen={onOpen} />
+    </div>
+  )
 }
 
-function TimelineDetail({ refQs, item, onBack, onMessage, onDetail }: { refQs: string; item: TrackingViewItem; onBack: () => void; onMessage: () => void; onDetail?: (() => void) | undefined }) {
+/** Lịch sử một đơn/link: từng bước đã qua so với thời gian chuẩn + mọi sự kiện. */
+export function OrderHistoryPanel({ orderId, sessionId }: { orderId?: string | null | undefined; sessionId?: string | null | undefined }) {
+  const refQs = orderId ? `orderId=${orderId}` : sessionId ? `sessionId=${sessionId}` : null
+  if (!refQs) return null
+  return <HistoryContent refQs={refQs} />
+}
+
+function HistoryContent({ refQs }: { refQs: string }) {
   const url = `/api/v1/greeting-card/tracking/timeline?${refQs}`
   const head = useApi<{ segments: StepSegment[] }>(`${url}&limit=1`)
   const events = usePagedList<TimelineEvent>(url, 50)
   const segments = head.data?.segments ?? []
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" onClick={onBack} className="min-h-11 text-body-sm font-semibold text-primary">← Chọn đơn khác</button>
-        <div className="flex items-center gap-2">
-          {onDetail && (
-            <button type="button" onClick={onDetail} className="min-h-11 rounded-xl border border-border bg-surface px-3 text-body-sm font-semibold text-foreground hover:bg-surface-muted">
-              Xem chi tiết đơn
-            </button>
-          )}
-          <button type="button" onClick={onMessage} className="min-h-11 rounded-xl border border-border bg-surface px-3 text-body-sm font-semibold text-foreground hover:bg-surface-muted">
-            Ghi chú / nhắn
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-body font-extrabold text-foreground">{item.customerName} · {codeOf(item)}</h3>
-          <StaffNametagGroup item={item} />
-        </div>
-      </div>
       {head.error ? <p role="alert" className="text-body-sm text-danger">{(head.error as Error).message}</p> : (
         <ol className="flex flex-col gap-2" aria-label="Các bước đã qua">
           {segments.map((s) => (

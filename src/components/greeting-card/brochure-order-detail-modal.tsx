@@ -5,6 +5,7 @@ import { X, Clock, MapPin, User, Phone, Flower2, CheckCircle2 } from "lucide-rea
 import { Button } from "@/components/ui/button"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { EvidenceTimelineDiagram } from "./evidence-timeline-diagram"
+import { OrderHistoryPanel } from "./tracking/views/timeline-view"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
 import { OrderDetailFooter } from "./order-detail-footer"
 import { StaffNametagGroup } from "./staff-nametag"
@@ -189,6 +190,8 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === "timeline" ? (
+            <div className="flex flex-col gap-5">
+            <OrderHistoryPanel orderId={target.orderId} sessionId={target.sessionId} />
             <EvidenceTimelineDiagram
               orderId={target.orderId}
               sessionId={target.sessionId}
@@ -203,6 +206,7 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
               totalVnd={target.totalVnd}
               paidVnd={target.paidVnd}
             />
+            </div>
           ) : activeTab === "florist" ? (
             <BrochureFloristJobTab
               target={target}
