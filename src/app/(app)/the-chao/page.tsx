@@ -70,11 +70,14 @@ export default function TheChaoPage() {
   const coordinatorBadge = pendingBalanceConfirmCount && pendingBalanceConfirmCount > 0 ? pendingBalanceConfirmCount : null
 
   const [refreshKey, setRefreshKey] = useState(0)
+  // Đơn cần mở ở tab Điều hành khi bấm "Xử lý" trong Hộp việc
+  const [paymentFocus, setPaymentFocus] = useState<string | null>(null)
 
   // Từ Hộp việc: mở đúng tab rồi cuộn tới đúng thẻ đơn (chờ dữ liệu tab tải xong tối đa ~4 giây)
   const openInboxTarget = useCallback((t: InboxTarget) => {
     setViewMode("manager")
     setActiveTab(t.tab)
+    setPaymentFocus(t.tab === "payment" ? t.orderId : null)
     const key = t.orderId ?? t.sessionId
     if (!key) return
     let tries = 0
@@ -228,7 +231,7 @@ export default function TheChaoPage() {
             />
           )}
           {shownTab === "coordinator" && <CoordinatorBrochureTab canDecideInTransitCancel={can("R5")} />}
-          {shownTab === "payment" && <AdminBrochurePaymentTab />}
+          {shownTab === "payment" && <AdminBrochurePaymentTab focusOrderId={paymentFocus} onClearFocus={() => setPaymentFocus(null)} />}
         </div>
       )}
     </div>

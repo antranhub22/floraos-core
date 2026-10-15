@@ -24,10 +24,12 @@ export const GET = handle(async (request) => {
   const q = url.searchParams.get("q")?.trim().slice(0, 40) || undefined
   const reported = url.searchParams.get("reported") === "1"
   const delivered = url.searchParams.get("delivered") === "1"
+  // Mở đúng một đơn từ Hộp việc — bỏ qua bộ lọc tab, vẫn trong phạm vi tiệm + sale
+  const orderId = url.searchParams.get("orderId")?.trim().slice(0, 64) || undefined
 
   const repo = new BrochureOrderRepository()
   const saleId = (await resolveSaleScope(ctx)) ?? undefined
-  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, delivered, limit, cursor })
+  const rows = await repo.listBrochureOrders(ctx, { status, payment, saleId, q, reported, delivered, orderId, limit, cursor })
 
   // Batch-resolve ảnh chuyển khoản và kết quả phân tích AI (tránh N+1) — chỉ ký asset của đúng tổ chức
   const proofAssetIds = rows
