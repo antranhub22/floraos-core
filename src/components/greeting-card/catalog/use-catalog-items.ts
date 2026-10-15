@@ -6,6 +6,7 @@ import { filterProducts } from "@/lib/product-filter"
 import type { ProductFilterCriteria } from "@/lib/product-filter"
 import { toInclusiveRange } from "@/lib/price-budgets"
 import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
+import { useExcludedCatalogProducts, withoutProducts } from "./use-excluded-catalog-products"
 
 export type AvailableProduct = {
   id: string
@@ -56,6 +57,9 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
   const [filterCategory, setFilterCategory] = useState<string>("")
   const [filterFlowerType, setFilterFlowerType] = useState<string>("")
   const [filterColorTone, setFilterColorTone] = useState<string>("")
+  // Bộ sưu tập user không muốn trùng mẫu — không ghi nhớ, mỗi lần mở bắt đầu trống
+  const [excludedCatalogIds, setExcludedCatalogIds] = useState<string[]>([])
+  const excluded = useExcludedCatalogProducts(excludedCatalogIds)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -107,6 +111,7 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     setFilterCategory("")
     setFilterFlowerType("")
     setFilterColorTone("")
+    setExcludedCatalogIds([])
   }
 
   const hasActiveFilters =
@@ -114,9 +119,11 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     Boolean(filterOccasion) ||
     Boolean(filterCategory) ||
     Boolean(filterFlowerType) ||
-    Boolean(filterColorTone)
+    Boolean(filterColorTone) ||
+    excludedCatalogIds.length > 0
 
-  const rawAvailable = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
+  const notInCatalog = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
+  const rawAvailable = withoutProducts(notInCatalog, excluded.excludedProductIds)
 
   // Ánh xạ selectedBudgets → PriceRange[] cho SSOT engine (khoảng giá do cửa hàng cấu hình)
   const priceRanges = priceBudgets
@@ -169,12 +176,17 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     setFilterColorTone,
     resetFilters,
     hasActiveFilters,
+    excludedCatalogIds,
+    setExcludedCatalogIds,
+    excludeLoading: excluded.loading,
+    /** Số mẫu bị ẩn vì đã có trong bộ sưu tập user chọn tránh trùng */
+    excludedHiddenCount: notInCatalog.length - rawAvailable.length,
     /** Sản phẩm sau khi lọc qua SSOT product-filter engine */
     available: filteredAvailable,
     rawCount: rawAvailable.length,
     add: (productId: string) => change("POST", productId),
     remove: (productId: string) => change("DELETE", productId),
     busyId,
-    error,
+    error: error ?? excluded.error,
   }
 }
