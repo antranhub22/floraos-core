@@ -178,12 +178,7 @@ export function CatalogProductPicker({ catalogId, compact = false, onItemCountCh
             {/* 1. Khoảng giá */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-caption text-text-muted shrink-0 w-16">Khoảng giá:</span>
-              {[
-                { id: "b1", label: "< 500k" },
-                { id: "b2", label: "500k - 800k" },
-                { id: "b3", label: "800k - 1.5tr" },
-                { id: "b4", label: "> 1.5tr" },
-              ].map((b) => {
+              {ci.priceBudgets.map((b) => {
                 const isSelected = ci.selectedBudgets.includes(b.id)
                 return (
                   <button

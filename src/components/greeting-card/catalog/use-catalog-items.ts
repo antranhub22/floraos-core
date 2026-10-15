@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
 import { filterProducts } from "@/lib/product-filter"
 import type { ProductFilterCriteria } from "@/lib/product-filter"
+import { toInclusiveRange } from "@/lib/price-budgets"
+import { usePriceBudgets } from "@/components/catalog/use-price-budgets"
 
 export type AvailableProduct = {
   id: string
@@ -48,6 +50,7 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const priceBudgets = usePriceBudgets()
   const [selectedBudgets, setSelectedBudgets] = useState<string[]>([])
   const [filterOccasion, setFilterOccasion] = useState<string>("")
   const [filterCategory, setFilterCategory] = useState<string>("")
@@ -115,16 +118,13 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
 
   const rawAvailable = (products.data?.data ?? []).filter((p) => !existing.has(p.id))
 
-  // Ánh xạ selectedBudgets → PriceRange[] cho SSOT engine
-  const BUDGET_RANGES: Record<string, { min: number; max: number }> = {
-    b1: { min: 0, max: 500_000 },
-    b2: { min: 500_000, max: 800_000 },
-    b3: { min: 800_000, max: 1_500_000 },
-    b4: { min: 1_500_000, max: 999_999_999 },
-  }
-  const priceRanges = selectedBudgets
-    .map((id) => BUDGET_RANGES[id])
-    .filter(Boolean) as { min: number; max: number }[]
+  // Ánh xạ selectedBudgets → PriceRange[] cho SSOT engine (khoảng giá do cửa hàng cấu hình)
+  const priceRanges = priceBudgets
+    .filter((b) => selectedBudgets.includes(b.id))
+    .map((b) => {
+      const { min, max } = toInclusiveRange(b)
+      return { min, max }
+    })
 
   // Tạo criteria theo chuẩn SSOT — dùng conditional spread để chập exactOptionalPropertyTypes
   const criteria: ProductFilterCriteria = {
@@ -156,6 +156,7 @@ export function useCatalogItems<TDetail extends { items: Array<{ product: { id: 
     loadingProducts: products.isLoading,
     searchQuery,
     setSearchQuery,
+    priceBudgets,
     selectedBudgets,
     setSelectedBudgets,
     filterOccasion,

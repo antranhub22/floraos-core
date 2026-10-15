@@ -11,7 +11,8 @@ import {
   type QuickCollectionCriteria,
   type QuickCollectionResult,
 } from "@/modules/catalog-links/domain/quick-collection-engine"
-import { QUICK_BUDGETS } from "./quick-collection-options"
+import { toInclusiveRange } from "@/lib/price-budgets"
+import { usePriceBudgets } from "./use-price-budgets"
 import { QuickCollectionCriteriaPanel, type QuickCollectionCriteriaState } from "./quick-collection-criteria"
 import { QuickCollectionPreview } from "./quick-collection-preview"
 import { QuickCollectionShare } from "./quick-collection-share"
@@ -91,10 +92,11 @@ export function QuickCollectionModal({
   }, [products, categoryRes.data])
 
   // Compute live match
+  const priceBudgets = usePriceBudgets()
   const liveResult = useMemo<QuickCollectionResult>(() => {
-    const selectedRanges = QUICK_BUDGETS
+    const selectedRanges = priceBudgets
       .filter((b) => selectedBudgetIds.includes(b.id))
-      .map((b) => ({ min: b.min, max: b.max, label: b.label }))
+      .map(toInclusiveRange)
 
     const criteria: QuickCollectionCriteria = {
       occasion: occasion || undefined,
@@ -117,6 +119,7 @@ export function QuickCollectionModal({
     flowerType,
     colorTone,
     selectedBudgetIds,
+    priceBudgets,
     priceMin,
     priceMax,
     productLimit,

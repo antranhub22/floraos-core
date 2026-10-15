@@ -36,16 +36,3 @@ export const COMMON_COLORS = [
   "Xanh / Tím",
 ]
 
-export interface QuickBudgetOption {
-  id: string
-  label: string
-  min: number
-  max: number
-}
-
-export const QUICK_BUDGETS: QuickBudgetOption[] = [
-  { id: "b1", label: "Dưới 500k", min: 0, max: 500_000 },
-  { id: "b2", label: "500k - 800k", min: 500_000, max: 800_000 },
-  { id: "b3", label: "800k - 1.5tr", min: 800_000, max: 1_500_000 },
-  { id: "b4", label: "Trên 1.5tr", min: 1_500_000, max: 10_000_000 },
-]
