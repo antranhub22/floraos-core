@@ -25,6 +25,16 @@ describe("SSOT thông tin mẫu hoa của đơn Thẻ chào", () => {
     expect(orderProductView({ items: [{ product_id: "px" }], greeting_sessions: [] }, images).imageUrl).toBeNull()
   })
 
+  it("link ảnh ký đã hết hạn trong ảnh chụp mẫu → dùng ảnh hiện tại trong kho", () => {
+    const now = new Date("2026-10-15T00:00:00Z")
+    const expired = `/api/v1/storage/org/a/p.jpg?exp=${now.getTime() - 1}&sig=x`
+    const live = `/api/v1/storage/org/a/p.jpg?exp=${now.getTime() + 60_000}&sig=x`
+    const src = (url: string) => ({ items: [{ product_id: "p1" }], greeting_sessions: [{ product_snapshot: { name: "Rosa", imageUrl: url } }] })
+    expect(orderProductView(src(expired), images, undefined, now).imageUrl).toBe("/kho/p1.jpg")
+    expect(orderProductView(src(live), images, undefined, now).imageUrl).toBe(live)
+    expect(orderProductView(src("https://cdn.example/p.jpg"), images, undefined, now).imageUrl).toBe("https://cdn.example/p.jpg")
+  })
+
   it("tên và giá rơi về mô tả / đơn giá dòng đơn, rồi tên mặc định", () => {
     expect(orderProductView({ items: [{ description: "Bó tay", unit_price_vnd: 300000 }], greeting_sessions: [] }, images)).toMatchObject({ name: "Bó tay", price: 300000 })
     expect(orderProductView({ items: [], greeting_sessions: [] }, images, "Chưa chốt mẫu")).toMatchObject({ name: "Chưa chốt mẫu", price: 0, imageUrl: null })

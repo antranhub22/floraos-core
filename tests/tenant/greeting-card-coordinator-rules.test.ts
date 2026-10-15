@@ -129,4 +129,14 @@ describe("greeting-card: luật Điều phối (PO 15/10/2026)", () => {
     await cancelBrochureOrder(a.ctx, order.orderId, "Khách đổi ý", true)
     expect((await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })).status).toBe("CANCELLED")
   })
+
+  it("mẫu chỉ có ảnh thư viện (chưa đặt ảnh chính) vẫn hiện ảnh trên bảng Điều phối", async () => {
+    const order = await placeOrder()
+    const item = await prisma.order_items.findFirstOrThrow({ where: { order_id: order.orderId } })
+    const img = await asset()
+    await prisma.product_images.create({ data: { organization_id: a.organizationId, product_id: item.product_id ?? "", asset_id: img.id, role: "GALLERY" } })
+    // Ảnh chụp mẫu lúc khách chọn không có ảnh (mẫu tạo chưa có ảnh) → lấy ảnh trong kho
+    const row = (await getCoordinatorBoard(a.ctx, {})).data.find((o) => o.id === order.orderId)
+    expect(row?.product.imageUrl).toContain(img.storage_key)
+  })
 })
