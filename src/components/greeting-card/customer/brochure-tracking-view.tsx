@@ -10,6 +10,7 @@ import { TrackingSteps } from "./tracking-steps"
 import { OrderChangePanel, type OrderChangeData } from "./order-change-panel"
 import { TrackingPaymentCard, type TrackingPayment } from "./tracking-payment-card"
 import { PaymentFailedNotice } from "./payment-failed-notice"
+import { OrderCancelledNotice, type CancellationNoticeData } from "./order-cancelled-notice"
 import { SubstitutePanel, type SubstituteData } from "./substitute-panel"
 import { CustomerThankYouCard, THANK_YOU_TARGET } from "./customer-thank-you-card"
 import { isTrackingCompleted } from "@/modules/greeting-card/domain/greeting-card-rules"
@@ -47,6 +48,8 @@ type TrackingData = {
     substitute?: SubstituteData | null
     /** Lần giao gần nhất không thành công (ghi chú chỉ khi đã xác minh) */
     deliveryFailure?: { at: string; reasonLabel: string; note: string | null; feeVnd: number; attempts: number } | null
+    /** Tiệm không thực hiện được đơn (Điều phối huỷ, đã duyệt): hạn liên hệ + tiền hoàn */
+    cancellationNotice?: CancellationNoticeData | null
     recipientName: string
     deliveryAddress: string
     finishedImageUrl?: string | null
@@ -139,11 +142,13 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
       </div>
 
       {paymentFailed && <PaymentFailedNotice orderCode={order.code} cta={failedCta} />}
+      {order.cancellationNotice && <OrderCancelledNotice orderCode={order.code} notice={order.cancellationNotice} />}
 
       {/* Đơn đã hoàn tất: lời cảm ơn + xem lại đơn, tiến độ, đặt đơn mới */}
       {isTrackingCompleted(order.status, order.deliveryStatus) && <CustomerThankYouCard orderCode={order.code} sendCode={sendCode} />}
 
-      {/* Progress Bar & Current Status Card */}
+      {/* Progress Bar & Current Status Card — đơn đã có thông báo huỷ thì không cần */}
+      {!order.cancellationNotice && <>
       <div className="bg-primary/5 rounded-2xl p-4 border border-primary/20 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-body font-extrabold text-primary">
@@ -169,6 +174,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
         productionStatus={order.productionStatus}
         cancelledReason={order.status === "CANCELLED" ? "Cửa hàng không thể nhận đơn" : null}
       />
+      </>}
 
       <BalancePaymentBanner
         totalVnd={order.totalVnd}
