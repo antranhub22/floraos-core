@@ -59,7 +59,7 @@ Ký hiệu trạng thái: **I** Implemented · **P** Partial · **M** Missing ·
 
 ## 4. End-to-End User Flow
 
-**4.1 Sale gửi link riêng (chế độ "Gửi nhanh", mặc định khi vào `/the-chao`)** — `journey/journey-wizard.tsx`
+**4.1 Sale gửi link riêng (chế độ "Gửi nhanh"; từ 16/10/2026 Sale vào `/the-chao` mở chế độ Quản lý · tab Bán hàng như Điều hành, bấm "Gửi nhanh" để gửi link)** — `journey/journey-wizard.tsx`
 1. Bước 1: chọn/tạo/nhân bản bộ sưu tập, thêm mẫu, chọn giao diện khách xem.
 2. Bước 2: (tuỳ chọn) tên + SĐT khách, hạn link → `POST /greeting-card/send-links` (R2).
 3. Bước 3: sao chép link `/b/<mã>` → `POST /send-links/:mã/copied` ghi mốc gửi (lỗi mạng không chặn chép).
