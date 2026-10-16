@@ -7,6 +7,7 @@
 import { STEP_SLA_RULES, type StepOwner, type StepSlaSetting } from "./step-sla"
 import { inCategory, type TrackingCategory } from "./tracking-filters"
 import { PIPELINE_STEPS, type TrackingPipelineItem, type TrackingPipelineStepId } from "./tracking-pipeline-types"
+import { classifyOrderTimeTier } from "./order-time-tier"
 
 export type SlaState = "NONE" | "ON_TRACK" | "DUE_SOON" | "OVERDUE"
 
@@ -149,15 +150,31 @@ export interface KanbanColumn {
   avgAgeMinutes: number
   maxAgeMinutes: number
   totalVnd: number
+  /** Số thẻ theo tầng thời gian trên CẢ cột (tiêu đề cột) — không chỉ phần thẻ đang hiện */
+  tierOverdue: number
+  tierUrgent: number
   items: TrackingViewItem[]
   hasMore: boolean
 }
 
-/** Nhóm theo 9 bước; mỗi cột chỉ trả `perColumn` thẻ gấp nhất (đếm vẫn tính đủ). */
-export function kanbanColumns(items: TrackingViewItem[], perColumn: number): KanbanColumn[] {
+/** Mỗi lần bấm "Xem thêm" mở thêm chừng này thẻ; trần một cột (lưới an toàn dữ liệu). */
+export const KANBAN_PAGE_SIZE = 20
+export const KANBAN_MAX_PER_COLUMN = 1000
+
+export type KanbanColumnLimits = Partial<Record<TrackingPipelineStepId, number>>
+
+/**
+ * Nhóm theo 9 bước; mỗi cột trả `perColumn` thẻ gấp nhất, hoặc số riêng của cột trong
+ * `columnLimits` (nút "Xem thêm" của cột). Đếm và số quá hạn/sắp hạn vẫn tính trên cả cột.
+ */
+export function kanbanColumns(items: TrackingViewItem[], perColumn: number, columnLimits: KanbanColumnLimits = {}, nowMs = Date.now()): KanbanColumn[] {
   return PIPELINE_STEPS.map((step) => {
     const inStep = items.filter((i) => i.currentStepId === step.id).sort((a, b) => compareItems(a, b, { field: "urgency", dir: "desc" }))
     const ages = inStep.map((i) => i.sla.ageMinutes)
+    const limit = Math.min(KANBAN_MAX_PER_COLUMN, Math.max(perColumn, columnLimits[step.id] ?? 0))
+    // Bước Hoàn tất không phân tầng quá hạn (khớp cách Kanban hiển thị)
+    const tiers = step.id === "STEP_9_COMPLETED" ? [] : inStep.map((i) =>
+      classifyOrderTimeTier({ deliveryDate: i.deliveryDate, deliveryTimeSlot: i.deliveryTimeSlot, isStuck: !!i.stuck, slaState: i.sla.state }, nowMs))
     return {
       stepId: step.id, title: step.shortTitle, count: inStep.length,
       overdue: inStep.filter((i) => i.sla.state === "OVERDUE").length,
@@ -165,7 +182,9 @@ export function kanbanColumns(items: TrackingViewItem[], perColumn: number): Kan
       avgAgeMinutes: ages.length ? Math.round(ages.reduce((s, x) => s + x, 0) / ages.length) : 0,
       maxAgeMinutes: ages.length ? Math.max(...ages) : 0,
       totalVnd: inStep.reduce((s, i) => s + i.totalVnd, 0),
-      items: inStep.slice(0, perColumn), hasMore: inStep.length > perColumn,
+      tierOverdue: tiers.filter((t) => t === "OVERDUE").length,
+      tierUrgent: tiers.filter((t) => t === "URGENT").length,
+      items: inStep.slice(0, limit), hasMore: inStep.length > limit,
     }
   })
 }

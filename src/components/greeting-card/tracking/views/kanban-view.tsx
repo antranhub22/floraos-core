@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useCallback } from "react"
+import React, { useCallback, useState } from "react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { formatMinutes } from "@/modules/greeting-card/domain/step-sla"
-import type { KanbanColumn, TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
+import { KANBAN_PAGE_SIZE, type KanbanColumn, type TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 import { ViewState } from "./tracking-bits"
 import { classifyOrderTimeTier, type OrderTimeTier } from "@/modules/greeting-card/domain/order-time-tier"
 import { TierCollapsibleSection } from "@/components/greeting-card/coordinator/tier-collapsible-section"
@@ -18,12 +18,18 @@ interface KanbanViewProps {
 
 /** Kanban 9 bước: phân tầng hiển thị theo thời gian để tập trung vào đơn cần xử lý ngay. */
 export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanViewProps) {
-  const apiPath = `/api/v1/greeting-card/tracking?view=kanban&limit=20&${qs}`
+  // Số thẻ đang mở của từng cột ("Xem thêm"); đổi bộ lọc thì thu lại như ban đầu
+  const [expanded, setExpanded] = useState<{ qs: string; byStep: Record<string, number> }>({ qs, byStep: {} })
+  const byStep = expanded.qs === qs ? expanded.byStep : {}
+  const expand = Object.entries(byStep).map(([step, n]) => `${step}:${n}`).join(",")
+  const apiPath = `/api/v1/greeting-card/tracking?view=kanban&limit=${KANBAN_PAGE_SIZE}${expand ? `&expand=${expand}` : ""}&${qs}`
   const res = useApi<{ data: { columns: KanbanColumn[]; total: number } }>(
     apiPath,
-    { refreshInterval: 30_000 }
+    { refreshInterval: 30_000, keepPreviousData: true }
   )
   const cols = res.data?.data.columns ?? []
+  const showMore = (c: KanbanColumn) =>
+    setExpanded({ qs, byStep: { ...byStep, [c.stepId]: c.items.length + KANBAN_PAGE_SIZE } })
 
   // Lỗi từ máy chủ (đơn vừa được thanh toán, không đủ quyền…) phải báo cho người bấm, không nuốt im
   const post = useCallback(async (path: string, body: Record<string, unknown>) => {
@@ -57,7 +63,7 @@ export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanV
   )
 
   return (
-    <ViewState loading={res.isLoading} error={res.error} empty={!!res.data && res.data.data.total === 0}>
+    <ViewState loading={res.isLoading && !res.data} error={res.error} empty={!!res.data && res.data.data.total === 0}>
       <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Kanban theo bước">
         {cols.map((c) => {
           // Phân nhóm đơn theo các tầng thời gian
@@ -99,8 +105,9 @@ export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanV
                 </h3>
                 <p className="text-caption text-text-muted">
                   {c.count > 0 ? `TB ${formatMinutes(c.avgAgeMinutes)} · lâu nhất ${formatMinutes(c.maxAgeMinutes)}` : "Trống"}
-                  {overdueItems.length > 0 && <span className="ml-1 font-semibold text-danger">· {overdueItems.length} quá hạn</span>}
-                  {urgentItems.length > 0 && <span className="ml-1 font-semibold text-warning">· {urgentItems.length} sắp hạn</span>}
+                  {/* Đếm trên cả cột (máy chủ tính), không chỉ phần thẻ đang hiện */}
+                  {c.tierOverdue > 0 && <span className="ml-1 font-semibold text-danger">· {c.tierOverdue} quá hạn</span>}
+                  {c.tierUrgent > 0 && <span className="ml-1 font-semibold text-warning">· {c.tierUrgent} sắp hạn</span>}
                 </p>
               </header>
 
@@ -132,7 +139,16 @@ export function KanbanView({ qs, onOpen, canDecide = false, onDismiss }: KanbanV
                 )}
               </div>
 
-              {c.hasMore && <p className="px-1 text-caption text-text-muted">Còn {c.count - c.items.length} — xem ở Danh sách</p>}
+              {c.hasMore && (
+                <button
+                  type="button"
+                  onClick={() => showMore(c)}
+                  disabled={res.isValidating}
+                  className="h-9 rounded-xl border border-border bg-surface text-body-sm font-bold text-foreground hover:bg-surface-muted disabled:opacity-60"
+                >
+                  {res.isValidating ? "Đang tải..." : `Xem thêm ${Math.min(KANBAN_PAGE_SIZE, c.count - c.items.length)} (còn ${c.count - c.items.length})`}
+                </button>
+              )}
             </section>
           )
         })}

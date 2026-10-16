@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import { Clock, UserCheck, Flower2, Camera, Truck, CheckCircle2 } from "lucide-react"
 import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 import { sortByDelivery } from "@/modules/greeting-card/domain/coordinator-board"
 import { BrochureOrderDetailModal, type OrderDetailModalTarget } from "@/components/greeting-card/brochure-order-detail-modal"
 import { classifyOrderTimeTier, type OrderTimeTier } from "@/modules/greeting-card/domain/order-time-tier"
@@ -47,7 +47,7 @@ interface CoordinatorKanbanViewProps {
   orders: BrochureOrder[]
   policy: BrochurePaymentPolicy
   onOpen: (m: ModalState) => void
-  workOf: Map<string, TrackingPipelineItem>
+  workOf: Map<string, TrackingViewItem>
   now: number
   onRefresh?: (() => void) | undefined
   workflowPolicy?: import("@/modules/greeting-card/domain/brochure-workflow-policy").BrochureWorkflowPolicy | undefined
@@ -126,11 +126,13 @@ export function CoordinatorKanbanView({
               continue
             }
             const work = workOf.get(o.id)
+            // Cùng cách tính với Kanban "Theo dõi đơn": kẹt ở bất kỳ bước nào + thời gian chuẩn của bước
             const tier = classifyOrderTimeTier(
               {
                 deliveryDate: o.delivery_window?.date,
                 deliveryTimeSlot: o.delivery_window?.timeSlot,
-                isStuck: work?.stuck?.owner === "COORDINATOR",
+                isStuck: !!work?.stuck,
+                slaState: work?.sla.state,
               },
               now
             )
@@ -194,7 +196,14 @@ export function CoordinatorKanbanView({
 
                     {/* TẦNG 2: TIÊU ĐIỂM HÀNH ĐỘNG (Sắp hạn + Trong ca hiện tại) - LUÔN BUNG MỞ */}
                     {urgentOrders.map((o) => renderCard(o, "URGENT"))}
-                    {currentOrders.map((o) => renderCard(o, "CURRENT"))}
+                    {/* Cột "Đã giao": đơn giao trong 24 giờ, thu gọn để không chiếm chỗ việc đang làm */}
+                    {col.id === "DELIVERED" ? (
+                      <TierCollapsibleSection type="DONE" count={currentOrders.length}>
+                        {currentOrders.map((o) => renderCard(o, "CURRENT"))}
+                      </TierCollapsibleSection>
+                    ) : (
+                      currentOrders.map((o) => renderCard(o, "CURRENT"))
+                    )}
 
                     {/* TẦNG 3: ĐƠN TƯƠNG LAI (Ca sau & Đặt trước) - Mặc định THU GỌN */}
                     {futureOrders.length > 0 && (
