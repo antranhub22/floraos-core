@@ -5,6 +5,8 @@ import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { normalizePhone, randomCode } from "../domain/greeting-card-rules"
 import { linkExpiryFrom, parseLinkLifetimeHours } from "../domain/link-lifetime"
 import { resolveEffectiveStepTimeoutPolicy } from "../domain/step-timeout-policy"
+import { GreetingMessageRepository } from "../infra/greeting-message-repository"
+import { visibleTarget } from "./internal-messages"
 
 export interface CreateSendLinkInput {
   catalogId?: string | undefined
@@ -103,8 +105,12 @@ export async function createSendLink(
   }
 }
 
-/** Thu hồi link đã gửi (chưa có đơn): khách mở lại sẽ thấy link không còn hiệu lực. */
+/**
+ * Thu hồi link đã gửi (chưa có đơn): khách mở lại sẽ thấy link không còn hiệu lực.
+ * Sale "chỉ khách của mình" không thu hồi được link của sale khác — 404 như mọi thao tác trên link.
+ */
 export async function revokeSendLink(ctx: TenantContext, sessionId: string, repo = new GreetingCardRepository()) {
+  await visibleTarget(ctx, { sessionId }, new GreetingMessageRepository())
   const changed = await repo.revokeSession(ctx, sessionId)
   if (changed) {
     await repo.recordJourneyEvent(ctx.organizationId, sessionId, "LINK_REVOKED", { revokedBy: ctx.userId })
