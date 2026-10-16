@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { ViDateInput } from "@/components/greeting-card/customer/vi-date-input"
 import { RefreshCw, Search, Sparkles, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CoordinatorActionModal } from "./coordinator-action-modal"
@@ -153,7 +154,7 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
                     {c.label}
                   </button>
                 ))}
-                <input type="date" aria-label="Chọn ngày giao" value={day} onChange={(e) => setDay(e.target.value)}
+                <ViDateInput compact ariaLabel="Chọn ngày giao" value={day} onChange={setDay} wrapperClassName="w-36"
                   className="h-9 rounded-xl border border-border bg-surface px-2 text-caption text-foreground" />
               </>
             )}

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { ViDateInput } from "@/components/greeting-card/customer/vi-date-input"
 import {
   X,
   Plus,
@@ -679,12 +680,7 @@ export function SalesOrderIntakeModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="font-bold text-text block mb-1">Ngày giao hẹn</label>
-                <input
-                  type="date"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text focus:outline-none focus:border-alert-500"
-                />
+                <ViDateInput ariaLabel="Ngày giao hẹn" value={deliveryDate} onChange={setDeliveryDate} className="w-full px-3 py-2 rounded-xl border border-border bg-surface text-text" />
               </div>
 
               <div>

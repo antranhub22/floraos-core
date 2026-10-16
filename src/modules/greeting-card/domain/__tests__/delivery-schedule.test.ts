@@ -5,6 +5,7 @@ import {
   earliestDeliveryDate,
   readyHour,
   viDeliveryDate,
+  viShortDate,
 } from "../delivery-schedule"
 
 // Helper tạo Date tương ứng giờ Việt Nam (GMT+7)
@@ -102,5 +103,12 @@ describe("viDeliveryDate", () => {
   it("giá trị rỗng / sai định dạng giữ nguyên", () => {
     expect(viDeliveryDate("")).toBe("")
     expect(viDeliveryDate("16 Oct 2026")).toBe("16 Oct 2026")
+  })
+})
+
+describe("viShortDate", () => {
+  it("ngày gọn kiểu Việt Nam cho ô lọc phía nhân viên; sai định dạng giữ nguyên", () => {
+    expect(viShortDate("2026-10-16")).toBe("16/10/2026")
+    expect(viShortDate("")).toBe("")
   })
 })
