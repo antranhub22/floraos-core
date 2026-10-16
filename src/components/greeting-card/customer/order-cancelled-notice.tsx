@@ -2,21 +2,15 @@
 
 import React from "react"
 import { XCircle } from "lucide-react"
+import { vnDeadlineLabel } from "@/modules/greeting-card/domain/customer-cancellation-notice"
 
 export interface CancellationNoticeData {
   cancelledAt: string
   contactDeadline: string
   /** 0 = huỷ không hoàn tiền → không nhắc tới hoàn tiền */
   refundVnd: number
-}
-
-/** "16:30 ngày 16/10" theo giờ Việt Nam, không phụ thuộc múi giờ máy khách. */
-function formatDeadline(iso: string): string {
-  const parts = new Intl.DateTimeFormat("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", hour12: false,
-  }).formatToParts(new Date(iso))
-  const v = (t: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === t)?.value ?? ""
-  return `${v("hour")}:${v("minute")} ngày ${v("day")}/${v("month")}`
+  /** Khách đã báo chuyển khoản nhưng tiệm chưa ghi nhận → hứa hoàn tiền, chưa nêu số */
+  refundToConfirm?: boolean | undefined
 }
 
 /**
@@ -24,7 +18,7 @@ function formatDeadline(iso: string): string {
  * báo khách lý do, hạn nhân viên liên hệ và hoàn tiền (nếu có) — PO 16/10/2026.
  */
 export function OrderCancelledNotice({ orderCode, notice }: { orderCode: string; notice: CancellationNoticeData }) {
-  const deadline = formatDeadline(notice.contactDeadline)
+  const deadline = vnDeadlineLabel(notice.contactDeadline)
   return (
     <section role="alert" aria-labelledby="order-cancelled-title" className="w-full flex flex-col items-center gap-2 rounded-2xl border border-danger/30 bg-danger-bg p-5 text-center">
       <XCircle size={32} className="text-danger" aria-hidden="true" />
@@ -37,6 +31,10 @@ export function OrderCancelledNotice({ orderCode, notice }: { orderCode: string;
           <>
             Nhân viên cửa hàng sẽ liên hệ và hoàn <strong>{notice.refundVnd.toLocaleString("vi-VN")}đ</strong> cho bạn trước{" "}
             <strong>{deadline}</strong>.
+          </>
+        ) : notice.refundToConfirm ? (
+          <>
+            Nhân viên cửa hàng sẽ liên hệ và hoàn tiền cho bạn trước <strong>{deadline}</strong>.
           </>
         ) : (
           <>

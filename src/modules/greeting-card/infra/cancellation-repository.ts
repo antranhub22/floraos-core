@@ -14,6 +14,7 @@ import {
 } from "../domain/cancellation-request"
 import { roleOf, type MessageRole } from "../domain/internal-message"
 import { cancelBlocker } from "../domain/brochure-payment-policy"
+import { saleCancellationReminder } from "../domain/customer-cancellation-notice"
 
 type Loose = Record<string, unknown>
 const obj = (v: unknown): Loose => (v && typeof v === "object" ? (v as Loose) : {})
@@ -121,7 +122,7 @@ export class CancellationRepository {
     return this.db.$transaction(async (tx) => {
       const req = await tx.greeting_messages.findFirst({
         where: scopedWhere(ctx, { id: input.requestId, kind: "CANCELLATION_REQUEST" }),
-        select: { id: true, order_id: true, sender_id: true, body: true, payload: true },
+        select: { id: true, order_id: true, sender_id: true, sender_role: true, body: true, payload: true },
       })
       if (!req || !req.order_id) throw notFound()
 
@@ -224,6 +225,22 @@ export class CancellationRepository {
             to_role: "ADMIN", kind: "CANCELLATION_AUTO_APPROVED", reply_to_id: req.id,
             body: autoApprovedNotice(order.code, input.autoTimeoutMinutes ?? 0, refundVnd),
             payload: decidedPayload as unknown as Prisma.InputJsonValue,
+          }),
+        })
+      }
+
+      // 4c. Điều phối huỷ (đã duyệt) → nhắc Sale phụ trách gọi/nhắn khách, lo hoàn tiền trong 2 tiếng (PO 16/10/2026)
+      if (shouldCancelOrder && req.sender_role === "COORDINATOR") {
+        const session = await tx.greeting_sessions.findFirst({
+          where: scopedWhere(ctx, { order_id: order.id }),
+          select: { sale_id: true, status: true, payment_proof_asset_id: true },
+        })
+        const reported = session?.status === "PAYMENT_REPORTED" || Boolean(session?.payment_proof_asset_id)
+        await tx.greeting_messages.create({
+          data: scopedData(ctx, {
+            id: randomUUID(), order_id: order.id, step_key: "GENERAL", sender_id: "system:cancellation-notice", sender_role: "ADMIN",
+            to_user_id: session?.sale_id ?? null, to_role: session ? null : "SALE", kind: "MESSAGE", reply_to_id: req.id,
+            body: saleCancellationReminder({ orderCode: order.code, decidedAt: now, refundVnd, customerReportedPayment: Number(order.paid_vnd) === 0 && reported }),
           }),
         })
       }
