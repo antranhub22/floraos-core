@@ -174,5 +174,7 @@ export interface TrackingPipelineItem {
   dismissal?: import("./dismissal-policy").DismissalInfo | undefined
   steps: TrackingStepState[]
   lastActiveAt: string
+  /** Lúc khách mở link lần đầu (chỉ với link chưa thành đơn). */
+  openedAt?: string | null | undefined
   createdAt: string
 }

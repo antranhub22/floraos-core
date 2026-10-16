@@ -6,13 +6,15 @@ import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { zaloHref } from "@/components/greeting-card/work/work-item-card"
 import { OrderPaymentProofView } from "./order-payment-proof-view"
 import type { OrderDetailModalTarget } from "./brochure-order-detail-modal"
+import { LinkCustomerCard } from "./link-customer-card"
 import { DEPOSIT_PENDING_APPROVAL_NOTE, isDepositPendingApproval } from "@/modules/greeting-card/domain/deposit-acknowledgement"
 
 export interface OrderDetailInfoTabProps {
   target: OrderDetailModalTarget
+  onCustomerSaved?: ((customer: { customerName: string; customerPhone: string | null }) => void) | undefined
 }
 
-export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
+export function OrderDetailInfoTab({ target, onCustomerSaved }: OrderDetailInfoTabProps) {
   const isPaid = (target.paidVnd ?? 0) >= (target.totalVnd ?? 0) && (target.totalVnd ?? 0) > 0
   const isDeposit = (target.paidVnd ?? 0) > 0 && !isPaid
   const depositPendingApproval = isDepositPendingApproval({
@@ -25,7 +27,8 @@ export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Khối Người đặt & Người nhận */}
+      {/* Link chưa có đơn: gửi cho ai, lúc nào — thay cho khối Người đặt & Người nhận còn trống */}
+      {!target.orderId && target.sessionId ? <LinkCustomerCard target={target} onSaved={onCustomerSaved} /> : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-border bg-surface-alt p-3.5 flex flex-col gap-1.5">
           <span className="text-caption font-bold uppercase tracking-wider text-text-muted flex items-center gap-1">
@@ -70,6 +73,7 @@ export function OrderDetailInfoTab({ target }: OrderDetailInfoTabProps) {
           </p>
         </div>
       </div>
+      )}
 
       {/* Khối Mẫu hoa & Thiệp */}
       <div className="rounded-2xl border border-border bg-surface p-4 flex flex-col gap-3">
