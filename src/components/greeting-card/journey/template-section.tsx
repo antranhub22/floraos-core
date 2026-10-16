@@ -30,7 +30,7 @@ export function templateName(id: GreetingTemplateId): string {
 interface TemplateSectionProps {
   catalog: CatalogOption
   onSave: (catalog: CatalogOption, templateId: GreetingTemplateId) => Promise<void>
-  /** Cài đặt hiển thị dùng chung cả tiệm — chỉ L3/L4 (Sale chỉnh giao diện bộ sưu tập của mình, không đổi cài đặt chung) */
+  /** Cài đặt hiển thị dùng chung cả tiệm — chỉ L4 (Sale, Điều phối chỉnh giao diện bộ sưu tập của mình, không đổi cài đặt chung) */
   canEditSharedDisplay?: boolean | undefined
 }
 

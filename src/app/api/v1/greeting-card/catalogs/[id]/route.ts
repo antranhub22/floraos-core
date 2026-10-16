@@ -41,7 +41,7 @@ export const PATCH = handle(async (request: Request, context: Context) => {
   const { isActive, ...fields } = parsed.data
   const repo = new GreetingCardRepository()
   const editsContent = Object.values(fields).some((v) => v !== undefined)
-  // Tên, mô tả, giao diện: chỉ người tạo hoặc L3/L4 (PO 16/10/2026) — ẩn/hiện có luật riêng ở use-case
+  // Tên, mô tả, giao diện: chỉ người tạo hoặc L4 (PO 16/10/2026) — ẩn/hiện có luật riêng ở use-case
   if (editsContent) await assertCanEditCatalog(ctx, id, repo)
   // Ghi đè chính sách tiệm theo bộ sưu tập (ảnh bill, duyệt thanh toán, thời hạn) → cần quyền sửa cấu hình tiệm
   if (fields.filters !== undefined && catalogPolicyKeysChanged(await repo.getCatalogFilters(ctx, id), fields.filters)) {

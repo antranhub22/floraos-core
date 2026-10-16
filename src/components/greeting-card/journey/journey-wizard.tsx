@@ -53,7 +53,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
   // Mặc định chọn bộ sưu tập đầu tiên; số mẫu hoa lấy từ danh sách (được cập nhật khi thêm/xóa mẫu)
   const selectedId = pickedId || catalogs[0]?.id || ""
   const selected = catalogs.find((c) => c.id === selectedId)
-  // Sửa mẫu/giao diện: người tạo bộ sưu tập hoặc L3/L4; Sale chỉ chọn bộ sưu tập người khác tạo (PO 16/10/2026)
+  // Sửa mẫu/giao diện: người tạo bộ sưu tập hoặc L4; Sale và Điều phối chỉ chọn bộ sưu tập người khác tạo (PO 16/10/2026)
   const canEditCatalog = Boolean(selected) && canEditCatalogPolicy({ createdBy: selected?.createdBy }, { userId: me.data?.user.id, has: can })
   const itemCount = selected?.itemCount ?? 0
   const publicPath = selected ? catalogPublicPath(orgSlug, selected) : ""
