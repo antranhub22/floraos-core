@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { readApiError } from "@/components/greeting-card/api-error"
+import { familyHref } from "./use-order-family"
 
 /** "Đặt thêm một đơn khác": mở link mới (mã đơn mới), đơn hiện tại giữ nguyên. */
 export function ReorderButton({ sendCode, label = "Đặt thêm một đơn khác", primary = false }: {
@@ -23,7 +24,8 @@ export function ReorderButton({ sendCode, label = "Đặt thêm một đơn khá
       const res = await fetch(`/api/v1/public/brochure/${encodeURIComponent(sendCode)}/reorder`, { method: "POST" })
       if (!res.ok) throw new Error(await readApiError(res, "Chưa mở được đơn mới, vui lòng thử lại"))
       const data = (await res.json()) as { sendCode: string }
-      router.push(`/b/${encodeURIComponent(data.sendCode)}` as Parameters<typeof router.push>[0])
+      // Khách chủ động mở đơn mới → trang đích ghi đây là chỗ đứng, không tự chuyển về đơn cũ
+      router.push(familyHref(data.sendCode) as Parameters<typeof router.push>[0])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Chưa mở được đơn mới, vui lòng thử lại")
       setBusy(false)

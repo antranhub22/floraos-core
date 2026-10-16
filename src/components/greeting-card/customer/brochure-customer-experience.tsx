@@ -2,6 +2,9 @@
 
 import { ReorderButton } from "./reorder-button"
 import { ShopContactBar } from "./shop-contact-bar"
+import { useOrderFamily } from "./use-order-family"
+import { OrderHistorySheet } from "./order-history-sheet"
+import { showOrderHistory } from "@/modules/greeting-card/domain/order-family"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { CustomerJourneyContext, copyThenOpen, type CustomerJourney } from "./journey-context"
 import { useJourneyTracker } from "./use-journey-tracker"
@@ -61,6 +64,8 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
 
   // "Khách đã mở" được ghi khi trình duyệt nhận chủ phiên (`/claim`) — máy quét xem trước không chạy tới.
   const track = useJourneyTracker(session.sendCode, !preview)
+  // Đã "Đặt thêm đơn": mở lại link cũ thì về đúng đơn đang làm dở; có nút Lịch sử đơn hàng
+  const family = useOrderFamily(session.sendCode, !preview)
   const [currentProduct, setCurrentProduct] = useState<GreetingCatalogProduct | null>(null)
   const [contactNote, setContactNote] = useState<string | null>(null)
   // Hết hạn thanh toán, đơn tự huỷ → đổi nút dưới thành "Đặt lại đơn mới"
@@ -208,6 +213,14 @@ export function BrochureCustomerExperience({ initialData, preview = false }: Bro
       <p className="bg-warning-bg px-4 py-2 text-center text-body-sm text-warning">
         Bạn đang xem trước link của khách — thao tác ở đây không được lưu cho khách.
       </p>
+    )}
+    {family.redirecting && (
+      <p role="status" className="bg-surface-muted px-4 py-2 text-center text-body-sm text-foreground">
+        Đang mở đơn bạn đang làm dở…
+      </p>
+    )}
+    {!family.redirecting && showOrderHistory(family.members) && (
+      <OrderHistorySheet members={family.members} currentSendCode={session.sendCode} />
     )}
     {contactNote && (
       <p role="status" className="bg-surface-muted px-4 py-2 text-center text-body-sm text-foreground">
