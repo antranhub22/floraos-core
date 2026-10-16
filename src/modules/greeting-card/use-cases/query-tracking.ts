@@ -3,7 +3,7 @@ import { loadTrackingDataset } from "./get-tracking-pipeline"
 import { TrackingPipelineRepository } from "../infra/tracking-pipeline-repository"
 import {
   calendarDays, dashboardOf, filterAndSort, kanbanColumns, paginate, slaStatusOf,
-  type TrackingFilter, type TrackingSort, type TrackingViewItem,
+  type KanbanColumnLimits, type TrackingFilter, type TrackingSort, type TrackingViewItem,
 } from "../domain/tracking-views"
 
 export const TRACKING_VIEWS = ["kanban", "list", "calendar", "queue", "dashboard"] as const
@@ -14,6 +14,8 @@ export interface TrackingQueryParams {
   filter: TrackingFilter
   sort: TrackingSort
   limit: number
+  /** Kanban: số thẻ riêng của từng cột (nút "Xem thêm") */
+  columnLimits?: KanbanColumnLimits | undefined
   cursor?: string | undefined
   /** Lịch: khoảng ngày giao (YYYY-MM-DD) */
   from?: string | undefined
@@ -36,7 +38,7 @@ export async function queryTracking(ctx: TenantContext, p: TrackingQueryParams, 
     case "kanban": {
       // Bộ lọc bước không áp cho Kanban — cột chính là bước
       const rows = filterAndSort(enriched, { ...p.filter, steps: undefined, category: undefined }, p.sort)
-      return { view: p.view, columns: kanbanColumns(rows, p.limit), total: rows.length }
+      return { view: p.view, columns: kanbanColumns(rows, p.limit, p.columnLimits, now.getTime()), total: rows.length }
     }
     case "calendar": {
       const from = p.from ?? p.filter.deliveryFrom ?? now.toISOString().slice(0, 10)
