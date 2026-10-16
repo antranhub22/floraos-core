@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { enforceRateLimit } from "@/core/http/rate-limit"
 import { openShareLink } from "@/modules/greeting-card/use-cases/share-links"
 import { grantBrochureOwner, serializeOwnerCookie } from "@/modules/greeting-card/use-cases/brochure-owner"
+import { FRESH_SESSION_PARAM } from "@/modules/greeting-card/domain/session-owner"
 
 const COOKIE_PREFIX = "fl_s_"
 const COOKIE_MAX_AGE = 30 * 86_400
@@ -17,7 +18,8 @@ const gone = () =>
  * máy quét xem trước link không chạy tới). Mỗi khách một phiên riêng tính cho người đã sao chép link,
  * nhớ qua cookie để tải lại không tạo phiên mới; rồi chuyển sang trang Thẻ chào `/b/<mã phiên>`.
  * Trình duyệt này được trao luôn cookie chủ phiên: ai khác mở `/b/<mã phiên>` đó sẽ được đưa về đây
- * để nhận phiên riêng, không thấy phiên của người trước.
+ * để nhận phiên riêng, không thấy phiên của người trước. Dấu `?moi=1` cho `/b/` biết phiên vừa tạo cho
+ * chính trình duyệt này — không có cookie thì dừng, không chuyển lại đây (tránh vòng tạo phiên rác).
  */
 export async function GET(request: Request, context: { params: Promise<{ code: string }> }) {
   const code = (await context.params).code.toUpperCase()
@@ -34,7 +36,7 @@ export async function GET(request: Request, context: { params: Promise<{ code: s
 
   // Location TƯƠNG ĐỐI: sau proxy của Render, `request.url` là địa chỉ nội bộ (localhost:3100) —
   // dựng URL tuyệt đối từ nó đưa khách sang localhost. Trình duyệt tự ghép với tên miền đang mở.
-  const res = new NextResponse(null, { status: 302, headers: { location: `/b/${encodeURIComponent(opened.sendCode)}` } })
+  const res = new NextResponse(null, { status: 302, headers: { location: `/b/${encodeURIComponent(opened.sendCode)}?${FRESH_SESSION_PARAM}=1` } })
   const https = (request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "")).split(",")[0]?.trim() === "https"
   res.cookies.set(cookieName, opened.sendCode, { httpOnly: true, sameSite: "lax", secure: https, maxAge: COOKIE_MAX_AGE, path: "/" })
   const owner = await grantBrochureOwner({ id: opened.sessionId, organization_id: opened.organizationId, send_code: opened.sendCode }, "share-link")

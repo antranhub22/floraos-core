@@ -21,3 +21,20 @@ export function decideViewer(input: { tokenValid: boolean; claimed: boolean; sta
   if (input.staffOfShop) return "STAFF"
   return input.claimed ? "OTHER" : "UNCLAIMED"
 }
+
+/**
+ * Dấu `?moi=1` trên `/b/<mã>` khi `/s/<mã>/mo` vừa tạo phiên và trao cookie chủ phiên cho chính
+ * trình duyệt này. Trình duyệt chặn cookie (webview Zalo/Facebook, máy quét link) quay về `/b/` mà
+ * không mang cookie → nếu lại chuyển về `/mo` thì mỗi vòng sinh thêm một phiên rác (sự cố 140 phiên
+ * "Đang lướt chọn mẫu hoa" 16/10/2026). Có dấu này thì dừng vòng, báo khách mở bằng trình duyệt khác.
+ */
+export const FRESH_SESSION_PARAM = "moi"
+
+/** Trang `/b/<mã>` làm gì với người không phải chủ phiên. */
+export type OtherViewerAction = "UNLOCK" | "COOKIE_BLOCKED" | "REDIRECT_SHARE" | "UNAVAILABLE"
+
+export function otherViewerAction(input: { hasOrder: boolean; shareCode: string | null; justCreated: boolean }): OtherViewerAction {
+  if (input.hasOrder) return "UNLOCK"
+  if (!input.shareCode) return "UNAVAILABLE"
+  return input.justCreated ? "COOKIE_BLOCKED" : "REDIRECT_SHARE"
+}

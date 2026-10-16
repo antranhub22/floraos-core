@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { brochureViewer } from "@/modules/greeting-card/use-cases/brochure-owner"
 import { staffOrganizationId } from "@/modules/greeting-card/use-cases/staff-viewer"
-import { ownerCookieName } from "@/modules/greeting-card/domain/session-owner"
+import { FRESH_SESSION_PARAM, otherViewerAction, ownerCookieName } from "@/modules/greeting-card/domain/session-owner"
 import { BrochureClaimGate } from "@/components/greeting-card/customer/brochure-claim-gate"
 import { BrochureUnlockGate } from "@/components/greeting-card/customer/brochure-unlock-gate"
 import { getGreetingCatalogForCustomer } from "@/modules/greeting-card/use-cases/get-greeting-catalog"
@@ -14,6 +14,7 @@ import { BrochureCustomerExperience } from "@/components/greeting-card/customer/
 
 interface PageProps {
   params: Promise<{ sendCode: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -59,7 +60,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function PublicBrochurePage({ params }: PageProps) {
+export default async function PublicBrochurePage({ params, searchParams }: PageProps) {
   const { sendCode } = await params
   // Phiên thuộc trình duyệt đã mở đầu tiên: người nhận link chuyển tiếp không thấy lựa chọn / đơn
   // của người trước. Dữ liệu phiên chỉ được dựng ra HTML sau khi đã xác định là chủ phiên.
@@ -79,9 +80,23 @@ export default async function PublicBrochurePage({ params }: PageProps) {
     ownerToken: (await cookies()).get(ownerCookieName(sendCode))?.value ?? null,
     staffOrganizationId: await staffOrganizationId(await headers()),
   })
-  // Phiên đã có đơn: trình duyệt khác mở lại bằng 4 số cuối SĐT người đặt (PO 08/10/2026)
-  if (viewer?.viewer === "OTHER" && data.order) return <BrochureUnlockGate sendCode={sendCode} shop={data.shop} />
-  if (viewer?.viewer === "OTHER" && viewer.shareCode) redirect(`/s/${viewer.shareCode}/mo`)
+  if (viewer?.viewer === "OTHER") {
+    const justCreated = (await searchParams)?.[FRESH_SESSION_PARAM] !== undefined
+    const action = otherViewerAction({ hasOrder: !!data.order, shareCode: viewer.shareCode, justCreated })
+    // Phiên đã có đơn: trình duyệt khác mở lại bằng 4 số cuối SĐT người đặt (PO 08/10/2026)
+    if (action === "UNLOCK") return <BrochureUnlockGate sendCode={sendCode} shop={data.shop} />
+    if (action === "REDIRECT_SHARE") redirect(`/s/${viewer.shareCode}/mo`)
+    if (action === "COOKIE_BLOCKED") {
+      return (
+        <LinkUnavailable
+          shop={data.shop}
+          title="Trình duyệt này chưa mở được bộ sưu tập"
+          message={`Trình duyệt đang chặn lưu dữ liệu trang web nên không giữ được lượt xem mẫu của bạn. Hãy bấm "Mở lại", hoặc chọn "Mở bằng trình duyệt" (Safari, Chrome). Cần hỗ trợ, liên hệ ${data.shop.name}.`}
+          action={{ href: `/s/${viewer.shareCode}/mo`, label: "Mở lại bộ sưu tập" }}
+        />
+      )
+    }
+  }
   if (viewer?.viewer === "UNCLAIMED") return <BrochureClaimGate sendCode={sendCode} />
   if (viewer?.viewer === "OTHER") {
     return (
