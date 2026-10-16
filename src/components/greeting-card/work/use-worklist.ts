@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
+import type { TrackingViewItem } from "@/modules/greeting-card/domain/tracking-views"
 
 /** Quy trình theo dõi (máy chủ đã lọc theo quyền xem) + người đang đăng nhập; tự làm mới mỗi phút. */
 export function useWorklist() {
@@ -15,6 +16,12 @@ export function useWorklist() {
     isLoading: pipeline.isLoading,
     refresh: () => pipeline.mutate(),
   }
+}
+
+/** Trạng thái việc của từng đơn cho bảng Điều phối (chỉ đơn, kèm thời gian chuẩn) — làm mới cùng nhịp bảng đơn. */
+export function useCoordinatorWork() {
+  const work = useApi<{ data: TrackingViewItem[] }>("/api/v1/greeting-card/coordinator-work", { refreshInterval: 30_000 })
+  return { items: work.data?.data ?? [], refresh: () => work.mutate() }
 }
 
 /** Đồng hồ cho "ở bước này bao lâu" — cập nhật mỗi phút, không gọi Date.now() lúc render. */

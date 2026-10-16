@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState } from "react"
-import { AlertCircle, ChevronDown, ChevronRight, Clock, Calendar } from "lucide-react"
+import { AlertCircle, ChevronDown, ChevronRight, Calendar, CheckCircle2 } from "lucide-react"
 
 interface TierSectionProps {
-  type: "OVERDUE" | "FUTURE"
+  type: "OVERDUE" | "FUTURE" | "DONE"
   count: number
   children: React.ReactNode
   defaultExpanded?: boolean
@@ -44,7 +44,9 @@ export function TierCollapsibleSection({
     )
   }
 
-  // Tương lai (FUTURE)
+  // Tương lai (FUTURE) và Đã giao (DONE) cùng kiểu thu gọn nhẹ
+  const Icon = type === "DONE" ? CheckCircle2 : Calendar
+  const label = type === "DONE" ? `${count} đơn đã giao trong 24 giờ` : `${count} đơn ca sau & đặt trước`
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-surface-muted/40 p-1.5 mt-1">
       <button
@@ -54,8 +56,8 @@ export function TierCollapsibleSection({
         aria-expanded={expanded}
       >
         <div className="flex items-center gap-1.5">
-          <Calendar size={13} className="shrink-0 text-text-muted" />
-          <span>{count} đơn ca sau & đặt trước</span>
+          <Icon size={13} className="shrink-0 text-text-muted" />
+          <span>{label}</span>
         </div>
         <div className="flex items-center gap-1 text-caption text-text-muted">
           <span>{expanded ? "Thu gọn" : "Xem"}</span>
