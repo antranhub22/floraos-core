@@ -222,6 +222,17 @@ export class BrochureOrderRepository {
     return matches.length === 1 ? matches[0] ?? null : null
   }
 
+  /** Đề xuất huỷ của một đơn (mới nhất trước) — trang theo dõi dựng thông báo huỷ cho khách. */
+  async cancellationRecordsOf(organizationId: string, orderId: string) {
+    const rows = await this.db.greeting_messages.findMany({
+      where: { organization_id: organizationId, order_id: orderId, kind: "CANCELLATION_REQUEST" },
+      select: { sender_role: true, payload: true },
+      orderBy: { created_at: "desc" },
+      take: 10,
+    })
+    return rows.map((r) => ({ senderRole: r.sender_role, payload: r.payload }))
+  }
+
   /** Sale phụ trách đơn (người gửi link) — `null` khi đơn không thuộc tổ chức / không phải đơn Thẻ chào. */
   async saleOfOrder(ctx: TenantContext, orderId: string): Promise<string | null> {
     const order = await this.db.orders.findFirst({

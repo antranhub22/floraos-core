@@ -14,6 +14,7 @@ import { parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochu
 import { orderPaymentSummary } from "../domain/payment-summary"
 import { paymentInstructionsFor } from "./payment-instructions"
 import { customerVisiblePaidVnd } from "../domain/deposit-acknowledgement"
+import { customerCancellationNotice } from "../domain/customer-cancellation-notice"
 
 const ORDER_CODE_REGEX = /^[A-Z0-9-]{4,40}$/
 
@@ -105,6 +106,11 @@ export async function getBrochureTracking(
     { requireFullBeforeDispatch: policy.requireFullBeforeDispatch },
   )
 
+  // Điều phối không nhận / huỷ giữa chừng đã được duyệt → thông báo cho khách (PO 16/10/2026)
+  const cancellationNotice = order.status === "CANCELLED" && payment.status !== "PAYMENT_FAILED"
+    ? customerCancellationNotice(await orders.cancellationRecordsOf(order.organization_id, order.id))
+    : null
+
   return {
     status: "FOUND" as const,
     order: {
@@ -155,6 +161,8 @@ export async function getBrochureTracking(
         : null,
       /** Chỉ người đặt đã xác minh: tiệm đề xuất mẫu thay thế (khách chọn mẫu / nhờ tiệm chọn / xin huỷ). */
       substitute: verified ? await customerSubstituteSection(order) : null,
+      /** Đơn bị huỷ do tiệm không thực hiện được: hạn nhân viên liên hệ + số tiền hoàn (0 = không hoàn). */
+      cancellationNotice,
     },
     // Huỷ vì hết hạn thanh toán: báo "không hoàn thành" thay cho "cửa hàng đã huỷ"
     trackingStep: payment.status === "PAYMENT_FAILED"
