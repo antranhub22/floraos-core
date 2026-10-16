@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { useSWRConfig } from "swr"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { MessageThread } from "@/components/greeting-card/inbox/message-thread"
@@ -15,7 +15,8 @@ import { CalendarView } from "./views/calendar-view"
 import { TimelineView } from "./views/timeline-view"
 import { DashboardView } from "./views/dashboard-view"
 import { codeOf } from "./views/tracking-bits"
-import { DEFAULT_STATE, queryString, type SavedView, type TrackingViewState } from "./views/tracking-view-state"
+import { COORDINATOR_DEFAULT, DEFAULT_STATE, queryString, type SavedView, type TrackingViewState } from "./views/tracking-view-state"
+import { defaultTheChaoView } from "@/components/greeting-card/default-view"
 
 import { DismissProposalModal } from "./views/dismiss-proposal-modal"
 import { canDecideDismissal } from "@/modules/greeting-card/domain/dismissal-policy"
@@ -27,7 +28,7 @@ import { canDecideDismissal } from "@/modules/greeting-card/domain/dismissal-pol
 export function BrochureOrderTrackingTab() {
   const me = useApi<{ user: { id: string }; capabilities: string[] }>("/api/v1/auth/me")
   const { mutate } = useSWRConfig()
-  const [state, setState] = useState<TrackingViewState>(DEFAULT_STATE)
+  const [picked, setPicked] = useState<TrackingViewState | null>(null)
   const [notesFor, setNotesFor] = useState<TrackingViewItem | null>(null)
   const [detailFor, setDetailFor] = useState<TrackingViewItem | null>(null)
   const [dismissFor, setDismissFor] = useState<TrackingViewItem | null>(null)
@@ -36,10 +37,15 @@ export function BrochureOrderTrackingTab() {
   // Điều hành / Admin có quyền duyệt bỏ hiển thị và thao tác quản trị
   // /auth/me trả MÃ quyền (R4…), không phải tên — so tên thì nút duyệt không bao giờ hiện
   const canDecide = canDecideDismissal(capabilities)
+  // Điều phối (vai mở thẳng bảng Điều phối) vào tab này thấy ngay việc của mình; bấm bỏ lọc để xem cả tập
+  const isCoordinator = me.data ? defaultTheChaoView((c) => capabilities.includes(c)).activeTab === "coordinator" : false
+  const initial: TrackingViewState = isCoordinator ? { ...DEFAULT_STATE, ...COORDINATOR_DEFAULT } : DEFAULT_STATE
+  const state = picked ?? initial
+  const setState = (next: (s: TrackingViewState) => TrackingViewState) => setPicked((prev) => next(prev ?? initial))
 
   const change = (patch: Partial<TrackingViewState>) => setState((s) => ({ ...s, ...patch }))
   const applyView = (v: SavedView) =>
-    setState({ ...DEFAULT_STATE, columns: state.columns, ...v.state, ...(v.scope === "me" && me.data ? { saleId: me.data.user.id } : {}) })
+    setState((s) => ({ ...DEFAULT_STATE, columns: s.columns, ...v.state, ...(v.scope === "me" && me.data ? { saleId: me.data.user.id } : {}) }))
   // Mở một đơn: hiện Thẻ đơn hàng (lịch sử nằm trong tab "Lịch sử đơn hàng" của thẻ)
   const open = (i: TrackingViewItem) => setDetailFor(i)
   const refresh = () => void mutate((key) => typeof key === "string" && key.includes("/api/v1/greeting-card/tracking") || (Array.isArray(key) && String(key[0]).includes("/api/v1/greeting-card/tracking")))
@@ -50,6 +56,15 @@ export function BrochureOrderTrackingTab() {
   return (
     <div className="flex flex-col gap-4">
       <TrackingToolbar state={state} onChange={change} onApplyView={applyView} onRefresh={refresh} />
+      {state.owner === "COORDINATOR" && (
+        <div className="flex items-center gap-2 text-caption text-text-muted">
+          <span>Đang xem việc của Điều phối (nhận đơn, cắm hoa, giao hàng).</span>
+          <button type="button" onClick={() => change({ owner: "" })}
+            className="inline-flex h-8 items-center gap-1 rounded-xl border border-border px-2.5 font-bold text-foreground hover:bg-surface-muted">
+            <X size={13} aria-hidden="true" /> Xem tất cả đơn và link
+          </button>
+        </div>
+      )}
 
       {state.view === "kanban" && (
         <KanbanView

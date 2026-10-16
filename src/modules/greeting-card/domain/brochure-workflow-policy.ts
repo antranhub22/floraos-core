@@ -193,6 +193,16 @@ export function isUrgentOrder(
   return false
 }
 
+/**
+ * Vai trò duyệt cọc theo NĂNG LỰC của người bấm, không theo màn đang mở: ai có quyền ghi nhận
+ * thanh toán (R11 — Điều hành/kế toán) là duyệt với tư cách Điều hành. Trước đây route Điều phối
+ * luôn coi là "COORDINATOR" nên Điều hành bấm "Xác nhận Tiền Cọc" bị chặn bởi chính cài đặt
+ * "chỉ Điều hành duyệt cọc" (16/10/2026).
+ */
+export function depositApproverRole(canRecordPayment: boolean): "ADMIN" | "COORDINATOR" {
+  return canRecordPayment ? "ADMIN" : "COORDINATOR"
+}
+
 /** Đánh giá xem vai trò hiện tại có quyền xác nhận cọc cho đơn không */
 export function canRoleApproveDeposit(
   role: "ADMIN" | "COORDINATOR" | "SALE",
