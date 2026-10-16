@@ -130,6 +130,30 @@ describe("greeting-card: luật Điều phối (PO 15/10/2026)", () => {
     expect((await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })).status).toBe("CANCELLED")
   })
 
+  it("tác vụ xưởng ghi bằng bản đọc cũ (đơn vừa huỷ / vừa có người làm) → 409, không hồi sinh đơn đã huỷ", async () => {
+    const order = await placeOrder()
+    await prisma.orders.update({ where: { id: order.orderId }, data: { production_status: "READY", delivery_status: "DELIVERING" } })
+    const repo = new BrochureOrderRepository()
+    const stale = await repo.findBrochureOrder(a.ctx, order.orderId)
+    if (!stale) throw new Error("thiếu đơn")
+    // Điều hành huỷ trong lúc Điều phối đang tải ảnh người nhận
+    await cancelBrochureOrder(a.ctx, order.orderId, "Khách đổi ý", true)
+    const complete = { eventType: "RECIPIENT_PHOTO_UPLOADED", deliveryStatus: "DELIVERED" as const, orderStatus: "COMPLETED" as const }
+    expect(await codeOf(repo.applyProgress(a.ctx, stale, complete))).toBe("CONFLICT")
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: order.orderId } })).status).toBe("CANCELLED")
+    expect(await prisma.order_events.count({ where: { order_id: order.orderId, reason: "RECIPIENT_PHOTO_UPLOADED" } })).toBe(0)
+
+    // Hai người cùng bấm "Giao ship": chỉ một lần được ghi
+    const other = await placeOrder()
+    await prisma.orders.update({ where: { id: other.orderId }, data: { production_status: "READY" } })
+    const snapshot = await repo.findBrochureOrder(a.ctx, other.orderId)
+    if (!snapshot) throw new Error("thiếu đơn")
+    const dispatch = { eventType: "SHIPPING_DISPATCHED", deliveryStatus: "DELIVERING" as const }
+    await repo.applyProgress(a.ctx, snapshot, dispatch)
+    expect(await codeOf(repo.applyProgress(a.ctx, snapshot, dispatch))).toBe("CONFLICT")
+    expect(await prisma.order_events.count({ where: { order_id: other.orderId, reason: "SHIPPING_DISPATCHED" } })).toBe(1)
+  })
+
   it("mẫu chỉ có ảnh thư viện (chưa đặt ảnh chính) vẫn hiện ảnh trên bảng Điều phối", async () => {
     const order = await placeOrder()
     const item = await prisma.order_items.findFirstOrThrow({ where: { order_id: order.orderId } })

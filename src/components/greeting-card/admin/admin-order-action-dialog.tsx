@@ -13,6 +13,7 @@ import { customerPaymentMessage } from "@/modules/greeting-card/domain/customer-
 import { AlertTriangle, Info } from "lucide-react"
 import { useNow } from "@/components/greeting-card/work/use-worklist"
 import { OrderPaymentProofView } from "@/components/greeting-card/order-payment-proof-view"
+import { balanceCollectionBlocker } from "@/modules/greeting-card/domain/balance-collection"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
@@ -45,39 +46,23 @@ export function AdminOrderActionDialog({
   const isDepositPaid = isDepositOrder && order.paid_vnd >= depositAmount
   const requireFull = policy.requireFullBeforeDispatch !== false
 
-  // Kiểm tra điều kiện đợt 2 cho đơn đặt cọc
-  const isReady = order.production_status === "READY"
-  const isPhotoApproved = order.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-  const productPhotoQc = order.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-  const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-  // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
-  const canCollectBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
-  const canCollectAfterDelivery = order.delivery_status === "DELIVERED"
-  const isReported = order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED")
+  const isReported = order.greeting_sessions?.some((s) => s.status === "PAYMENT_REPORTED") ?? false
 
-  let isBlocked = false
-  let blockReason: string | null = null
-
-  if (type === "collect" && isDepositOrder && isDepositPaid) {
-    if (!isReported) {
-      if (requireFull) {
-        if (!canCollectBeforeDispatch) {
-          isBlocked = true
-          if (!isReady) {
-            blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Xưởng chưa hoàn thành cắm hoa, chưa thể thu phần còn lại."
-          } else {
-            blockReason = "Đơn hàng đang chờ khách xác nhận ảnh hoa thành phẩm (hoặc đếm ngược 10 phút). Khách xác nhận ảnh xong mới tiến hành thu tiền Đợt 2 trước khi giao hoa."
-          }
-        }
-      } else {
-        // Khớp server: shipper không thu tiền mặt (mặc định) → khách chuyển khoản lần 2 lúc nào cũng thu được
-        if (policy.allowShipperCash === true && !canCollectAfterDelivery) {
-          isBlocked = true
-          blockReason = "Đơn hàng đã được ghi nhận tiền cọc (Đợt 1). Theo chính sách của tiệm, phần còn lại sẽ thu sau khi giao hoa thành công."
-        }
-      }
-    }
-  }
+  // Điều kiện thu đợt 2 của đơn đặt cọc — cùng luật với máy chủ
+  const blockReason =
+    type === "collect" && isDepositOrder && isDepositPaid
+      ? balanceCollectionBlocker(
+          {
+            productionStatus: order.production_status ?? "",
+            deliveryStatus: order.delivery_status,
+            customerReported: isReported,
+            qcRecords: order.qc_records ?? [],
+          },
+          { requireFullBeforeDispatch: requireFull, allowShipperCash: policy.allowShipperCash },
+          now
+        )
+      : null
+  const isBlocked = blockReason !== null
 
   const suggested =
     type === "collect"
@@ -119,7 +104,12 @@ export function AdminOrderActionDialog({
   let submitButtonLabel: string = TITLES[type]
 
   if (type === "collect") {
-    if (isReported) {
+    if (isReported && !isDepositOrder) {
+      // Đơn trả đủ (không cọc): trước đây hiện "Phê duyệt tiền cọc (Đợt 1 — 0%)"
+      dialogTitle = "Phê duyệt thanh toán (100%)"
+      amountLabel = "Số tiền đã nhận (đ)"
+      submitButtonLabel = `Phê duyệt đã nhận (${vnd(suggested)})`
+    } else if (isReported) {
       dialogTitle = isDepositPaid
         ? `Phê duyệt thanh toán phần còn lại (Đợt 2)`
         : `Phê duyệt tiền cọc (Đợt 1 — ${pct}%)`
@@ -196,7 +186,7 @@ export function AdminOrderActionDialog({
             <div className="flex flex-col gap-0.5">
               <span className="font-bold text-caption text-success">Khách đã bấm báo chuyển khoản</span>
               <p className="text-body-sm text-foreground/80 leading-relaxed">
-                Khách hàng đã xác nhận chuyển {isDepositPaid ? "phần còn lại" : "tiền cọc"} {vnd(suggested)}. Vui lòng đối soát tài khoản ngân hàng và bấm phê duyệt.
+                Khách hàng đã xác nhận chuyển {isDepositPaid ? "phần còn lại" : isDepositOrder ? "tiền cọc" : "đủ tiền"} {vnd(suggested)}. Vui lòng đối soát tài khoản ngân hàng và bấm phê duyệt.
               </p>
             </div>
           </div>

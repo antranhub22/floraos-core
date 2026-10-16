@@ -13,6 +13,7 @@ import { depositAmountVnd } from "@/modules/greeting-card/domain/payment-schedul
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { PaymentProofBadge } from "./payment-proof-badge"
 import { useNow } from "@/components/greeting-card/work/use-worklist"
+import { balanceCollectionBlocker } from "@/modules/greeting-card/domain/balance-collection"
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Chờ thanh toán", className: "bg-warning-bg text-warning" },
@@ -67,22 +68,31 @@ export function AdminOrderTable({
             const isFullyPaid = o.total_vnd > 0 && o.paid_vnd >= o.total_vnd
             const requireFull = policy?.requireFullBeforeDispatch !== false
 
-            // Kiểm tra tiến độ hoa & duyệt ảnh đối với đơn thu trước giao
+            // Thu lần 2: cùng luật với máy chủ (`balanceCollectionBlocker`) để nút không lệch điều máy chủ cho phép
             const isReady = o.production_status === "READY"
-            const isPhotoApproved = o.qc_records?.some((qc) => qc.notes === "CUSTOMER_PHOTO_APPROVED")
-            const productPhotoQc = o.qc_records?.find((qc) => qc.notes === "PRODUCT_PHOTO_UPLOADED")
-            const isAutoApproved = !!productPhotoQc && (now >= new Date(productPhotoQc.created_at).getTime() + 10 * 60_000)
-            // Nếu không tải ảnh lên (!productPhotoQc), coi như tiệm bỏ qua duyệt ảnh -> cho phép thu lần 2 ngay khi cắm xong (isReady)
-            const canCollectBalanceBeforeDispatch = isReady && (!productPhotoQc || isPhotoApproved || isAutoApproved)
-            const canCollectBalanceAfterDelivery = o.delivery_status === "DELIVERED"
             const isReportedPaid = balance > 0 && o.status !== "CANCELLED" && o.greeting_sessions[0]?.status === "PAYMENT_REPORTED"
+            const balanceBlocker = balanceCollectionBlocker(
+              {
+                productionStatus: o.production_status ?? "",
+                deliveryStatus: o.delivery_status,
+                customerReported: isReportedPaid,
+                qcRecords: o.qc_records ?? [],
+              },
+              { requireFullBeforeDispatch: requireFull, allowShipperCash: policy?.allowShipperCash },
+              now
+            )
 
             let collectButton: { label: string; className: string } | null = null
             if (!isFullyPaid && balance > 0 && o.status !== "CANCELLED" && !awaitingQuote) {
               if (isReportedPaid) {
                 // Khách đã bấm chuyển khoản -> Ưu tiên hiện nút Phê duyệt cho Điều hành
+                // Đơn trả đủ (không cọc) không có "cọc" — trước đây hiện "Phê duyệt cọc (0 đ)"
                 collectButton = {
-                  label: isDepositPaid ? `Phê duyệt đợt 2 (${vnd(balance)})` : `Phê duyệt cọc (${vnd(depositAmount)})`,
+                  label: isDepositPaid
+                    ? `Phê duyệt đợt 2 (${vnd(balance)})`
+                    : isDepositOrder
+                    ? `Phê duyệt cọc (${vnd(Math.max(0, depositAmount - o.paid_vnd))})`
+                    : `Phê duyệt thanh toán (${vnd(balance)})`,
                   className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1 shadow-sm ring-2 ring-success/40",
                 }
               } else if (!isDepositOrder) {
@@ -95,12 +105,7 @@ export function AdminOrderTable({
                   label: `Thu tiền cọc (${vnd(depositAmount)})`,
                   className: "h-8 bg-primary hover:bg-primary-dark text-white text-caption font-bold gap-1",
                 }
-              } else if (requireFull && canCollectBalanceBeforeDispatch) {
-                collectButton = {
-                  label: `Thu lần 2 (${vnd(balance)})`,
-                  className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",
-                }
-              } else if (!requireFull && canCollectBalanceAfterDelivery) {
+              } else if (balanceBlocker === null) {
                 collectButton = {
                   label: `Thu lần 2 (${vnd(balance)})`,
                   className: "h-8 bg-success hover:bg-success/90 text-white text-caption font-bold gap-1",
@@ -207,7 +212,11 @@ export function AdminOrderTable({
                       )
                     )}
 
-                    {o.paid_vnd > 0 && (
+                    {o.pending_refund_vnd != null ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-caption font-semibold bg-warning-bg text-warning border border-warning/30" title="Khoản hoàn của đề xuất huỷ đã duyệt — đánh dấu đã hoàn ở Hộp việc, mục Cần hoàn tiền">
+                        <RotateCcw size={12} aria-hidden="true" /> Chờ hoàn {vnd(o.pending_refund_vnd)} · xử lý ở Hộp việc
+                      </span>
+                    ) : o.paid_vnd > 0 && (
                       <Button type="button" size="sm" variant="outline" onClick={() => onAction({ type: "refund", order: o })} className="h-8 text-caption gap-1">
                         <RotateCcw size={13} /> Hoàn tiền
                       </Button>

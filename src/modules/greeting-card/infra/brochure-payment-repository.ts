@@ -64,7 +64,8 @@ export class BrochurePaymentRepository {
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
-        where: { id: order.id, organization_id: ctx.organizationId, paid_vnd: order.paid_vnd, status: { not: "CANCELLED" } },
+        // Khoá cả tổng đơn: giảm giá / phí giao lại đổi tổng cùng lúc thì số còn phải thu tính sai
+        where: { id: order.id, organization_id: ctx.organizationId, paid_vnd: order.paid_vnd, total_vnd: order.total_vnd, status: { not: "CANCELLED" } },
         data: { paid_vnd: paidAfter, balance_vnd: total - paidAfter, status: nextStatus },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")
@@ -152,7 +153,7 @@ export class BrochurePaymentRepository {
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
-        where: { id: order.id, organization_id: ctx.organizationId, paid_vnd: order.paid_vnd },
+        where: { id: order.id, organization_id: ctx.organizationId, paid_vnd: order.paid_vnd, total_vnd: order.total_vnd },
         data: { paid_vnd: paidAfter, balance_vnd: total - paidAfter },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")

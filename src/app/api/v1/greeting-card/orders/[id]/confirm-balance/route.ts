@@ -11,6 +11,7 @@ import {
   isUrgentOrder,
   canRoleApproveDeposit,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
+import { coordinatorBalanceConfirmBlocker } from "@/modules/greeting-card/domain/balance-collection"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { BrochureOrderRepository } from "@/modules/greeting-card/infra/brochure-order-repository"
 
@@ -45,13 +46,13 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
     deliveryTimeSlot: deliveryWindow?.timeSlot,
   })
 
-  if (workflowPolicy.requireAdminDepositApproval && !isUrgent) {
-    const policy = parsePaymentPolicy(shop.settings)
-    const balancePolicy = resolveBalancePaymentTriggerPolicy(policy)
-    if (balancePolicy === "PAYMENT_ONLY") {
-      throw unprocessable("Cài đặt của cửa hàng yêu cầu chỉ Điều hành mới được xác nhận thanh toán lần 2")
-    }
-  }
+  // Cùng luật với nút trên thẻ Điều phối; tính cả ghi đè theo bộ sưu tập của đơn
+  const blocker = coordinatorBalanceConfirmBlocker({
+    requireAdminDepositApproval: workflowPolicy.requireAdminDepositApproval,
+    isUrgent,
+    balanceTrigger: resolveBalancePaymentTriggerPolicy(parsePaymentPolicy(shop.settings), order.greeting_sessions[0]?.catalog?.filters),
+  })
+  if (blocker) throw unprocessable(blocker)
 
   const body = await request.json().catch(() => ({}))
   const parsed = schema.safeParse(body)

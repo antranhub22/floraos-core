@@ -149,6 +149,7 @@ Phần trước và chú giải cột: [09a-api-a-i.md](09a-api-a-i.md).
 | POST | `/public/brochure/[sendCode]/order` | assertBrochureOwner, submitBrochureOrder | Công khai (rate limit) | — | — | 1 tệp: `customer/brochure-customer-experience.tsx` |
 | POST | `/public/brochure/[sendCode]/payment-notify` | assertBrochureOwner, reportCustomerPayment | Công khai (rate limit) | — | — | 2 tệp: `customer/brochure-customer-experience.tsx`, `customer/brochure-public-view.tsx` |
 | POST | `/public/brochure/[sendCode]/quote` | assertBrochureOwner, quoteBrochureSession | Công khai (rate limit) | — | — | 1 tệp: `customer/brochure-customer-experience.tsx` |
+| GET | `/public/brochure/[sendCode]/history` | assertBrochureOwner, getOrderFamily | Công khai (rate limit) | — | — | 1 tệp: `customer/use-order-family.ts` |
 | POST | `/public/brochure/[sendCode]/reorder` | assertBrochureOwner, isHttps, serializeOwnerCookie, startAnotherOrder | Công khai (rate limit) | — | — | 1 tệp: `customer/reorder-button.tsx` |
 | POST | `/public/brochure/[sendCode]/select` | assertBrochureOwner, selectBrochureProduct | Công khai (rate limit) | — | — | 1 tệp: `customer/brochure-customer-experience.tsx` |
 | GET · POST | `/public/brochure/tracking/[code]` | isBrochureOwner, getBrochureTracking | Công khai (rate limit) | — | query: link | 3 tệp: `customer/brochure-payment-view.tsx`, `customer/brochure-tracking-view.tsx` … |

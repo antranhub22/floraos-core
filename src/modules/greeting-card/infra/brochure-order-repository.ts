@@ -1,6 +1,7 @@
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
+import { conflict } from "@/core/http/errors"
 import { resolveCoordinatorId } from "../domain/coordinator-owner"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
@@ -269,8 +270,17 @@ export class BrochureOrderRepository {
         })
       }
 
-      await tx.orders.update({
-        where: { id: order.id },
+      // Khoá lạc quan: chỉ ghi khi đơn chưa huỷ và tiến độ xưởng/giao vẫn đúng như lúc đọc. Thiếu khoá này,
+      // Điều hành huỷ đơn trong lúc Điều phối đang tải ảnh người nhận thì đơn CANCELLED bị ghi đè thành
+      // COMPLETED; hai người bấm cùng một tác vụ thì ghi hai sự kiện + gửi khách hai tin.
+      const moved = await tx.orders.updateMany({
+        where: {
+          id: order.id,
+          organization_id: ctx.organizationId,
+          status: { not: "CANCELLED" },
+          production_status: order.production_status,
+          delivery_status: order.delivery_status,
+        },
         data: {
           ...(input.productionStatus ? { production_status: input.productionStatus } : {}),
           ...(input.deliveryStatus ? { delivery_status: input.deliveryStatus } : {}),
@@ -280,6 +290,7 @@ export class BrochureOrderRepository {
             : {}),
         },
       })
+      if (moved.count === 0) throw conflict("Đơn hàng vừa thay đổi trạng thái, vui lòng tải lại")
 
       const isDelivery = input.deliveryStatus !== undefined
       await tx.order_events.create({

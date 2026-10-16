@@ -5,7 +5,8 @@ import { CheckCircle2, ShieldCheck, XCircle, Banknote, Copy, Check } from "lucid
 import { Button } from "@/components/ui/button"
 import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
 import type { BrochureOrder, ModalState } from "./coordinator-order-card"
-import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { resolveBalancePaymentTriggerPolicy, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { coordinatorBalanceConfirmBlocker } from "@/modules/greeting-card/domain/balance-collection"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { customerSecondPaymentReminderMessage } from "@/modules/greeting-card/domain/customer-notifications"
 import { firstPaymentAmountVnd } from "@/modules/greeting-card/domain/payment-plan"
@@ -47,6 +48,14 @@ export function CoordinatorCardDecisionBlocks({
   const hasBalanceReported = order.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED")
   const requireFullBeforeDispatch = policy.requireFullBeforeDispatch !== false
   const balanceVnd = order.total_vnd - order.paid_vnd
+  // Cùng luật với máy chủ: tiệm chỉ cho Điều hành xác nhận Lần 2 → không hiện nút (trước đây bấm mới báo lỗi)
+  const balanceConfirmBlocker = workflowPolicy
+    ? coordinatorBalanceConfirmBlocker({
+        requireAdminDepositApproval: workflowPolicy.requireAdminDepositApproval,
+        isUrgent,
+        balanceTrigger: resolveBalancePaymentTriggerPolicy(policy, order.greeting_sessions[0]?.catalog?.filters),
+      })
+    : null
 
   return (
     <>
@@ -138,6 +147,9 @@ export function CoordinatorCardDecisionBlocks({
               <> · <a href={order.payment_proof_balance_url} target="_blank" rel="noopener noreferrer" className="text-primary underline font-bold">Xem ảnh bill</a></>
             )}
           </p>
+          {balanceConfirmBlocker ? (
+            <p role="note" className="text-caption font-semibold text-warning text-center">Chờ Điều hành xác nhận — tiệm chỉ cho Điều hành xác nhận thanh toán lần 2</p>
+          ) : (
           <Button
             type="button"
             variant="warning"
@@ -154,6 +166,7 @@ export function CoordinatorCardDecisionBlocks({
             <CheckCircle2 size={15} />
             Xác nhận Đã Nhận Đủ Tiền (Lần 2)
           </Button>
+          )}
         </div>
       )}
 
@@ -166,7 +179,7 @@ export function CoordinatorCardDecisionBlocks({
             </span>
             <span className="font-extrabold text-foreground">{balanceVnd.toLocaleString("vi-VN")}đ</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <div className={`grid grid-cols-1 gap-1.5 ${balanceConfirmBlocker ? "" : "sm:grid-cols-2"}`}>
             <Button
               type="button"
               variant="outline"
@@ -193,6 +206,7 @@ export function CoordinatorCardDecisionBlocks({
               {copied ? <Check size={13} className="text-success" /> : <Copy size={13} />}
               <span>{copied ? "Đã chép Zalo" : "Chép tin nhắc lần 2"}</span>
             </Button>
+            {!balanceConfirmBlocker && (
             <Button
               type="button"
               variant="primary"
@@ -209,6 +223,7 @@ export function CoordinatorCardDecisionBlocks({
               <CheckCircle2 size={13} />
               <span>Xác nhận thu đủ (Lần 2)</span>
             </Button>
+            )}
           </div>
         </div>
       )}
