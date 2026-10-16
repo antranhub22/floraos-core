@@ -4,6 +4,7 @@ import {
   deliveryScheduleError,
   earliestDeliveryDate,
   readyHour,
+  viDeliveryDate,
 } from "../delivery-schedule"
 
 // Helper tạo Date tương ứng giờ Việt Nam (GMT+7)
@@ -89,5 +90,17 @@ describe("deliveryScheduleError", () => {
     expect(deliveryScheduleError(TODAY, "Giờ cụ thể: 17:00", {}, now)).toMatch(/không còn kịp chuẩn bị/)
     expect(deliveryScheduleError(TODAY, "Giờ cụ thể: 17:30", {}, now)).toBeNull()
     expect(deliveryScheduleError(TODAY, "Giờ cụ thể: 18:00", {}, now)).toBeNull()
+  })
+})
+
+describe("viDeliveryDate", () => {
+  it("hiện ngày giao kiểu Việt Nam, không theo ngôn ngữ máy khách", () => {
+    expect(viDeliveryDate("2026-10-16")).toBe("Thứ Sáu, 16/10/2026")
+    expect(viDeliveryDate("2026-10-18")).toBe("Chủ Nhật, 18/10/2026")
+  })
+
+  it("giá trị rỗng / sai định dạng giữ nguyên", () => {
+    expect(viDeliveryDate("")).toBe("")
+    expect(viDeliveryDate("16 Oct 2026")).toBe("16 Oct 2026")
   })
 })
