@@ -8,6 +8,7 @@ import { createSendLink } from "@/modules/greeting-card/use-cases/create-send-li
 import { selectBrochureProduct } from "@/modules/greeting-card/use-cases/select-brochure-product"
 import { submitBrochureOrder } from "@/modules/greeting-card/use-cases/submit-brochure-order"
 import { getCoordinatorBoard } from "@/modules/greeting-card/use-cases/coordinator-board"
+import { getCoordinatorWork } from "@/modules/greeting-card/use-cases/coordinator-work"
 
 /**
  * Đợt 2-G (PO 08/10/2026): bảng Điều phối thấy ĐỦ đơn còn việc (trước đây chỉ 20 đơn mới nhất), xếp
@@ -65,5 +66,16 @@ describe("greeting-card: bảng việc Điều phối", () => {
     const day4 = await getCoordinatorBoard(coord(a), { date: day(4) })
     expect(day4.data.length).toBeGreaterThan(0)
     expect(day4.data.every((o) => (o.delivery_window as { date: string }).date === day(4))).toBe(true)
+  })
+
+  it("trạng thái việc cho bảng Điều phối: chỉ đơn (bỏ link chưa có đơn), có thời gian chuẩn; tiệm khác không thấy", async () => {
+    const ids = await orders(a, 2)
+    const catalog = await prisma.greeting_catalogs.findFirstOrThrow({ where: { organization_id: a.organizationId } })
+    await createSendLink({ ...a.ctx, capabilities: new Set(["R2"]) }, { catalogId: catalog.id }) // link khách chưa đặt
+
+    const work = await getCoordinatorWork(coord(a))
+    expect(work.map((w) => w.orderId).sort()).toEqual([...ids].sort())
+    expect(work.every((w) => typeof w.sla.state === "string")).toBe(true)
+    expect(await getCoordinatorWork(coord(b))).toEqual([])
   })
 })
