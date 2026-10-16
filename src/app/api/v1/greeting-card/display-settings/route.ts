@@ -19,7 +19,7 @@ const putSchema = z.object({
   fields: z.array(z.string().max(40)).max(20),
 })
 
-/** PUT — đổi trường hiển thị (R2 + L3/L4: cài đặt dùng chung cả tiệm, Sale không đổi — PO 16/10/2026). Trả nợ #170. */
+/** PUT — đổi trường hiển thị (R2 + L4: cài đặt dùng chung cả tiệm, Sale và Điều phối không đổi — PO 16/10/2026). Trả nợ #170. */
 export const PUT = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.manage)

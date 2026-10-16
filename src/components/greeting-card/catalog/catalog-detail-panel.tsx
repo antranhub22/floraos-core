@@ -51,7 +51,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
   const ci = useCatalogItems<CatalogDetail>(catalogId)
   const catalog = ci.catalog
   const loading = ci.loading
-  // Thêm/xoá mẫu: người tạo bộ sưu tập hoặc L3/L4 — Sale chỉ xem bộ sưu tập người khác tạo (PO 16/10/2026)
+  // Thêm/xoá mẫu: người tạo bộ sưu tập hoặc L4 — Sale và Điều phối chỉ xem bộ sưu tập người khác tạo (PO 16/10/2026)
   const canEdit = Boolean(catalog) && canEditCatalog({ createdBy: catalog?.created_by }, { userId: me.data?.user.id, has: can })
   const isAddOpen = ci.pickerOpen
   const setIsAddOpen = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())

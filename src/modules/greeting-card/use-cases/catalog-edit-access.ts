@@ -19,6 +19,6 @@ export async function assertCanEditCatalog(
 /** Cài đặt hiển thị dùng chung cả tiệm — chỉ người sửa được mọi bộ sưu tập. */
 export function assertCanEditSharedDisplay(ctx: TenantContext): void {
   if (!canEditAnyCatalog((c) => ctx.capabilities.has(c))) {
-    throw new AppError("CAPABILITY_DENIED", "Chỉ Điều hành hoặc người quản lý sản phẩm đổi được cài đặt hiển thị chung")
+    throw new AppError("CAPABILITY_DENIED", "Chỉ Điều hành đổi được cài đặt hiển thị chung")
   }
 }
