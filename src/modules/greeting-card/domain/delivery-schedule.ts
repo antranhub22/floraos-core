@@ -140,6 +140,17 @@ export function earliestDeliveryDate(cfg: Schedule, now: Date = new Date()): str
   return ok ? today : nextDay(today)
 }
 
+const VI_WEEKDAYS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+
+/** "Thứ Sáu, 16/10/2026" từ "2026-10-16" — ô chọn ngày của trình duyệt hiện theo ngôn ngữ máy khách. */
+export function viDeliveryDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return iso
+  const [, y, mo, d] = m
+  const weekday = VI_WEEKDAYS[new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d))).getUTCDay()]
+  return `${weekday}, ${d}/${mo}/${y}`
+}
+
 /** Lỗi tiếng Việt khi ngày/khung giờ khách chọn không hợp lệ hoặc không kịp giao; `null` nếu hợp lệ. */
 export function deliveryScheduleError(
   date: string,

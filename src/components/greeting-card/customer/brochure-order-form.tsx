@@ -20,6 +20,7 @@ import { PromotionPicker } from "./promotion-picker"
 import { customerChoosesPromotion, PROMOTION_CHOICE_MISSING } from "@/modules/greeting-card/domain/order-policies"
 import { SelectedProductHeader } from "./selected-product-header"
 import { OrderNotesFields } from "./order-notes-fields"
+import { ViDateInput } from "./vi-date-input"
 import type { PublicAppliedPolicies } from "@/modules/greeting-card/domain/store-policy"
 
 interface BrochureOrderFormProps {
@@ -285,14 +286,14 @@ export function BrochureOrderForm({
             <label htmlFor={`${uid}-deliveryDate`} className="block text-body-sm font-bold text-foreground mb-1">
               Ngày giao hoa <span className="text-danger">*</span>
             </label>
-            <input
-              type="date"
+            <ViDateInput
+              id={`${uid}-deliveryDate`}
               required
               min={minDate}
               max={maxDate}
               value={deliveryDate}
-              id={`${uid}-deliveryDate`} onChange={(e) => setDeliveryDate(e.target.value)}
-              className={`${INPUT} appearance-none text-left`}
+              onChange={setDeliveryDate}
+              className={INPUT}
             />
           </div>
           <div>

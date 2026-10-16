@@ -12,6 +12,7 @@ import { DELIVERY_NOTE_MAX, MAP_URL_MAX } from "@/modules/greeting-card/domain/d
 import { CHANGE_NOTE_MAX, type OrderChangeInput, type OrderChangeSnapshot } from "@/modules/greeting-card/domain/order-change-request"
 import { AddressFields } from "./address-fields"
 import { DeliveryTimePicker } from "./delivery-time-picker"
+import { ViDateInput } from "./vi-date-input"
 
 const INPUT = "w-full min-w-0 h-11 px-3 rounded-lg border border-border bg-background text-title font-normal text-foreground placeholder:text-body placeholder:text-text-muted/70 focus:outline-none focus:ring-2 focus:ring-primary/20"
 const LABEL = "block text-body-sm font-bold text-foreground mb-1"
@@ -102,7 +103,7 @@ export function OrderChangeForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor={`${uid}-date`} className={LABEL}>Ngày giao</label>
-          <input id={`${uid}-date`} type="date" min={earliestDeliveryDate(shipping)} value={v.deliveryDate} onChange={(e) => set({ deliveryDate: e.target.value })} className={`${INPUT} appearance-none text-left`} />
+          <ViDateInput id={`${uid}-date`} min={earliestDeliveryDate(shipping)} value={v.deliveryDate} onChange={(deliveryDate) => set({ deliveryDate })} className={INPUT} />
         </div>
         <div>
           <label htmlFor={`${uid}-slot`} className={LABEL}>Giờ giao</label>
