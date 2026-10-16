@@ -14,7 +14,9 @@ import { orderPhotoApproval, photoApprovalDispatchBlocker } from "../domain/phot
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
 import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
-import { canBypassDeliveryPhoto, canBypassFinishedPhoto, canRoleApproveDeposit, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
+import { canBypassDeliveryPhoto, canBypassFinishedPhoto, canRoleApproveDeposit, depositApproverRole, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
+import { hasCapability } from "@/core/rbac/capabilities"
+import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
 
 /** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
 async function loadForAction(
@@ -221,12 +223,12 @@ export async function coordinatorAcceptBrochureOrder(
   const session = order.greeting_sessions?.[0]
   const hasProofOrReported = Boolean(session?.payment_proof_asset_id || session?.status === "PAYMENT_REPORTED")
 
-  // Ghi nhận cọc thay Điều hành chỉ khi chính sách tiệm cho Điều phối duyệt cọc (như /confirm-deposit)
+  // Ghi nhận cọc khi người bấm là Điều hành (R11), hoặc chính sách tiệm cho Điều phối duyệt cọc (như /confirm-deposit)
   const shop = await shops.getShopProfile(ctx.organizationId)
   const deliveryWindow = order.delivery_window as { date?: string; timeSlot?: string } | null
   const minutesWaiting = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60_000)
   const workflow = parseBrochureWorkflowPolicy(shop.settings)
-  const mayConfirmDeposit = canRoleApproveDeposit("COORDINATOR", workflow, {
+  const mayConfirmDeposit = canRoleApproveDeposit(depositApproverRole(hasCapability(ctx, GREETING_CARD_CAPABILITY.paymentRecord)), workflow, {
     isUrgent: isUrgentOrder({ deliveryDate: deliveryWindow?.date, deliveryTimeSlot: deliveryWindow?.timeSlot }),
     isOverdueSla: minutesWaiting >= workflow.slaEscalationMinutes,
   })

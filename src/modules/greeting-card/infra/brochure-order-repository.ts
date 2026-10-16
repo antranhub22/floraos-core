@@ -3,6 +3,7 @@ import { scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { conflict } from "@/core/http/errors"
 import { resolveCoordinatorId } from "../domain/coordinator-owner"
+import { sortByDelivery } from "../domain/coordinator-board"
 import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
@@ -45,14 +46,19 @@ export class BrochureOrderRepository {
    * tuỳ chọn một ngày giao. Trần `COORDINATOR_BOARD_MAX`, xếp ở use-case theo giờ giao.
    */
   async listCoordinatorBoard(ctx: TenantContext, options: { date?: string | undefined; saleId?: string | undefined; doneSince: Date; max: number }) {
+    const where = scopedWhere(ctx, {
+      source: "BROCHURE",
+      NOT: { status: "CANCELLED" as const },
+      OR: [{ delivery_status: { not: "DELIVERED" as const } }, { updated_at: { gte: options.doneSince } }],
+      ...(options.date ? { delivery_window: { path: ["date"], equals: options.date } } : {}),
+      ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
+    })
+    // Vượt trần: giữ đơn có ngày + giờ giao GẦN NHẤT (trước đây giữ đơn tạo sớm nhất, bỏ mất đơn mới sắp giao)
+    const keep = (await this.db.orders.count({ where })) > options.max
+      ? sortByDelivery(await this.db.orders.findMany({ where, select: { id: true, delivery_window: true, created_at: true } })).slice(0, options.max).map((o) => o.id)
+      : null
     const rows = await this.db.orders.findMany({
-      where: scopedWhere(ctx, {
-        source: "BROCHURE",
-        NOT: { status: "CANCELLED" as const },
-        OR: [{ delivery_status: { not: "DELIVERED" as const } }, { updated_at: { gte: options.doneSince } }],
-        ...(options.date ? { delivery_window: { path: ["date"], equals: options.date } } : {}),
-        ...(options.saleId ? { greeting_sessions: { some: { sale_id: options.saleId } } } : {}),
-      }),
+      where: keep ? { ...where, id: { in: keep } } : where,
       include: {
         customer: { select: { id: true, code: true, name: true, phone: true } },
         items: true,

@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { validationFailed, unprocessable, notFound } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
-import { requireCapability } from "@/core/rbac/capabilities"
+import { hasCapability, requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
 import { coordinatorConfirmDepositPayment } from "@/modules/greeting-card/use-cases/confirm-brochure-payment"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
@@ -9,6 +9,7 @@ import {
   parseBrochureWorkflowPolicy,
   isUrgentOrder,
   canRoleApproveDeposit,
+  depositApproverRole,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { BrochureOrderRepository } from "@/modules/greeting-card/infra/brochure-order-repository"
@@ -20,7 +21,8 @@ const schema = z.object({
 /**
  * POST /api/v1/greeting-card/orders/[id]/confirm-deposit
  * Điều phối xác nhận đã nhận tiền đặt cọc (hoặc toàn phần) qua ảnh bill của khách.
- * Chỉ hoạt động khi policy cho phép Điều phối (PAYMENT_OR_COORDINATOR hoặc workflowPolicy.requireAdminDepositApproval === false).
+ * Điều phối chỉ duyệt được khi policy cho phép (PAYMENT_OR_COORDINATOR hoặc workflowPolicy.requireAdminDepositApproval === false);
+ * người có quyền ghi nhận thanh toán (R11 — Điều hành) luôn duyệt được.
  */
 export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request, context) => {
   const { ctx } = await requireTenantContext(request)
@@ -46,7 +48,8 @@ export const POST = handle<[{ params: Promise<{ id: string }> }]>(async (request
   const minutesWaiting = Math.floor((Date.now() - createdAtMs) / 60_000)
   const isOverdueSla = minutesWaiting >= workflowPolicy.slaEscalationMinutes
 
-  const canApprove = canRoleApproveDeposit("COORDINATOR", workflowPolicy, { isUrgent, isOverdueSla })
+  const role = depositApproverRole(hasCapability(ctx, GREETING_CARD_CAPABILITY.paymentRecord))
+  const canApprove = canRoleApproveDeposit(role, workflowPolicy, { isUrgent, isOverdueSla })
   if (!canApprove) {
     throw unprocessable("Cài đặt của cửa hàng yêu cầu chỉ Điều hành mới được duyệt tiền cọc")
   }

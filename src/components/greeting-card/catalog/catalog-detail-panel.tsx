@@ -8,6 +8,8 @@ import { useCatalogItems } from "./use-catalog-items"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CatalogHeartsPanel } from "./catalog-hearts-panel"
 import { CatalogPoliciesSettings } from "./catalog-policies-settings"
+import { useApi } from "@/components/greeting-card/greeting-api"
+import { canEditCatalog } from "@/modules/greeting-card/domain/catalog-edit-policy"
 
 type ProductVariant = { id: string; price_vnd: number; name: string }
 type CatalogProduct = {
@@ -28,6 +30,7 @@ type CatalogDetail = {
   type: string
   description: string | null
   filters?: Record<string, unknown> | null
+  created_by?: string | null
   _count: { sessions: number }
   items: CatalogProduct[]
 }
@@ -41,11 +44,15 @@ type Props = {
 export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
   const [showPolicies, setShowPolicies] = useState(false)
   // Chính sách theo bộ sưu tập ghi đè chính sách tiệm → chỉ người sửa được cấu hình tiệm (máy chủ cũng kiểm)
-  const canEditPolicies = useSession().can("F2")
+  const { can } = useSession()
+  const canEditPolicies = can("F2")
+  const me = useApi<{ user: { id: string } }>("/api/v1/auth/me")
   const [productSearch, setProductSearch] = useState("")
   const ci = useCatalogItems<CatalogDetail>(catalogId)
   const catalog = ci.catalog
   const loading = ci.loading
+  // Thêm/xoá mẫu: người tạo bộ sưu tập hoặc L3/L4 — Sale chỉ xem bộ sưu tập người khác tạo (PO 16/10/2026)
+  const canEdit = Boolean(catalog) && canEditCatalog({ createdBy: catalog?.created_by }, { userId: me.data?.user.id, has: can })
   const isAddOpen = ci.pickerOpen
   const setIsAddOpen = (open: boolean) => (open ? ci.openPicker() : ci.closePicker())
   const openAddProduct = ci.openPicker
@@ -102,6 +109,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
             <span>{showPolicies ? "Xem Mẫu Hoa" : "Chính sách & Cam kết"}</span>
           </Button>
           )}
+          {canEdit && (
           <Button
             type="button"
             size="sm"
@@ -111,8 +119,15 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
             <Plus size={16} />
             <span>Thêm Mẫu Hoa</span>
           </Button>
+          )}
         </div>
       </div>
+
+      {catalog && !canEdit && (
+        <p role="note" className="rounded-xl border border-border bg-surface-alt px-4 py-3 text-body-sm text-text-muted">
+          Bộ sưu tập do người khác tạo — bạn xem và gửi link được, không thêm/xoá mẫu. Cần bộ sưu tập riêng? Quay lại danh sách và bấm &quot;Tạo bộ sưu tập&quot;.
+        </p>
+      )}
 
       {showPolicies && canEditPolicies && (
         <CatalogPoliciesSettings
@@ -213,7 +228,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
               Thêm mẫu hoa từ danh mục sản phẩm để khách có thể vuốt chọn
             </p>
           </div>
-          <Button
+          {canEdit && <Button
             type="button"
             variant="outline"
             onClick={() => void openAddProduct()}
@@ -221,7 +236,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
           >
             <Plus size={16} />
             Thêm Mẫu Hoa Đầu Tiên
-          </Button>
+          </Button>}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -239,7 +254,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                       {item.sort_order + 1}
                     </span>
                   </div>
-                  <button
+                  {canEdit && <button
                     type="button"
                     onClick={() => void handleRemoveProduct(item.product.id)}
                     disabled={removingId === item.product.id}
@@ -249,7 +264,7 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
                     {removingId === item.product.id
                       ? <Loader2 size={12} className="animate-spin" />
                       : <Trash2 size={12} />}
-                  </button>
+                  </button>}
                 </div>
                 <div className="p-3 flex flex-col gap-1">
                   <p className="text-caption font-bold text-foreground line-clamp-2 leading-tight">
@@ -266,14 +281,14 @@ export function CatalogDetailPanel({ catalogId, catalogName, onBack }: Props) {
           })}
 
           {/* Add More Card */}
-          <button
+          {canEdit && <button
             type="button"
             onClick={() => void openAddProduct()}
             className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 flex flex-col items-center justify-center gap-2 text-text-muted hover:text-primary"
           >
             <Plus size={24} />
             <span className="text-caption font-bold">Thêm mẫu</span>
-          </button>
+          </button>}
         </div>
       )}
 

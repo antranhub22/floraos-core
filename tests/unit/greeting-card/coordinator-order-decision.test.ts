@@ -13,7 +13,8 @@ const ctx: TenantContext = {
   workspaceId: "",
   userId: "user-coordinator",
   branchId: null,
-  capabilities: new Set(["R4", "R6", "R11"]),
+  // R11 (ghi nhận thanh toán) có trần cứng chỉ Điều hành — Điều phối thật không bao giờ có
+  capabilities: new Set(["R4", "R6"]),
 }
 
 const shopWith = (settings: Record<string, unknown>) =>

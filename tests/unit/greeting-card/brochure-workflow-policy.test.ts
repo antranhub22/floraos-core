@@ -9,6 +9,7 @@ import {
   detectWorkflowPreset,
   isUrgentOrder,
   canRoleApproveDeposit,
+  depositApproverRole,
   canBypassFinishedPhoto,
   canBypassDeliveryPhoto,
   shouldBlockDispatchForBalance,
@@ -115,6 +116,13 @@ describe("Brochure Workflow Policy Domain Tests", () => {
 
   describe("Gate Decision Evaluators", () => {
     describe("canRoleApproveDeposit", () => {
+      it("Điều hành (có quyền ghi nhận thanh toán) bấm duyệt cọc từ màn Điều phối vẫn là ADMIN — không bị cài đặt 'chỉ Điều hành duyệt' chặn", () => {
+        expect(depositApproverRole(true)).toBe("ADMIN")
+        expect(canRoleApproveDeposit(depositApproverRole(true), STRICT_WORKFLOW_POLICY, { isOverdueSla: false })).toBe(true)
+        expect(depositApproverRole(false)).toBe("COORDINATOR")
+        expect(canRoleApproveDeposit(depositApproverRole(false), STANDARD_WORKFLOW_POLICY, { isOverdueSla: false })).toBe(false)
+      })
+
       it("always allows ADMIN", () => {
         expect(canRoleApproveDeposit("ADMIN", STANDARD_WORKFLOW_POLICY)).toBe(true)
         expect(canRoleApproveDeposit("ADMIN", STRICT_WORKFLOW_POLICY)).toBe(true)

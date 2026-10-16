@@ -5,9 +5,11 @@ import { ShopContactBar } from "./shop-contact-bar"
 /**
  * Link đã hết hạn, bị thu hồi hoặc bộ sưu tập đã ngừng — thay cho trang 404 chung,
  * để khách vẫn liên hệ được đúng cửa hàng thay vì bỏ đi. Cũng dùng khi link riêng đã được mở
- * trên thiết bị khác (`title`/`message` riêng).
+ * trên thiết bị khác (`title`/`message` riêng). `action`: nút thử lại (vd. trình duyệt chặn cookie).
  */
-export function LinkUnavailable({ shop, title, message }: { shop?: ShopContact | null; title?: string; message?: string }) {
+export function LinkUnavailable({ shop, title, message, action }: {
+  shop?: ShopContact | null; title?: string; message?: string; action?: { href: string; label: string }
+}) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       {shop && <ShopContactBar shop={shop} />}
@@ -18,6 +20,11 @@ export function LinkUnavailable({ shop, title, message }: { shop?: ShopContact |
             ? `Link có thể đã hết hạn hoặc cửa hàng đã cập nhật mẫu mới. Liên hệ ${shop.name} để nhận bộ sưu tập mới nhất.`
             : "Đường dẫn xem mẫu hoa này không tồn tại hoặc đã hết thời gian sử dụng. Vui lòng liên hệ người gửi hoặc cửa hàng hoa để nhận link mới.")}
         </p>
+        {action && (
+          <a href={action.href} className="mt-2 inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary text-body font-bold text-surface hover:bg-primary-dark">
+            {action.label}
+          </a>
+        )}
         {shop && (
           <div className="mt-2 flex w-full flex-col gap-2">
             {shop.zaloUrl && (

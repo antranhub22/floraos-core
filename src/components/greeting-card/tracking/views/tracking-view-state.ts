@@ -77,6 +77,9 @@ export interface SavedView {
 
 const today = () => new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10)
 
+/** Bộ lọc mặc định khi Điều phối mở tab: chỉ các bước Điều phối phụ trách (nhận đơn → giao xong). */
+export const COORDINATOR_DEFAULT: Partial<TrackingViewState> = { view: "kanban", owner: "COORDINATOR" }
+
 /** View mẫu có sẵn. "Đơn của Sale X" = chọn sale ở bộ lọc rồi lưu thành view riêng. */
 export function presetViews(): SavedView[] {
   const d = today()
@@ -86,6 +89,7 @@ export function presetViews(): SavedView[] {
     { id: "stuck", name: "Đơn đang kẹt", state: { view: "list", category: "STUCK", sort: "urgency", dir: "desc" } },
     { id: "overdue", name: "Đơn quá thời gian chuẩn", state: { view: "list", sla: "OVERDUE", sort: "age", dir: "desc" } },
     { id: "todo", name: "Đơn cần xử lý", state: { view: "queue" } },
+    { id: "coordinator", name: "Việc của Điều phối", state: COORDINATOR_DEFAULT },
   ]
 }
 

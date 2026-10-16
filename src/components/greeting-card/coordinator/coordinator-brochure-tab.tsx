@@ -10,7 +10,7 @@ import { useApi } from "@/components/greeting-card/greeting-api"
 import { PendingCancellationPanel } from "@/components/greeting-card/admin/pending-cancellation-panel"
 import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { canBypassDeliveryPhoto, canBypassFinishedPhoto, parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
-import { useNow, useWorklist } from "@/components/greeting-card/work/use-worklist"
+import { useCoordinatorWork, useNow } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import { BrochureOrderDetailModal } from "@/components/greeting-card/brochure-order-detail-modal"
 
@@ -44,7 +44,7 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
   const openModal = (m: ModalState) => setModal(m)
   const [bucket, setBucket] = useState<WorkBucket | null>(null)
   const [viewMode, setViewMode] = useState<"kanban" | "grid">("kanban")
-  const work = useWorklist()
+  const work = useCoordinatorWork()
   const now = useNow()
   const workOf = new Map(work.items.filter((i) => i.orderId).map((i) => [i.orderId as string, i]))
   const bucketOf = (o: BrochureOrder): WorkBucket => {
@@ -74,8 +74,11 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
 
   const filtered = term ? orders.filter(matchesSearch) : orders
   const counts = Object.fromEntries(BUCKETS.map((b) => [b, filtered.filter((o) => bucketOf(o) === b).length])) as Record<WorkBucket, number>
-  // Giữ thứ tự giờ giao của máy chủ; mặc định ẩn đơn đã xong trừ khi đang tìm kiếm
-  const shown = term ? filtered : orders.filter((o) => (bucket ? bucketOf(o) === bucket : bucketOf(o) !== "DONE"))
+  // Giữ thứ tự giờ giao của máy chủ; Lưới thẻ mặc định ẩn đơn đã xong trừ khi đang tìm kiếm.
+  // Kanban luôn có đơn giao trong 24 giờ ở cột "Đã giao" (thu gọn) — trước đây cột này luôn trống
+  const shown = term
+    ? filtered
+    : orders.filter((o) => (bucket ? bucketOf(o) === bucket : viewMode === "kanban" || bucketOf(o) !== "DONE"))
   const dayChips: Array<{ id: string; label: string }> = [
     { id: "", label: "Mọi ngày" },
     { id: vnDate(0), label: "Hôm nay" },

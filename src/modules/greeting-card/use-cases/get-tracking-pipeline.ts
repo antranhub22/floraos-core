@@ -91,12 +91,12 @@ export async function getTrackingPipeline(ctx: TenantContext, repo = new Trackin
 export async function loadTrackingDataset(
   ctx: TenantContext,
   repo = new TrackingPipelineRepository(),
-  now = new Date()
+  now = new Date(), opts: { ordersOnly?: boolean } = {} // ordersOnly: bảng Điều phối không cần link chưa có đơn
 ): Promise<{ items: TrackingPipelineItem[]; sla: ReturnType<typeof parseStepSla> }> {
   const saleId = await resolveSaleScope(ctx)
   const [orders, activeSessions, org, fallbackOwner] = await Promise.all([
     repo.listBrochureOrders(ctx, saleId, now),
-    repo.listActiveSessions(ctx, saleId, now),
+    opts.ordersOnly ? Promise.resolve([] as Awaited<ReturnType<typeof repo.listActiveSessions>>) : repo.listActiveSessions(ctx, saleId, now),
     getCurrentOrganization(ctx),
     defaultOwnerOf(ctx.organizationId),
   ])
