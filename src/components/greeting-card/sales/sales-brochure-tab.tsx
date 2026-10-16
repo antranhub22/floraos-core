@@ -215,7 +215,7 @@ export function SalesBrochureTab({ initialOpenCreate = false, onNavigateToCatalo
                       channel: item.channel,
                       paymentProofUrl: item.paymentProofUrl,
                       paymentProofBalanceUrl: item.paymentProofBalanceUrl,
-                      createdAt: item.createdAt,
+                      createdAt: item.createdAt, copiedAt: item.copiedAt, openedAt: item.openedAt, lastActiveAt: item.lastActiveAt,
                     })
                   }
                   className="h-9 text-caption font-bold"

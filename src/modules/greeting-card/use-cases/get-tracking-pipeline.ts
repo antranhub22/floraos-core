@@ -338,7 +338,7 @@ export async function loadTrackingDataset(
       copiedAt: facts.copiedAt,
       expiresAt: session.expires_at?.toISOString() ?? null,
       steps,
-      lastActiveAt: session.last_active_at.toISOString(),
+      lastActiveAt: session.last_active_at.toISOString(), openedAt: session.opened_at?.toISOString() ?? null,
       createdAt: session.created_at.toISOString(),
     }
   })

@@ -129,7 +129,7 @@ export function BrochureOrderTrackingTab() {
             paymentProofUrl: detailFor.paymentProofUrl,
             paymentProofBalanceUrl: detailFor.paymentProofBalanceUrl,
             customerReportedPaid: Boolean(detailFor.customerReportedPaid || detailFor.paymentProofBalanceUrl),
-            createdAt: detailFor.createdAt,
+            createdAt: detailFor.createdAt, copiedAt: detailFor.copiedAt, openedAt: detailFor.openedAt, lastActiveAt: detailFor.lastActiveAt,
           }}
 
           onClose={() => setDetailFor(null)}

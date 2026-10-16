@@ -54,6 +54,10 @@ export interface OrderDetailModalTarget {
   /** Khách đã bấm báo chuyển khoản / có ảnh bill lần 2 */
   customerReportedPaid?: boolean | undefined
   createdAt?: string | null | undefined
+  /** Link chưa có đơn: lúc gửi (sao chép) link, lúc khách mở lần đầu, lúc xem gần nhất */
+  copiedAt?: string | null | undefined
+  openedAt?: string | null | undefined
+  lastActiveAt?: string | null | undefined
 }
 
 export interface BrochureOrderDetailModalProps {
@@ -72,16 +76,21 @@ const TABS: { key: DetailTab; label: string }[] = [
   { key: "florist", label: "Thẻ gia công" },
 ]
 
-export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCancellationProposed }: BrochureOrderDetailModalProps) {
+export function BrochureOrderDetailModal({ target: inputTarget, onClose, onOpenNotes, onCancellationProposed }: BrochureOrderDetailModalProps) {
   const [activeTab, setActiveTab] = useState<"info" | "timeline" | "customer" | "florist">("info")
+  // Sale vừa ghi tên khách lên link → hiện ngay, không chờ tải lại danh sách
+  const [savedCustomer, setSavedCustomer] = useState<{ key: string; customerName: string; customerPhone: string | null } | null>(null)
   useEffect(() => {
-    if (!target) return
+    if (!inputTarget) return
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [target, onClose])
+  }, [inputTarget, onClose])
 
-  if (!target) return null
+  if (!inputTarget) return null
+  const target: OrderDetailModalTarget = savedCustomer && savedCustomer.key === inputTarget.sessionId
+    ? { ...inputTarget, customerName: savedCustomer.customerName, customerPhone: savedCustomer.customerPhone }
+    : inputTarget
 
   const isPaid = (target.paidVnd ?? 0) >= (target.totalVnd ?? 0) && (target.totalVnd ?? 0) > 0
   const isDeposit = (target.paidVnd ?? 0) > 0 && !isPaid
@@ -210,7 +219,7 @@ export function BrochureOrderDetailModal({ target, onClose, onOpenNotes, onCance
               onAcceptedOrRejected={onCancellationProposed}
             />
           ) : (
-            <OrderDetailInfoTab target={target} />
+            <OrderDetailInfoTab target={target} onCustomerSaved={(c) => setSavedCustomer({ key: target.sessionId ?? "", ...c })} />
           )}
         </div>
 
