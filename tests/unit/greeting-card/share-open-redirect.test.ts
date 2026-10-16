@@ -23,7 +23,7 @@ describe("GET /s/<mã>/mo — chuyển sang trang Thẻ chào", () => {
     const req = new Request("http://localhost:3100/s/abc/mo", { headers: { "x-forwarded-proto": "https" } })
     const res = await GET(req, { params: Promise.resolve({ code: "abc" }) })
     expect(res.status).toBe(302)
-    expect(res.headers.get("location")).toBe("/b/SL-ABC123")
+    expect(res.headers.get("location")).toBe("/b/SL-ABC123?moi=1")
     expect(res.headers.get("set-cookie")).toMatch(/fl_s_ABC=SL-ABC123.*Secure/i)
     // Trình duyệt mở link chia sẻ là chủ phiên vừa tạo: người khác mở /b/SL-ABC123 không thấy phiên này
     expect(res.headers.get("set-cookie")).toMatch(/fl_b_SL-ABC123=chuky.*Secure/i)

@@ -9,6 +9,7 @@
 - Máy quét xem trước link (Zalo/Facebook) không chạy JavaScript → không chiếm được phiên; trang khi chưa nhận chỉ trả màn chờ, không chứa dữ liệu phiên.
 - `/s/<mã>/mo` tạo phiên mới và trao chủ ngay; đặt từ link chung `/g` · `/bst` và "Đặt thêm đơn" cũng trao chủ cho phiên mới.
 - Người khác mở cùng `/b/<mã>`: phiên sinh từ link chia sẻ → chuyển về `/s/<mã chia sẻ>/mo` để có phiên riêng; link riêng của sale → màn "Link này đã được mở trên thiết bị khác" kèm Gọi/Zalo của tiệm.
+- Chống vòng tạo phiên rác (16/10/2026): `/mo` chuyển sang `/b/<mã phiên>?moi=1`. Về tới `/b` có `?moi=1` mà vẫn thiếu cookie chủ phiên (trình duyệt trong app chặn cookie, máy quét link) → **không chuyển lại `/mo` nữa**, hiện màn "Trình duyệt này chưa mở được bộ sưu tập" kèm nút "Mở lại bộ sưu tập" (bấm tay mới tạo phiên mới) và Gọi/Zalo của tiệm. Trước đây vòng `/mo` ↔ `/b` tạo một phiên `SL-…` mỗi lượt chuyển hướng — một lượt mở sinh 10–30 thẻ "Đang lướt chọn mẫu hoa". `domain/session-owner.ts` (`otherViewerAction`).
 - Nhân viên đăng nhập của chính tiệm mở link (nút "Mở link" ở bảng sale) → xem trước, không chiếm phiên, không ghi sự kiện.
 - Mọi API `/api/v1/public/brochure/[sendCode]/*` (xem, chọn mẫu, báo giá, đặt đơn, báo đã chuyển khoản, đặt thêm, sự kiện) trả **404** khi thiếu cookie chủ phiên. Theo dõi đơn `?link=` chỉ trả bản đầy đủ cho chủ phiên.
 - Phiên mở trước khi triển khai chưa có mốc chủ → trình duyệt đầu tiên mở lại sau triển khai nhận chủ.
