@@ -3,6 +3,7 @@ import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { assertCanEditSharedDisplay } from "@/modules/greeting-card/use-cases/catalog-edit-access"
 import { getDisplaySettings, updateDisplaySettings } from "@/modules/greeting-card/use-cases/display-settings"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 
@@ -18,10 +19,11 @@ const putSchema = z.object({
   fields: z.array(z.string().max(40)).max(20),
 })
 
-/** PUT — đổi trường hiển thị (R2, cùng quyền với sửa bộ sưu tập / chọn mẫu giao diện). Trả nợ #170. */
+/** PUT — đổi trường hiển thị (R2 + L3/L4: cài đặt dùng chung cả tiệm, Sale không đổi — PO 16/10/2026). Trả nợ #170. */
 export const PUT = handle(async (request: Request) => {
   const { ctx } = await requireTenantContext(request)
   requireCapability(ctx, GREETING_CARD_CAPABILITY.manage)
+  assertCanEditSharedDisplay(ctx)
   const parsed = putSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) throw validationFailed({ issues: parsed.error.issues })
   return jsonResponse({ data: await updateDisplaySettings(ctx, parsed.data) })

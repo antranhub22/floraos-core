@@ -3,6 +3,7 @@ import { validationFailed, notFound } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireCapability } from "@/core/rbac/capabilities"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { assertCanEditCatalog } from "@/modules/greeting-card/use-cases/catalog-edit-access"
 import { GreetingCardRepository } from "@/modules/greeting-card/infra/greeting-card-repository"
 import { GREETING_CARD_CAPABILITY } from "@/modules/greeting-card/domain/greeting-card-capabilities"
 import { catalogPolicyKeysChanged } from "@/modules/greeting-card/domain/catalog-policy-keys"
@@ -39,13 +40,16 @@ export const PATCH = handle(async (request: Request, context: Context) => {
   // Ẩn/hiện luôn đi qua use-case (kiểm người tạo/L4 + audit); trường còn lại cập nhật thường
   const { isActive, ...fields } = parsed.data
   const repo = new GreetingCardRepository()
+  const editsContent = Object.values(fields).some((v) => v !== undefined)
+  // Tên, mô tả, giao diện: chỉ người tạo hoặc L3/L4 (PO 16/10/2026) — ẩn/hiện có luật riêng ở use-case
+  if (editsContent) await assertCanEditCatalog(ctx, id, repo)
   // Ghi đè chính sách tiệm theo bộ sưu tập (ảnh bill, duyệt thanh toán, thời hạn) → cần quyền sửa cấu hình tiệm
   if (fields.filters !== undefined && catalogPolicyKeysChanged(await repo.getCatalogFilters(ctx, id), fields.filters)) {
     requireCapability(ctx, "F2")
   }
   if (isActive === true) await restoreGreetingCatalog(ctx, id)
   else if (isActive === false) await deleteGreetingCatalog(ctx, id)
-  if (Object.values(fields).some((v) => v !== undefined)) await repo.updateCatalog(ctx, id, fields)
+  if (editsContent) await repo.updateCatalog(ctx, id, fields)
   const updated = await repo.getCatalogById(ctx, id)
   if (!updated) throw notFound()
   return jsonResponse({ data: updated })
