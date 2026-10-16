@@ -10,7 +10,10 @@ describe("Thẻ chào mở đúng chỗ làm việc theo năng lực", () => {
   it("Điều phối (R3/R4/R5, không R11) → bảng Điều phối", () => {
     expect(defaultTheChaoView(canOf(["R1", "R2", "R5"]))).toEqual({ viewMode: "manager", activeTab: "coordinator" })
   })
-  it("Sale → Gửi nhanh", () => {
-    expect(defaultTheChaoView(canOf(["R1", "R2", "L1"]))).toEqual({ viewMode: "wizard", activeTab: "catalog" })
+  it("Sale → chế độ Quản lý, tab Bán hàng (cùng giao diện với Điều hành — PO 16/10/2026)", () => {
+    expect(defaultTheChaoView(canOf(["R1", "R2", "L1"]))).toEqual({ viewMode: "manager", activeTab: "sales" })
+  })
+  it("không gửi được link (không R2) → Gửi nhanh, tab Bộ sưu tập", () => {
+    expect(defaultTheChaoView(canOf(["R1", "L1"]))).toEqual({ viewMode: "wizard", activeTab: "catalog" })
   })
 })

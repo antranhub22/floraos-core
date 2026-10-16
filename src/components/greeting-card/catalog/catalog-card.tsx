@@ -78,13 +78,14 @@ export function CatalogCard({
         </p>
       )}
 
-      <div className="flex items-center gap-2 mt-auto">
+      {/* Nút chính một hàng riêng — không bị ép chữ khi vai có thêm nút (xoá) */}
+      <div className="flex flex-wrap items-center gap-2 mt-auto">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={onSelect}
-          className="flex-1 text-caption gap-1.5 h-8"
+          className="basis-full whitespace-nowrap text-caption gap-1.5 h-8"
         >
           <Edit2 size={12} />
           <span>Quản lý mẫu hoa</span>

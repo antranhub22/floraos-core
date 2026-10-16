@@ -122,8 +122,9 @@ export default function TheChaoPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-4 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
+      {/* Màn rộng: tiêu đề trái, nút phải trên MỘT hàng; hẹp hơn: nút xuống dưới tiêu đề — mọi vai cùng bố cục */}
+      <header className="flex flex-col gap-4 border-b border-border pb-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0 xl:flex-1">
           <Link
             href="/don-hang"
             className="mb-2 inline-flex items-center gap-1 text-body-sm font-medium text-text-muted hover:text-foreground"
@@ -137,7 +138,7 @@ export default function TheChaoPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:shrink-0 xl:flex-nowrap">
           <BrochureUserGuideModal />
           <InboxButton onOpenTarget={openInboxTarget} />
           <div role="tablist" aria-label="Chế độ làm việc" className="inline-flex rounded-xl border border-border bg-surface-alt p-1">
