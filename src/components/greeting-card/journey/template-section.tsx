@@ -30,10 +30,12 @@ export function templateName(id: GreetingTemplateId): string {
 interface TemplateSectionProps {
   catalog: CatalogOption
   onSave: (catalog: CatalogOption, templateId: GreetingTemplateId) => Promise<void>
+  /** Cài đặt hiển thị dùng chung cả tiệm — chỉ L3/L4 (Sale chỉnh giao diện bộ sưu tập của mình, không đổi cài đặt chung) */
+  canEditSharedDisplay?: boolean | undefined
 }
 
 /** Bước 1b: chọn giao diện khách sẽ lướt xem — lưu ngay khi bấm "Chọn mẫu". */
-export function TemplateSection({ catalog, onSave }: TemplateSectionProps) {
+export function TemplateSection({ catalog, onSave, canEditSharedDisplay = true }: TemplateSectionProps) {
   const [pendingId, setPendingId] = useState<GreetingTemplateId | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { announce } = useAnnounce()
@@ -63,7 +65,7 @@ export function TemplateSection({ catalog, onSave }: TemplateSectionProps) {
         onSelectTemplate={(id) => void handleSelect(id)}
         catalogId={catalog.id}
         displaySettings={display.settings}
-        onOpenDisplaySettings={setSettingsFor}
+        onOpenDisplaySettings={canEditSharedDisplay ? setSettingsFor : undefined}
       />
       {error && <InlineError message={error} />}
       {settingsFor && (

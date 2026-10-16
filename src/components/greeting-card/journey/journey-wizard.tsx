@@ -15,6 +15,7 @@ import { createShareUrl, markPersonalLinkCopied } from "@/components/greeting-ca
 import { catalogPublicPath, normalizeLinkCode, useJourneyCatalogs, type CatalogOption } from "./use-journey-catalogs"
 import { QuickCollectionModal } from "@/components/catalog/quick-collection-modal"
 import { useApi } from "@/components/greeting-card/greeting-api"
+import { canEditAnyCatalog, canEditCatalog as canEditCatalogPolicy } from "@/modules/greeting-card/domain/catalog-edit-policy"
 import type { QuickCollectionCandidate } from "@/modules/catalog-links/domain/quick-collection-engine"
 import { toQuickCollectionCandidate, type QuickCollectionProductRow } from "@/modules/catalog-links/domain/quick-collection-candidate"
 
@@ -29,8 +30,8 @@ function absoluteUrl(path: string): string {
 }
 
 export function JourneyWizard({ onFinish }: JourneyWizardProps) {
-  // Sửa mẫu/giao diện bộ sưu tập dùng chung: người được sửa sản phẩm (L3 — Điều hành, Điều phối); Sale chỉ chọn
-  const canEditCatalog = useSession().can("L3")
+  const { can } = useSession()
+  const me = useApi<{ user: { id: string } }>("/api/v1/auth/me")
   const data = useJourneyCatalogs()
   const { catalogs, setCatalogs, orgSlug } = data
   const { copy, copiedKey, copyError, copyFallback } = useCopyLink()
@@ -52,6 +53,8 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
   // Mặc định chọn bộ sưu tập đầu tiên; số mẫu hoa lấy từ danh sách (được cập nhật khi thêm/xóa mẫu)
   const selectedId = pickedId || catalogs[0]?.id || ""
   const selected = catalogs.find((c) => c.id === selectedId)
+  // Sửa mẫu/giao diện: người tạo bộ sưu tập hoặc L3/L4; Sale chỉ chọn bộ sưu tập người khác tạo (PO 16/10/2026)
+  const canEditCatalog = Boolean(selected) && canEditCatalogPolicy({ createdBy: selected?.createdBy }, { userId: me.data?.user.id, has: can })
   const itemCount = selected?.itemCount ?? 0
   const publicPath = selected ? catalogPublicPath(orgSlug, selected) : ""
   const publicUrl = publicPath ? absoluteUrl(publicPath) : ""
@@ -118,7 +121,7 @@ export function JourneyWizard({ onFinish }: JourneyWizardProps) {
               onItemCountChange={handleItemCountChange}
               onNext={() => setStep(2)}
               readOnly={!canEditCatalog}
-              templateSlot={selected && canEditCatalog && <TemplateSection catalog={selected} onSave={data.saveTemplate} />}
+              templateSlot={selected && canEditCatalog && <TemplateSection catalog={selected} onSave={data.saveTemplate} canEditSharedDisplay={canEditAnyCatalog(can)} />}
             />
           )}
           {step === 2 && selected && (

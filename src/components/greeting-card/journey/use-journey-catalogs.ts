@@ -10,6 +10,8 @@ export interface CatalogOption {
   itemCount: number
   /** Cấu hình JSON của bộ sưu tập; `templateId` là giao diện khách xem. */
   filters: Record<string, unknown> | null
+  /** Người tạo — Sale chỉ sửa bộ sưu tập của mình (PO 16/10/2026) */
+  createdBy?: string | null | undefined
 }
 
 type CatalogListResponse = {
@@ -18,6 +20,7 @@ type CatalogListResponse = {
     name: string
     code: string
     filters?: Record<string, unknown> | null
+    created_by?: string | null
     _count?: { items: number }
   }>
 }
@@ -65,6 +68,7 @@ export function useJourneyCatalogs() {
       code: c.code,
       itemCount: c._count?.items ?? 0,
       filters: c.filters ?? null,
+      createdBy: c.created_by ?? null,
     }))
   })
   // Không có slug (lỗi/không quyền) → dùng link dạng g/<id>
