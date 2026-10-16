@@ -68,11 +68,11 @@ export function BrochurePaymentView({
   const canSubmit = !requirePaymentProof || !!proofAssetId
 
   // Hỏi trạng thái đơn định kỳ (SWR) để tự hiện "đã thanh toán" khi Điều hành/ngân hàng xác nhận.
-  // Dừng khi đã xác nhận; SWR tự bỏ lượt khi tab đang ẩn.
+  // Đã xác nhận thì hỏi thưa hơn (đơn còn có thể bị huỷ), đơn huỷ thì dừng; SWR tự bỏ lượt khi tab ẩn.
   const tracking = useSWR<PolledTracking>(
     `/api/v1/public/brochure/tracking/${orderCode}`,
     apiGet,
-    { refreshInterval: (latest) => (isPaid(latest?.order) || latest?.order?.status === "CANCELLED" ? 0 : POLL_INTERVAL_MS), revalidateOnFocus: true }
+    { refreshInterval: (latest) => (latest?.order?.status === "CANCELLED" ? 0 : isPaid(latest?.order) ? 15_000 : POLL_INTERVAL_MS), revalidateOnFocus: true }
   )
   const isPaymentConfirmed = isPaid(tracking.data?.order)
   const isOrderAccepted =
@@ -93,6 +93,9 @@ export function BrochurePaymentView({
   useEffect(() => {
     if (paymentFailed) onPaymentFailed?.()
   }, [paymentFailed, onPaymentFailed])
+  // Tiệm huỷ đơn khi khách còn ở màn này (vd. Điều phối không nhận đơn) → sang Theo dõi để thấy thông báo huỷ
+  const cancelledByShop = tracking.data?.order?.status === "CANCELLED" && !paymentFailed
+  useEffect(() => { if (cancelledByShop) onGoToTracking() }, [cancelledByShop, onGoToTracking])
   const depositOnly = isPaymentConfirmed && (tracking.data?.order?.paidVnd ?? 0) < (tracking.data?.order?.totalVnd ?? 0)
 
   function copyToClipboard(text: string, field: string) {

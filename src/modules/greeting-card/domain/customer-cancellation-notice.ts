@@ -14,6 +14,8 @@ export interface CustomerCancellationNotice {
   contactDeadline: string
   /** 0 = huỷ không hoàn tiền (khách chưa trả, hoặc tiệm duyệt huỷ không hoàn). */
   refundVnd: number
+  /** Khách đã báo chuyển khoản nhưng tiệm chưa ghi nhận tiền → vẫn hứa hoàn tiền (chưa rõ số). */
+  refundToConfirm?: boolean | undefined
 }
 
 /** Một đề xuất huỷ đã lưu (tin nhắn hệ thống CANCELLATION_REQUEST). */
@@ -44,4 +46,32 @@ export function customerCancellationNotice(records: readonly CancellationRecord[
     }
   }
   return null
+}
+
+/** "16:30 ngày 16/10" theo giờ Việt Nam, không phụ thuộc múi giờ máy chủ hay máy khách. */
+export function vnDeadlineLabel(iso: string): string {
+  const parts = new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", hour12: false,
+  }).formatToParts(new Date(iso))
+  const v = (t: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === t)?.value ?? ""
+  return `${v("hour")}:${v("minute")} ngày ${v("day")}/${v("month")}`
+}
+
+/**
+ * Tin nhắc Sale phụ trách khi đơn bị Điều phối huỷ (đã duyệt): gọi/nhắn khách và lo hoàn tiền
+ * trong 2 tiếng (PO 16/10/2026). `refundVnd` 0 + khách đã báo chuyển khoản → nhắc kiểm tiền để hoàn.
+ */
+export function saleCancellationReminder(input: {
+  orderCode: string
+  decidedAt: Date
+  refundVnd: number
+  customerReportedPayment: boolean
+}): string {
+  const deadline = vnDeadlineLabel(new Date(input.decidedAt.getTime() + CUSTOMER_CONTACT_WINDOW_MS).toISOString())
+  const todo = input.refundVnd > 0
+    ? `gọi/nhắn khách thông báo và xử lý hoàn ${input.refundVnd.toLocaleString("vi-VN")}đ`
+    : input.customerReportedPayment
+      ? "gọi/nhắn khách thông báo, kiểm tra khoản khách đã chuyển và xử lý hoàn tiền"
+      : "gọi/nhắn khách thông báo"
+  return `Đơn #${input.orderCode} đã bị Điều phối huỷ (đã được duyệt). Vui lòng ${todo} trước ${deadline} (tối đa 2 tiếng).`
 }

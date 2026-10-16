@@ -107,9 +107,11 @@ export async function getBrochureTracking(
   )
 
   // Điều phối không nhận / huỷ giữa chừng đã được duyệt → thông báo cho khách (PO 16/10/2026)
-  const cancellationNotice = order.status === "CANCELLED" && payment.status !== "PAYMENT_FAILED"
+  const notice = order.status === "CANCELLED" && payment.status !== "PAYMENT_FAILED"
     ? customerCancellationNotice(await orders.cancellationRecordsOf(order.organization_id, order.id))
     : null
+  // Khách đã chuyển khoản mà tiệm chưa kịp ghi nhận → vẫn báo sẽ hoàn tiền
+  const cancellationNotice = notice ? { ...notice, refundToConfirm: notice.refundVnd === 0 && ledgerPaidVnd === 0 && customerReported } : null
 
   return {
     status: "FOUND" as const,
