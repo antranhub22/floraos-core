@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { ViDateInput } from "@/components/greeting-card/customer/vi-date-input"
 import { CalendarHeart, Loader2, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SkeletonBlock } from "@/components/ui/skeleton"
@@ -108,7 +109,7 @@ export function BrochureHolidaySettings() {
               <li key={r.id} className="rounded-xl border border-border p-3 flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <input aria-label="Tên ngày lễ" value={r.name} maxLength={HOLIDAY_NAME_MAX} placeholder="VD: Valentine" onChange={(e) => patch(i, { name: e.target.value })} className={`${FIELD} flex-1 min-w-40`} />
-                  <input aria-label="Ngày" type="date" value={r.date} onChange={(e) => patch(i, { date: e.target.value })} className={`${FIELD} w-44`} />
+                  <ViDateInput compact ariaLabel="Ngày" value={r.date} onChange={(date) => patch(i, { date })} wrapperClassName="w-44" className={FIELD} />
                   <label className="flex items-center gap-1.5 text-body-sm text-foreground">
                     <input type="checkbox" checked={r.yearly} onChange={(e) => patch(i, { yearly: e.target.checked })} /> Lặp lại hằng năm
                   </label>

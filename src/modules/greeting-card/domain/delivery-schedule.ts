@@ -151,6 +151,12 @@ export function viDeliveryDate(iso: string): string {
   return `${weekday}, ${d}/${mo}/${y}`
 }
 
+/** "16/10/2026" từ "2026-10-16" — bản gọn cho ô lọc/ô nhỏ phía nhân viên. */
+export function viShortDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
+}
+
 /** Lỗi tiếng Việt khi ngày/khung giờ khách chọn không hợp lệ hoặc không kịp giao; `null` nếu hợp lệ. */
 export function deliveryScheduleError(
   date: string,

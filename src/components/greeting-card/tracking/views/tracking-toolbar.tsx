@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { ViDateInput } from "@/components/greeting-card/customer/vi-date-input"
 import {
   Bookmark,
   Calendar as CalendarIcon,
@@ -269,22 +270,12 @@ export function TrackingToolbar({ state, onChange, onApplyView, onRefresh }: Pro
 
           <label className="flex items-center gap-1.5 text-caption text-text-muted">
             <span>Giao từ</span>
-            <input
-              type="date"
-              value={state.deliveryFrom}
-              onChange={(e) => onChange({ deliveryFrom: e.target.value })}
-              className={`${SELECT} flex-1`}
-            />
+            <ViDateInput compact ariaLabel="Giao từ ngày" value={state.deliveryFrom} onChange={(v) => onChange({ deliveryFrom: v })} wrapperClassName="flex-1" className={SELECT} />
           </label>
 
           <label className="flex items-center gap-1.5 text-caption text-text-muted">
             <span>đến</span>
-            <input
-              type="date"
-              value={state.deliveryTo}
-              onChange={(e) => onChange({ deliveryTo: e.target.value })}
-              className={`${SELECT} flex-1`}
-            />
+            <ViDateInput compact ariaLabel="Giao đến ngày" value={state.deliveryTo} onChange={(v) => onChange({ deliveryTo: v })} wrapperClassName="flex-1" className={SELECT} />
           </label>
 
           <select
