@@ -13,8 +13,17 @@ export const GUIDE_ROLES = ["ADMIN", "SALE", "COORDINATOR"] as const
 export type GuideRole = (typeof GUIDE_ROLES)[number]
 export const GUIDE_ROLE_LABEL: Record<GuideRole, string> = { ADMIN: "Điều hành", SALE: "Sale", COORDINATOR: "Điều phối" }
 
-/** Nơi thao tác. Nhãn tab lấy từ từ điển màn hình (`greetingCardVi.tabs`) khi dựng tài liệu. */
-export type GuideTab = "catalogs" | "tracking" | "sales" | "operation" | "coordination" | "inbox" | "orderDetail" | "customerLink"
+/** Nơi thao tác. Nhãn 5 tab trùng từ điển màn hình (`greetingCardVi.tabs`) — test kiểm. */
+export type GuideTab = "catalogs" | "tracking" | "sales" | "operation" | "coordination" | "inbox" | "orderDetail"
+export const GUIDE_TAB_LABEL: Record<GuideTab, string> = {
+  catalogs: "Bộ sưu tập",
+  tracking: "Theo dõi đơn",
+  sales: "Bán hàng",
+  operation: "Điều hành",
+  coordination: "Điều phối",
+  inbox: "Hộp việc",
+  orderDetail: "Chi tiết đơn",
+}
 
 export type SituationGroup = "LINK" | "ORDER_INTAKE" | "PAYMENT" | "PRODUCTION" | "DELIVERY" | "CANCELLATION" | "CHANGE"
 
@@ -25,7 +34,7 @@ export const SITUATION_GROUP_LABEL: Record<SituationGroup, string> = {
   PRODUCTION: "Cắm hoa và duyệt ảnh",
   DELIVERY: "Giao hoa",
   CANCELLATION: "Huỷ đơn và hoàn tiền",
-  CHANGE: "Khách xin đổi, giảm giá, đổi mẫu",
+  CHANGE: "Khách xin đổi, giảm giá, đổi mẫu, hoá đơn",
 }
 
 export interface GuideStep {

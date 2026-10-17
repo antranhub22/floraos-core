@@ -53,6 +53,8 @@
     "check:schemas:creative": "tsx scripts/gen-creative-studio-schemas.ts --check",
     "gen:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts",
     "check:schemas:coordinator": "tsx scripts/gen-coordinator-schemas.ts --check",
+    "gen:guide:the-chao": "tsx scripts/gen-greeting-situation-guide.ts",
+    "check:guide:the-chao": "tsx scripts/gen-greeting-situation-guide.ts --check",
     "gen:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts",
     "check:schemas:content-engine": "tsx scripts/gen-content-engine-schemas.ts --check",
     "check:docs": "node scripts/check-docs.mjs",

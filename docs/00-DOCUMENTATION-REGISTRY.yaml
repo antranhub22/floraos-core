@@ -693,6 +693,20 @@ documents:
     dependencies: ["docs/FLORAOS_CORE_JOURNEY_FIRST_UX_ARCHITECTURE_FINAL.md", "docs/dac-ta/03b-role-ux.md", "docs/kien-truc/KE_HOACH_THUC_THI_NANG_CAP_ROLE_CAPABILITY_ARCHITECTURE.md"]
     supersedes: []
 
+  - id: "DOC-05-HUONG-DAN-TINH-HUONG-THE-CHAO"
+    path: "docs/dac-ta/HUONG_DAN_TINH_HUONG_THE_CHAO.md"
+    title: "Hướng dẫn xử lý tình huống — Thẻ chào mẫu hoa (sinh tự động)"
+    domain: "Sales & Greeting Card"
+    layer: "Level 4"
+    purpose: "Danh mục tình huống nghiệp vụ cho Điều hành, Sale, Điều phối: nhận biết, ai làm, bước tiếp theo (tab, nút), hạn, hệ thống tự làm. Sinh từ src/modules/greeting-card/domain/guidance/ — test buộc khớp Hộp việc, bước quy trình và nhãn nút; giao diện dùng cùng dữ liệu để hiện Bước tiếp theo"
+    status: "CANONICAL"
+    authority: "Level 4"
+    canonical: true
+    ssot: true
+    owner: "Product Owner"
+    dependencies: ["src/modules/greeting-card/domain/guidance/situation-catalog.ts", "docs/kien-truc/HIEN_TRANG_THE_CHAO.md"]
+    supersedes: ["docs/dac-ta/KNOWLEDGE_BASE_THE_CHAO_MAU_HOA.md"]
+
   - id: "DOC-05-KE-HOACH-MA-TRAN-THE-CHAO"
     path: "docs/kien-truc/KE_HOACH_MA_TRAN_QUY_TRINH_THE_CHAO.md"
     title: "Kế hoạch Thực thi: Ma Trận Bật/Tắt & Tối Ưu Quy Trình Thẻ Chào Mẫu Hoa"
