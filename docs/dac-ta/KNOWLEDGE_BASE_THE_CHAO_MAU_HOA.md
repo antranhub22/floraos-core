@@ -1,5 +1,7 @@
 # CẨM NANG TRI THỨC VẬN HÀNH THẺ CHÀO MẪU HOA (SSOT KNOWLEDGE BASE)
 
+> ⚠️ **Đã được thay thế (17/10/2026):** hướng dẫn xử lý tình huống chuẩn (SSOT) nay là [`HUONG_DAN_TINH_HUONG_THE_CHAO.md`](HUONG_DAN_TINH_HUONG_THE_CHAO.md), sinh tự động từ mã. Tài liệu này chỉ còn để tham khảo, có chỗ đã cũ.
+
 > **Tài liệu chuẩn mực (Single Source of Truth - SSOT)** về toàn bộ các tình huống nghiệp vụ thực tế, quy trình thao tác và hướng dẫn xử lý cho mọi vai trò (Điều hành, Sale, Điều phối, Khách hàng) trong chức năng **Thẻ Chào Mẫu Hoa (Greeting Card / Brochure Order & Tracking)** của nền tảng FloraOS.
 
 ---
