@@ -23,4 +23,6 @@ export interface StorageProvider {
     expiresInSeconds: number,
     method?: StorageMethod
   ): Promise<string>;
+  /** Xoá hẳn một tệp (dọn Thùng rác quá 30 ngày). Tệp không còn thì coi là xong. */
+  remove?(key: string): Promise<void>;
 }

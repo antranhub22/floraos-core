@@ -27,6 +27,9 @@ export async function createCustomer(
   if (existing) {
     throw conflict(`Số điện thoại ${phone} đã tồn tại trong danh sách khách hàng`)
   }
+  if (await repo.isPhoneInTrash(ctx, phone)) {
+    throw conflict(`Số điện thoại ${phone} thuộc một khách hàng trong Thùng rác. Hãy khôi phục khách hàng đó thay vì tạo mới.`)
+  }
 
   return repo.create(ctx, { ...input, phone })
 }

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 import type { StorageProvider, StorageMethod } from "@/core/ports"
@@ -35,6 +35,12 @@ export class LocalDiskStorageProvider implements StorageProvider {
 
   async get(key: string): Promise<Uint8Array> {
     return readFile(absolutePathFor(key))
+  }
+
+  async remove(key: string): Promise<void> {
+    const target = absolutePathFor(key)
+    await rm(target, { force: true })
+    await rm(`${target}.meta.json`, { force: true })
   }
 
   /** `_method` bỏ qua: route `/api/v1/storage/[...key]` nhận cả PUT lẫn GET

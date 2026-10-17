@@ -392,6 +392,10 @@ model assets {
   created_by String
   created_at DateTime @default(now())
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations @relation(fields: [organization_id], references: [id])
 
   @@index([organization_id])
@@ -399,6 +403,7 @@ model assets {
   @@index([parent_asset_id])
   @@index([output_sha256])
   @@index([organization_id, product_id, kind, approval_state])
+  @@index([organization_id, deleted_at])
 }
 
 /**
@@ -630,6 +635,10 @@ model products {
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization              organizations               @relation(fields: [organization_id], references: [id])
   variants                  product_variants[]
   images                    product_images[]
@@ -639,6 +648,7 @@ model products {
 
   @@unique([organization_id, code])
   @@index([organization_id])
+  @@index([organization_id, deleted_at])
 }
 
 model product_variants {
@@ -1040,10 +1050,15 @@ model catalog_links {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations @relation(fields: [organization_id], references: [id])
 
   @@index([organization_id])
   @@index([slug])
+  @@index([organization_id, deleted_at])
 }
 
 // ── M01b — Product Sales Data (Tên, Mô tả, Thẻ, Phân khúc giá) ────────────────
@@ -1158,6 +1173,10 @@ model video_jobs {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations  @relation(fields: [organization_id], references: [id])
   scenes       video_scenes[]
 
@@ -1166,6 +1185,7 @@ model video_jobs {
   @@index([stage])
   @@index([script_approval])
   @@index([video_approval])
+  @@index([organization_id, deleted_at])
 }
 
 model video_scenes {
@@ -1372,6 +1392,10 @@ model customers {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization  organizations        @relation(fields: [organization_id], references: [id])
   orders        orders[]
   occasions     customer_occasions[]
@@ -1383,6 +1407,7 @@ model customers {
   @@unique([organization_id, code])
   @@index([organization_id, tier])
   @@index([organization_id, name])
+  @@index([organization_id, deleted_at])
 }
 
 model customer_occasions {
@@ -1436,11 +1461,16 @@ model vouchers {
   order_id         String?
   created_at       DateTime              @default(now())
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations @relation(fields: [organization_id], references: [id])
   customer     customers?    @relation(fields: [customer_id], references: [id])
 
   @@unique([organization_id, code])
   @@index([organization_id, customer_id])
+  @@index([organization_id, deleted_at])
 }
 
 // ── M08 — AI Chat Assistant & Hội thoại (P23) ──────────────────────────────
@@ -2077,11 +2107,16 @@ model campaign_packages {
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@index([organization_id, created_at])
   @@index([organization_id, master_asset_id])
   @@index([organization_id, status])
+  @@index([organization_id, deleted_at])
 }
 
 /// Bài đăng Khu vực B (Chặng 06a) TỰ LƯU theo ảnh + chủ đề + mode (24/09/2026) —
@@ -2102,10 +2137,15 @@ model content_drafts {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@unique([organization_id, asset_id, topic_id, mode])
   @@index([organization_id, updated_at])
+  @@index([organization_id, deleted_at])
 }
 
 /// Kết quả Content Engine (P27, quyết định PO 25/09/2026). TENANT. Một bản ghi
@@ -2625,6 +2665,10 @@ model greeting_catalogs {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
   organization organizations               @relation(fields: [organization_id], references: [id], onDelete: Cascade)
   items        greeting_catalog_products[]
   sessions     greeting_sessions[]
@@ -2633,6 +2677,7 @@ model greeting_catalogs {
   share_links    greeting_share_links[]
   @@unique([organization_id, code])
   @@index([organization_id])
+  @@index([organization_id, deleted_at])
 }
 
 /// Sản phẩm gán vào Catalog Thẻ chào (tham chiếu Product Master SSOT)

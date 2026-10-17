@@ -6,4 +6,6 @@ export async function register(): Promise<void> {
   if (process.env["NEXT_RUNTIME"] !== "nodejs") return
   const { startBackgroundSweep } = await import("@/modules/greeting-card/use-cases/background-sweep-scheduler")
   startBackgroundSweep()
+  const { startTrashPurge } = await import("@/modules/storage/use-cases/trash-purge-scheduler")
+  startTrashPurge()
 }

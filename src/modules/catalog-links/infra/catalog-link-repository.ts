@@ -11,7 +11,7 @@ export class CatalogLinkRepository {
   }
 
   async findBySlugInOrg(ctx: TenantContext, slug: string) {
-    return this.db.catalog_links.findFirst({ where: scopedWhere(ctx, { slug }) })
+    return this.db.catalog_links.findFirst({ where: scopedWhere(ctx, { slug, deleted_at: null }) })
   }
 
   async create(ctx: TenantContext, input: {
@@ -36,6 +36,7 @@ export class CatalogLinkRepository {
   async list(ctx: TenantContext, options: { includeRevoked?: boolean } = {}) {
     return this.db.catalog_links.findMany({
       where: scopedWhere(ctx, {
+        deleted_at: null,
         ...(options.includeRevoked ? {} : { is_revoked: false }),
       }),
       orderBy: { created_at: "desc" },
@@ -48,7 +49,7 @@ export class CatalogLinkRepository {
     filters?: Record<string, unknown> | null
   }) {
     const result = await this.db.catalog_links.updateMany({
-      where: scopedWhere(ctx, { slug }),
+      where: scopedWhere(ctx, { slug, deleted_at: null }),
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
@@ -76,7 +77,7 @@ export class CatalogLinkRepository {
       where: { slug },
     })
 
-    if (!link) return null
+    if (!link || link.deleted_at) return null
     if (link.is_revoked || link.revoked_at) {
       return { link, revoked: true as const }
     }
@@ -152,7 +153,7 @@ export class CatalogLinkRepository {
 
   async recordLead(slug: string, lead: { phone: string; message: string | null; submittedAt: string }) {
     const link = await this.db.catalog_links.findUnique({ where: { slug } })
-    if (!link || link.is_revoked) return null
+    if (!link || link.is_revoked || link.deleted_at) return null
 
     const existing = (link.filters as Record<string, unknown>) ?? {}
     const existingLeads = Array.isArray(existing.leads)
