@@ -96,6 +96,22 @@ export const CANCELLATION_SITUATIONS = [
     next: ["CANCELLATION_REFUND_DUE"],
   },
   {
+    id: "CANCELLED_REPORTED_PAYMENT",
+    group: "CANCELLATION",
+    title: "Đơn đã huỷ nhưng khách báo đã chuyển khoản",
+    recognize: "Đơn bị huỷ khi khách đã báo chuyển khoản (hoặc gửi bill) mà tiệm chưa ghi nhận đồng nào — sổ thu 0 đ nên không có việc hoàn tiền thường.",
+    owners: ["ADMIN"],
+    informed: ["SALE"],
+    steps: {
+      ADMIN: [
+        { do: "Mở ảnh bill, kiểm sao kê. Đã nhận tiền thì chuyển hoàn cho khách, nhập số tiền đã hoàn rồi xác nhận ngay trong Hộp việc — sổ thu ghi cả khoản vào lẫn khoản hoàn.", where: { tab: "inbox", button: "Đã hoàn tiền cho khách" } },
+        { do: "Sao kê không có khoản này thì đóng việc.", where: { tab: "inbox", button: "Không nhận được tiền" } },
+      ],
+    },
+    automation: "Việc tự hiện cho mọi đơn huỷ trong 60 ngày gần nhất có tình trạng này, tới khi Điều hành chốt.",
+    next: [],
+  },
+  {
     id: "LEDGER_DIRECT_CANCEL",
     group: "CANCELLATION",
     title: "Điều hành huỷ đơn trực tiếp",

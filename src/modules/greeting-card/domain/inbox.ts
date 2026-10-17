@@ -34,6 +34,7 @@ export interface InboxAction {
     | "QC_INSPECTION"
     | "ASSIGN_SHIPPER"
     | "CANCELLATION_FOLLOW_UP"
+    | "CANCELLED_REPORTED_PAYMENT"
   title: string
   detail: string
   orderId: string | null
@@ -55,6 +56,8 @@ export interface InboxAction {
   } | undefined
   /** Chỉ với CANCELLATION_FOLLOW_UP: đơn hệ thống tự huỷ, Điều hành xác nhận đã hoàn tiền / liên hệ khách. */
   followUp?: { requestId: string; refundDueVnd: number; reason: string } | undefined
+  /** Chỉ với CANCELLED_REPORTED_PAYMENT: đơn đã huỷ, khách đã báo chuyển khoản — kiểm sao kê rồi chốt. */
+  reportedPayment?: { orderId: string; expectedVnd: number; proofUrl: string | null } | undefined
   /** Chỉ với CHANGE_REQUEST: khách xin đổi gì — duyệt/từ chối ngay trong Hộp việc. */
   change?: {
     requestId: string
@@ -90,6 +93,8 @@ export interface PipelineLike {
   deliveryFailed?: boolean | undefined
   sessionStatus?: string | null | undefined
   customerReportedPaid?: boolean | undefined
+  /** Đơn đã huỷ / đã bỏ hiển thị — không còn việc thu tiền, cắm, giao */
+  isCancelled?: boolean | undefined
 }
 
 const TAB_OF_ROLE: Record<MessageRole, InboxTab> = { ADMIN: "payment", SALE: "sales", COORDINATOR: "coordinator" }
@@ -106,6 +111,8 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
     
     // Lọc theo vai trò: Sale chỉ nhận đơn của mình hoặc đơn chưa có người phụ trách
     if (role === "SALE" && !isMySale && !isUnassignedSale) continue
+    // Đơn đã huỷ không sinh việc theo bước (khách báo chuyển khoản trước khi huỷ → việc riêng ở get-inbox)
+    if (i.isCancelled) continue
 
     const base = { orderId: i.orderId ?? null, sessionId: i.sessionId || null, customerName: i.customerName, imageUrl: i.productImageUrl ?? null }
 

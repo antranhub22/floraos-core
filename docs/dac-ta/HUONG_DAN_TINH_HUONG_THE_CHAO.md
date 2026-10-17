@@ -7,7 +7,7 @@
 
 ## Theo vai
 
-**Điều hành** (18): [Đơn chọn mẫu chưa niêm yết giá — chờ báo giá](#order-awaiting-quote) · [Khách báo đã chuyển khoản — chờ xác nhận tiền](#first-payment-reported) · [Điều phối đã nhận đơn — Điều hành chưa ghi nhận tiền](#deposit-pending-admin-approval) · [Khách báo đã chuyển phần còn lại](#second-payment-reported) · [Đã giao còn nợ](#post-delivery-debt) · [Có khoản tiền vào chưa khớp đơn](#unmatched-bank-transfer) · [Chưa nhận đơn được: tiệm yêu cầu thu tiền trước khi cắm](#accept-blocked-by-payment) · [Khách xin đổi thông tin đơn](#customer-change-request-pending) · [Sale xin giảm giá cho đơn](#discount-request-pending) · [Khách cần hoá đơn VAT](#vat-invoice-request) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Đề xuất huỷ / hoàn tiền chờ duyệt](#cancellation-proposal-pending) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Điều hành huỷ đơn trực tiếp](#ledger-direct-cancel) · [Ghi nhận hoàn tiền trên sổ thu](#ledger-refund) · [Chờ duyệt bỏ hiển thị đơn/link chưa trả tiền](#dismissal-pending) · [Đã bỏ hiển thị — có thể khôi phục](#dismissed-restorable)
+**Điều hành** (19): [Đơn chọn mẫu chưa niêm yết giá — chờ báo giá](#order-awaiting-quote) · [Khách báo đã chuyển khoản — chờ xác nhận tiền](#first-payment-reported) · [Điều phối đã nhận đơn — Điều hành chưa ghi nhận tiền](#deposit-pending-admin-approval) · [Khách báo đã chuyển phần còn lại](#second-payment-reported) · [Đã giao còn nợ](#post-delivery-debt) · [Có khoản tiền vào chưa khớp đơn](#unmatched-bank-transfer) · [Chưa nhận đơn được: tiệm yêu cầu thu tiền trước khi cắm](#accept-blocked-by-payment) · [Khách xin đổi thông tin đơn](#customer-change-request-pending) · [Sale xin giảm giá cho đơn](#discount-request-pending) · [Khách cần hoá đơn VAT](#vat-invoice-request) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Đề xuất huỷ / hoàn tiền chờ duyệt](#cancellation-proposal-pending) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Đơn đã huỷ nhưng khách báo đã chuyển khoản](#cancelled-reported-payment) · [Điều hành huỷ đơn trực tiếp](#ledger-direct-cancel) · [Ghi nhận hoàn tiền trên sổ thu](#ledger-refund) · [Chờ duyệt bỏ hiển thị đơn/link chưa trả tiền](#dismissal-pending) · [Đã bỏ hiển thị — có thể khôi phục](#dismissed-restorable)
 
 **Sale** (11): [Đã tạo link — chưa gửi khách](#link-created-not-sent) · [Đã gửi link — khách chưa mở](#link-sent-not-opened) · [Khách đang xem / đã chọn mẫu nhưng chưa đặt](#customer-browsing) · [Đơn mới chưa có Sale phụ trách](#order-unassigned-sale) · [Đã đặt đơn — chờ khách chuyển khoản](#order-placed-awaiting-transfer) · [Hoa xong — chờ khách trả phần còn lại](#second-payment-due) · [Đã giao còn nợ](#post-delivery-debt) · [Giao không thành công — hẹn giao lại](#delivery-failed) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Cần huỷ hoặc hoàn tiền một đơn](#cancellation-propose) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
 
@@ -423,6 +423,18 @@
 - **Hạn:** Trong 2 tiếng kể từ lúc duyệt huỷ (giờ cụ thể ghi trong tin).
 - **Hệ thống tự làm:** Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ.
 - **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due)
+
+### Đơn đã huỷ nhưng khách báo đã chuyển khoản
+
+<a id="cancelled-reported-payment"></a>Mã: `CANCELLED_REPORTED_PAYMENT`
+
+- **Nhận biết:** Đơn bị huỷ khi khách đã báo chuyển khoản (hoặc gửi bill) mà tiệm chưa ghi nhận đồng nào — sổ thu 0 đ nên không có việc hoàn tiền thường.
+- **Ai làm:** Điều hành
+- **Cần biết:** Sale
+- **Bước tiếp theo:**
+  - **Điều hành:** Mở ảnh bill, kiểm sao kê. Đã nhận tiền thì chuyển hoàn cho khách, nhập số tiền đã hoàn rồi xác nhận ngay trong Hộp việc — sổ thu ghi cả khoản vào lẫn khoản hoàn. *(Hộp việc → nút "Đã hoàn tiền cho khách")*
+  - **Điều hành:** Sao kê không có khoản này thì đóng việc. *(Hộp việc → nút "Không nhận được tiền")*
+- **Hệ thống tự làm:** Việc tự hiện cho mọi đơn huỷ trong 60 ngày gần nhất có tình trạng này, tới khi Điều hành chốt.
 
 ### Điều hành huỷ đơn trực tiếp
 

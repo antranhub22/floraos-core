@@ -52,6 +52,7 @@ export const INBOX_KIND_SITUATIONS: Record<InboxAction["kind"], readonly Situati
   QC_INSPECTION: ["READY_TO_DISPATCH"],
   ASSIGN_SHIPPER: ["READY_TO_DISPATCH"],
   CANCELLATION_FOLLOW_UP: ["CANCELLATION_REFUND_DUE"],
+  CANCELLED_REPORTED_PAYMENT: ["CANCELLED_REPORTED_PAYMENT"],
 }
 
 /** Bước theo dõi → các tình huống có thể gặp ở bước đó. Thiếu bước nào là lỗi biên dịch. */

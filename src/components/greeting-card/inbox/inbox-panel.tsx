@@ -10,6 +10,7 @@ import { timeAgo, useInbox, type InboxData } from "./use-inbox"
 import { DiscountDecision } from "./discount-decision"
 import { ChangeDecision } from "./change-decision"
 import { CancellationFollowUp } from "./cancellation-follow-up"
+import { ReportedPaymentCheck } from "./reported-payment-check"
 
 type Group = "actions" | "messages" | "updates"
 export interface InboxTarget { tab: InboxTab; orderId: string | null; sessionId: string | null }
@@ -156,6 +157,7 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
     action.kind === "UNMATCHED_PAYMENTS" ||
     action.kind === "CANCELLATION_REQUEST" ||
     action.kind === "CANCELLATION_FOLLOW_UP" ||
+    action.kind === "CANCELLED_REPORTED_PAYMENT" ||
     action.kind === "DELIVERY_FAILED_SALE_CONTACT" ||
     action.kind === "REDELIVER"
   const [done, setDone] = useState<string | null>(null)
@@ -189,9 +191,14 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
           <CancellationFollowUp {...action.followUp} onDone={(msg) => { setDone(msg); onDecided() }} />
         </div>
       )}
+      {action.reportedPayment && !done && (
+        <div className="rounded-xl border border-border bg-surface-alt p-3">
+          <ReportedPaymentCheck {...action.reportedPayment} onDone={(msg) => { setDone(msg); onDecided() }} />
+        </div>
+      )}
       {done && <p role="status" className="rounded-xl bg-success-bg px-3 py-2 text-body-sm text-success">{done}</p>}
       <div className="flex gap-2 pl-15">
-        {!action.discount && !action.change && !action.followUp && (
+        {!action.discount && !action.change && !action.followUp && !action.reportedPayment && (
           <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
             {ACTION_LABEL[action.kind] ?? "Xử lý"}
           </button>
