@@ -220,3 +220,18 @@ describe("inboxActions — cơ chế thanh toán lần 2 và thu nợ sau giao",
     })
   })
 })
+
+describe("inboxActions — đơn đã huỷ không còn việc theo bước (PO 17/10/2026)", () => {
+  it("đơn huỷ khi khách đã báo chuyển khoản không còn 'Đối chiếu và xác nhận tiền' hay việc của Sale/Điều phối", () => {
+    const cancelled: PipelineLike = {
+      id: "ord-c", type: "ORDER", orderId: "ord-c", sessionId: "sess-c", orderCode: "DHC", sendCode: "SC",
+      customerName: "Khách", productName: "Bó hoa", totalVnd: 999_000, paidVnd: 0, balanceVnd: 999_000,
+      currentStepId: "STEP_4_PAYMENT_PENDING", currentStepTitle: "Đơn hàng đã huỷ", stepStartedAt: new Date().toISOString(),
+      stuck: null, saleId: "sale-1", sessionStatus: "PAYMENT_REPORTED", customerReportedPaid: true, isCancelled: true,
+    }
+    expect(inboxActions([cancelled], "ADMIN", "admin-1")).toEqual([])
+    expect(inboxActions([cancelled], "SALE", "sale-1")).toEqual([])
+    expect(inboxActions([cancelled], "COORDINATOR", "coord-1")).toEqual([])
+    expect(inboxActions([{ ...cancelled, isCancelled: false }], "ADMIN", "admin-1").map((a) => a.kind)).toContain("CONFIRM_PAYMENT")
+  })
+})
