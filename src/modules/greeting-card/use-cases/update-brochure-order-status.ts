@@ -2,23 +2,29 @@ import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import { mediaSelectionError } from "../domain/media-limits"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
-import { coordinatorAcceptanceBlocker, coordinatorActionBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
-import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { coordinatorAcceptanceBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { coordinatorBlockerOf } from "../domain/coordinator-card-actions"
+import { effectivePaymentPolicy, isUrgentDeliveryWindow, resolveWorkflowGates } from "../domain/workflow-gates"
+import { paymentGateBlocker } from "../domain/brochure-payment-policy"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { queueOrderNotification } from "./notify-customer"
 import {
   DELIVERY_FAILURE_LABEL, deliveryFailureError, parseRedeliveryFee, redeliveryFeeFor, type DeliveryFailureReason,
 } from "../domain/delivery-failure"
 import { DeliveryFailureRepository } from "../infra/delivery-failure-repository"
-import { orderPhotoApproval, photoApprovalDispatchBlocker } from "../domain/photo-approval"
+import { orderPhotoApproval } from "../domain/photo-approval"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationRepository } from "../infra/cancellation-repository"
 import { coordinatorConfirmDepositPayment } from "./confirm-brochure-payment"
-import { canBypassDeliveryPhoto, canBypassFinishedPhoto, canRoleApproveDeposit, depositApproverRole, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
+import { canRoleApproveDeposit, depositApproverRole, isUrgentOrder, parseBrochureWorkflowPolicy } from "../domain/brochure-workflow-policy"
 import { hasCapability } from "@/core/rbac/capabilities"
 import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
 
-/** Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). */
+/**
+ * Đơn của tổ chức + kiểm đúng thứ tự tác vụ xưởng (409 nếu sai bước). Cùng hàm chặn với Lưới thẻ / Kanban
+ * (`coordinatorBlockerOf`); cờ ảnh thành phẩm, thu đủ trước giao, ảnh bàn giao đọc theo Quy trình vận hành
+ * (`resolveWorkflowGates` — tiệm chưa lưu quy trình giữ chính sách thanh toán cũ).
+ */
 async function loadForAction(
   ctx: TenantContext,
   orderId: string,
@@ -27,37 +33,29 @@ async function loadForAction(
 ) {
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
-  // Chính sách thu tiền và kiểm định ảnh của tiệm
   const shop = await new GreetingCardRepository().getShopProfile(ctx.organizationId)
-  const policy = parsePaymentPolicy(shop.settings)
-  const blocker = coordinatorActionBlocker(
-    action,
+  const now = new Date()
+  const blocker = coordinatorBlockerOf(
     {
       status: order.status,
       productionStatus: order.production_status,
       deliveryStatus: order.delivery_status,
+      totalVnd: Number(order.total_vnd),
+      paidVnd: Number(order.paid_vnd),
+      photoApproval: action === "dispatch-shipping" ? orderPhotoApproval(order, shop.settings, now) : null,
     },
-    { skipPhoto: policy.requireProductPhotoQC === false }
-  )
+    effectivePaymentPolicy(shop.settings),
+    { isUrgent: isUrgentDeliveryWindow(order.delivery_window, now), nowMs: now.getTime() },
+  )(action)
   if (blocker) throw conflict(blocker)
-  const moneyBlocker = paymentGateBlocker(action, policy, {
-    totalVnd: Number(order.total_vnd),
-    paidVnd: Number(order.paid_vnd),
-  })
-  if (moneyBlocker) throw conflict(moneyBlocker)
-  if (action === "dispatch-shipping") {
-    const approval = orderPhotoApproval(order, shop.settings, policy.productPhotoReviewMinutes, new Date())
-    const waiting = photoApprovalDispatchBlocker(approval)
-    if (waiting) throw conflict(waiting)
-  }
   return order
 }
 
 
 /** Gói Nghiêm ngặt bắt buộc ảnh — gọi thẳng API bỏ qua ảnh cũng bị chặn (PO 15/10/2026). */
 async function assertSkipAllowed(ctx: TenantContext, kind: "product" | "recipient") {
-  const workflow = parseBrochureWorkflowPolicy((await new GreetingCardRepository().getShopProfile(ctx.organizationId)).settings)
-  const allowed = kind === "product" ? canBypassFinishedPhoto(workflow) : canBypassDeliveryPhoto(workflow)
+  const gates = resolveWorkflowGates((await new GreetingCardRepository().getShopProfile(ctx.organizationId)).settings)
+  const allowed = kind === "product" ? gates.canSkipFinishedPhoto : gates.canSkipDeliveryPhoto
   if (!allowed) throw conflict(kind === "product" ? "Tiệm bắt buộc ảnh thành phẩm — không bỏ qua được" : "Tiệm bắt buộc ảnh bàn giao — không bỏ qua được")
 }
 
@@ -237,7 +235,7 @@ export async function coordinatorAcceptBrochureOrder(
     paidNow = (await coordinatorConfirmDepositPayment(ctx, orderId, { note: input.note })).paidVnd
   }
   // Cùng chốt tiền như khi gán thợ: tiệm bắt thu trước khi cắm mà chưa thu → chưa được tiếp nhận
-  const moneyBlocker = paymentGateBlocker("assign-florist", parsePaymentPolicy(shop.settings), { totalVnd: total, paidVnd: paidNow })
+  const moneyBlocker = paymentGateBlocker("assign-florist", effectivePaymentPolicy(shop.settings), { totalVnd: total, paidVnd: paidNow })
   if (moneyBlocker) throw conflict(`${moneyBlocker}. Chờ Điều hành xác nhận tiền cọc rồi tiếp nhận đơn.`)
 
   const result = await repo.applyProgress(ctx, order, {

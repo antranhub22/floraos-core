@@ -205,6 +205,7 @@ describe("greeting-card hardening", () => {
     const link = await createSendLink(a.ctx, { catalogId: catalog.id })
     await selectBrochureProduct(link.sendCode, product.id)
     const order = await submitBrochureOrder(link.sendCode, ORDER_INPUT)
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
 
     const foreignAsset = await prisma.assets.create({
       data: {

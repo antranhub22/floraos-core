@@ -74,6 +74,7 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
 
   it("một lần chụp nhận nhiều ảnh + video và giữ đúng giới hạn (mục 6)", async () => {
     const { order } = await orderedLink()
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
     const six = await Promise.all(Array.from({ length: 6 }, () => asset()))
     expect(await codeOf(uploadBrochureProductPhoto(a.ctx, order.orderId, { assetIds: six.map((x) => x.id) }))).toBe("VALIDATION_FAILED")
@@ -113,6 +114,7 @@ describe("greeting-card: đặt thêm đơn, ảnh theo dõi, sale phụ trách"
     const { order, link } = await orderedLink()
     const product = await asset()
     const recipient = await asset()
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
     await uploadBrochureProductPhoto(a.ctx, order.orderId, { assetId: product.id })
     // Gói mặc định chờ khách duyệt ảnh thành phẩm trước khi giao (PO 15/10/2026) — khách bấm duyệt

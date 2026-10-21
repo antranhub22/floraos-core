@@ -26,6 +26,7 @@ import {
   type BrochureWorkflowPolicy,
   type WorkflowPreset,
 } from "@/modules/greeting-card/domain/brochure-workflow-policy"
+import { hasSavedWorkflowPolicy } from "@/modules/greeting-card/domain/workflow-gates"
 
 export function BrochureWorkflowSettings() {
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
@@ -107,14 +108,14 @@ export function BrochureWorkflowSettings() {
       id: "STANDARD",
       title: "Tiêu Chuẩn",
       subtitle: "Tiệm vừa 4–10 người",
-      desc: "Mặc định an toàn. Điều hành duyệt cọc, ảnh thành phẩm chờ khách duyệt 10 phút (được bỏ qua ảnh khi cần), thu đủ trước khi giao.",
+      desc: "Mặc định an toàn. Điều hành duyệt cọc, ảnh thành phẩm chờ khách duyệt theo Thời hạn từng bước (được bỏ qua ảnh khi cần), thu đủ trước khi giao.",
       icon: <ShieldCheck size={18} className="text-primary" />,
     },
     {
       id: "STRICT",
       title: "Nghiêm Ngặt",
       subtitle: "Chuỗi lớn & Cao cấp",
-      desc: "Kiểm soát tuyệt đối. Bắt buộc Điều hành duyệt tiền, bắt buộc 2 lần ảnh (thành phẩm + người nhận, không có nút bỏ qua), chờ khách duyệt ảnh tối đa 30 phút.",
+      desc: "Kiểm soát tuyệt đối. Bắt buộc Điều hành duyệt tiền, bắt buộc 2 lần ảnh (thành phẩm + người nhận, không có nút bỏ qua), khách phải bấm duyệt ảnh mới giao (không tự duyệt).",
       icon: <Building2 size={18} className="text-foreground" />,
     },
   ]
@@ -132,6 +133,9 @@ export function BrochureWorkflowSettings() {
         </span>
       </div>
 
+      {!hasSavedWorkflowPolicy(org.data?.settings) && (
+        <p role="note" className="text-caption font-semibold text-warning">Tiệm chưa lưu quy trình — đơn đang chạy theo Chính sách thanh toán cũ cho tới khi bấm &quot;Lưu ma trận&quot;.</p>
+      )}
       <p className="text-caption text-text-muted">
         Chọn 1 trong 3 chế độ vận hành mẫu để hệ thống tự động cấu hình các nút duyệt và điểm chặn, hoặc bấm &quot;Tùy biến nâng cao&quot; để chỉnh riêng từng công tắc.
       </p>
@@ -240,7 +244,7 @@ export function BrochureWorkflowSettings() {
                 onChange={(e) => handleToggle("customerApprovalMode", e.target.value)}
                 className="h-8 px-2 rounded-lg border border-border bg-surface text-caption font-semibold"
               >
-                <option value="AUTO_PASS_10M">Tự duyệt sau 10 phút (Chuẩn)</option>
+                <option value="AUTO_PASS_10M">Tự duyệt khi hết thời gian chờ (Chuẩn)</option>
                 <option value="REQUIRE_CUSTOMER">Bắt buộc khách bấm duyệt</option>
                 <option value="BYPASS">Bỏ qua duyệt khách (Giao ngay)</option>
               </select>

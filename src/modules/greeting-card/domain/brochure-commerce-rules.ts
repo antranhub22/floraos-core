@@ -90,6 +90,16 @@ export function coordinatorAcceptanceBlocker(
 }
 
 /**
+ * Đơn đã được nhận chưa: Điều phối bấm "Nhận đơn" (→ CONFIRMED + ASSIGNED) hoặc Điều hành ghi nhận tiền
+ * (→ CONFIRMED). Đơn còn DRAFT mà xưởng chưa bắt đầu = chưa ai nhận.
+ */
+export function isOrderAccepted(s: OrderProgressState): boolean {
+  return s.status !== "DRAFT" || s.productionStatus !== "WAITING"
+}
+
+export const NOT_ACCEPTED_REASON = "Đơn chưa được nhận — bấm \"Nhận đơn\" trước khi giao florist, chụp ảnh hay giao ship"
+
+/**
  * Trả lý do chặn (tiếng Việt) hoặc `null` nếu được làm. Bản cũ cho bấm cả
  * bốn tác vụ theo thứ tự bất kỳ — giao ship trước khi cắm xong, hay chụp ảnh
  * người nhận trên đơn đã huỷ.
@@ -103,6 +113,8 @@ export function coordinatorActionBlocker(
   if (s.status === "COMPLETED" || s.deliveryStatus === "DELIVERED") return "Đơn hàng đã giao xong"
 
   const shipped = s.deliveryStatus === "DISPATCHED" || s.deliveryStatus === "DELIVERING"
+  // PO 17/10/2026: phải nhận đơn trước — trước đây đơn chờ nhận vẫn hiện "Giao Florist" bấm được
+  if (action !== "recipient-photo" && action !== "delivery-failed" && !isOrderAccepted(s)) return NOT_ACCEPTED_REASON
   switch (action) {
     case "assign-florist":
       if (s.productionStatus === "READY" || shipped) return "Hoa đã cắm xong, không phân công lại được"

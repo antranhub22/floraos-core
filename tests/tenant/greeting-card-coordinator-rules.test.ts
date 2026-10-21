@@ -83,11 +83,14 @@ describe("greeting-card: luật Điều phối (PO 15/10/2026)", () => {
 
   it("gói mặc định cho bỏ qua ảnh; gói Nghiêm ngặt chặn cả khi gọi thẳng API", async () => {
     const free = await placeOrder()
+    await prisma.orders.update({ where: { id: free.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(a.ctx, free.orderId, { floristNote: "Thợ A" })
     await uploadBrochureProductPhoto(a.ctx, free.orderId, { skipPhoto: true })
 
-    await usePolicy(STRICT_WORKFLOW_POLICY)
+    // Nghiêm ngặt nhưng không bắt thu đủ trước giao — bài này chỉ kiểm chốt ảnh
+    await usePolicy({ ...STRICT_WORKFLOW_POLICY, preset: "CUSTOM", requireFullPaymentBeforeDispatch: false })
     const strict = await placeOrder()
+    await prisma.orders.update({ where: { id: strict.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(a.ctx, strict.orderId, { floristNote: "Thợ A" })
     expect(await codeOf(uploadBrochureProductPhoto(a.ctx, strict.orderId, { skipPhoto: true }))).toBe("CONFLICT")
     await uploadBrochureProductPhoto(a.ctx, strict.orderId, { assetId: (await asset()).id })
@@ -98,6 +101,7 @@ describe("greeting-card: luật Điều phối (PO 15/10/2026)", () => {
 
   it("chờ khách duyệt ảnh thì chưa giao ship được, Điều phối thấy đếm ngược; gói Tinh gọn không chờ", async () => {
     const order = await placeOrder()
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(a.ctx, order.orderId, { floristNote: "Thợ A" })
     await uploadBrochureProductPhoto(a.ctx, order.orderId, { assetId: (await asset()).id })
     expect(await codeOf(dispatchBrochureShipping(a.ctx, order.orderId, { trackingNote: "Ship" }))).toBe("CONFLICT")

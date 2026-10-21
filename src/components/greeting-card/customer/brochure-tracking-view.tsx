@@ -59,6 +59,7 @@ type TrackingData = {
       status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"
       uploadedAt: string | null
       countdownMinutes: number
+      autoApprove?: boolean
       approvedAt: string | null
     }
     createdAt: string
@@ -219,6 +220,7 @@ export function BrochureTrackingView({ orderCode, sendCode, failedCta, onPayment
               sendCode={sendCode}
               uploadedAt={order.photoApproval.uploadedAt}
               countdownMinutes={order.photoApproval.countdownMinutes}
+              autoApprove={order.photoApproval.autoApprove}
               hasBalanceDue={!isPaid && order.paidVnd > 0}
               onApproved={() => {
                 void loadTracking()

@@ -13,23 +13,36 @@ import {
   applyHolidayAutoPreset,
   type BrochurePaymentPolicy,
 } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { resolveWorkflowGates } from "@/modules/greeting-card/domain/workflow-gates"
+import { resolvePhotoReviewTiming } from "@/modules/greeting-card/domain/photo-review-timing"
 import { PolicyRow } from "./policy-row"
 
 interface Props {
   policy: BrochurePaymentPolicy
   onChange: (patch: Partial<BrochurePaymentPolicy>) => void
   disabled?: boolean
+  /** `organizations.settings` — để biết trường nào đang theo "Quy trình vận hành" (chỉ hiển thị) */
+  settings?: unknown
 }
 
-export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
+const FOLLOWS_WORKFLOW = " Đang theo Quy trình vận hành — chỉnh tại mục Quy trình vận hành."
+const FOLLOWS_STEP_TIMEOUT = " Đang theo Thời hạn từng bước — chỉnh tại mục Thời hạn từng bước."
+
+export function PolicyMatrixTable({ policy, onChange, disabled, settings }: Props) {
+  // PO 17/10/2026: tiệm đã lưu Quy trình vận hành → các dòng trùng ở đây chỉ hiển thị giá trị đang áp dụng
+  const gates = settings === undefined ? null : resolveWorkflowGates(settings)
+  const locked = gates?.source === "WORKFLOW"
+  const timing = settings === undefined ? null : resolvePhotoReviewTiming(settings)
+  const reviewLocked = timing?.minutesSource === "STEP_TIMEOUT"
   const isHoliday = policy.holidayAutoMode === true
-  const isPaidBeforeShip = policy.requireFullBeforeDispatch === true
+  const isPaidBeforeShip = locked ? gates.requireFullBeforeDispatch : policy.requireFullBeforeDispatch === true
   const isCoordinatorAllowed = policy.trackingTriggerPolicy !== "PAYMENT_ONLY"
   const isAutoApproveProof = policy.autoApprovePaymentWithProof === true
   const isAutoCancelUnpaid = (policy.paymentTimeoutMinutes ?? 0) > 0
   const isProofRequired = policy.requirePaymentProof !== false
-  const isQCRequired = policy.requireProductPhotoQC !== false
-  const isRecipientPhotoRequired = policy.requireRecipientPhoto !== false
+  const isQCRequired = locked ? gates.dispatchNeedsPhotoStep : policy.requireProductPhotoQC !== false
+  const isRecipientPhotoRequired = locked ? !gates.canSkipDeliveryPhoto : policy.requireRecipientPhoto !== false
+  const reviewMinutes = reviewLocked ? timing.minutes : policy.productPhotoReviewMinutes ?? 10
 
   const handleToggleHoliday = (enable: boolean) => {
     onChange(applyHolidayAutoPreset(policy, enable))
@@ -90,11 +103,11 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
               <PolicyRow
                 icon={<Truck size={17} className="text-foreground" />}
                 title="Bắt buộc thu đủ 100% trước khi Giao Ship"
-                description="Đơn đặt cọc bắt buộc phải thanh toán nốt phần còn lại (Lần 2) trước khi tài xế xuất giao hoa."
+                description={`Đơn đặt cọc bắt buộc phải thanh toán nốt phần còn lại (Lần 2) trước khi tài xế xuất giao hoa.${locked ? FOLLOWS_WORKFLOW : ""}`}
                 isOn={isPaidBeforeShip}
                 onToggle={(val) => onChange({ requireFullBeforeDispatch: val })}
                 statusText={isPaidBeforeShip ? "Khóa nút Giao nếu còn nợ tiền" : "Cho phép giao cọc, thu sau"}
-                disabled={disabled}
+                disabled={disabled || locked}
               />
 
               {/* 2b. SHIPPER THU TIỀN MẶT (mặc định TẮT — PO 14/10/2026) */}
@@ -219,21 +232,25 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
               <PolicyRow
                 icon={<Camera size={17} className="text-foreground" />}
                 title="Bắt buộc ảnh hoa thành phẩm (QC) trước khi Giao"
-                description="Thợ cắm hoa phải tải ảnh QC lên hệ thống mới mở nút Giao Ship. Tắt = không chặn xuất giao."
+                description={`Thợ cắm hoa phải tải ảnh QC lên hệ thống mới mở nút Giao Ship. Tắt = không chặn xuất giao.${locked ? FOLLOWS_WORKFLOW : ""}`}
                 isOn={isQCRequired}
                 onToggle={(val) => onChange({ requireProductPhotoQC: val })}
                 statusText={isQCRequired ? "Kiểm định hoa chặt chẽ" : "Tự do giao (Thợ vẫn có thể tải ảnh)"}
-                disabled={disabled}
+                disabled={disabled || locked}
               />
 
               {/* 9. ĐẾM NGƯỢC DUYỆT ẢNH HOA THÀNH PHẨM */}
               <PolicyRow
                 icon={<Clock size={17} className="text-foreground" />}
                 title="Đếm ngược duyệt ảnh hoa thành phẩm (SLA)"
-                description="Khách xem ảnh trên link theo dõi. Hết thời gian đếm ngược sẽ tự động duyệt để kịp giờ bàn giao tài xế."
-                isOn={(policy.productPhotoReviewMinutes ?? 10) > 0}
+                description={`Khách xem ảnh trên link theo dõi. Hết thời gian đếm ngược sẽ tự động duyệt để kịp giờ bàn giao tài xế.${reviewLocked ? FOLLOWS_STEP_TIMEOUT : ""}`}
+                isOn={reviewMinutes > 0}
                 onToggle={(val) => onChange({ productPhotoReviewMinutes: val ? 10 : 0 })}
-                extraControl={
+                extraControl={reviewLocked ? (
+                  <span className="text-caption font-semibold text-foreground">
+                    {reviewMinutes} phút{timing.autoApprove ? ", hết giờ tự duyệt" : ", chờ khách bấm duyệt"}
+                  </span>
+                ) :
                   <select
                     disabled={disabled || (policy.productPhotoReviewMinutes ?? 10) === 0}
                     value={policy.productPhotoReviewMinutes || 10}
@@ -246,18 +263,18 @@ export function PolicyMatrixTable({ policy, onChange, disabled }: Props) {
                     <option value={20}>20 phút</option>
                   </select>
                 }
-                disabled={disabled}
+                disabled={disabled || reviewLocked}
               />
 
               {/* 10. ẢNH NGƯỜI NHẬN HOA */}
               <PolicyRow
                 icon={<Camera size={17} className="text-foreground" />}
                 title="Bắt buộc ảnh người nhận hoa lúc giao thành công"
-                description="Shipper phải chụp ảnh người nhận mới bấm Hoàn tất. Tắt = cho phép bấm Hoàn tất trực tiếp."
+                description={`Shipper phải chụp ảnh người nhận mới bấm Hoàn tất. Tắt = cho phép bấm Hoàn tất trực tiếp.${locked ? FOLLOWS_WORKFLOW : ""}`}
                 isOn={isRecipientPhotoRequired}
                 onToggle={(val) => onChange({ requireRecipientPhoto: val })}
                 statusText={isRecipientPhotoRequired ? "Bảo đảm bằng chứng giao" : "Tự do hoàn tất (Shipper vẫn chụp được)"}
-                disabled={disabled}
+                disabled={disabled || locked}
               />
             </tbody>
           </table>

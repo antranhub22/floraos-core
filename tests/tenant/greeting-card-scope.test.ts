@@ -135,6 +135,7 @@ describe("greeting-card: phạm vi xem cho tiền và phễu", () => {
 
   it("tác vụ xưởng ghi nhật ký kiểm toán (ai, lúc nào, đổi gì)", async () => {
     const order = await orderBy(lan, 500_000, "XU")
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     await assignBrochureFlorist(owner, order.orderId, { floristNote: "Thợ Mai" })
     const audit = await prisma.audit_logs.findFirstOrThrow({ where: { organization_id: a.organizationId, action: "greeting_card.order.florist_assigned" } })
     expect(audit).toMatchObject({ entity_id: order.orderId, user_id: owner.userId })

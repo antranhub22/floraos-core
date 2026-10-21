@@ -10,6 +10,7 @@ import { coordinatorBalanceConfirmBlocker } from "@/modules/greeting-card/domain
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import { customerSecondPaymentReminderMessage } from "@/modules/greeting-card/domain/customer-notifications"
 import { firstPaymentAmountVnd } from "@/modules/greeting-card/domain/payment-plan"
+import { photoWasSkipped } from "@/modules/greeting-card/domain/photo-approval"
 import {
   isUrgentOrder,
   canRoleApproveDeposit,
@@ -187,7 +188,8 @@ export function CoordinatorCardDecisionBlocks({
               onClick={() => {
                 const sendCode = order.greeting_sessions[0]?.send_code
                 const trackingUrl = sendCode && typeof window !== "undefined" ? `${window.location.origin}/b/${sendCode}` : null
-                const skippedPhoto = !order.delivery_window // fallback
+                // Hoa xong mà không có lần tải ảnh thành phẩm nào = Điều phối đã bỏ qua ảnh
+                const skippedPhoto = photoWasSkipped(order.photo_approval)
                 const msg = customerSecondPaymentReminderMessage({
                   orderCode: order.code,
                   balanceVnd,

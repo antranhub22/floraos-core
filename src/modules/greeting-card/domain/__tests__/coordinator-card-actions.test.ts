@@ -25,9 +25,15 @@ describe("visibleCoordinatorActions", () => {
   })
 
   it("không còn nút nào: nêu lý do của bước (vd. tiệm yêu cầu thu tiền trước khi cắm)", () => {
-    const s = state("WAITING", "PENDING", "DRAFT")
+    const s = state("WAITING", "PENDING", "CONFIRMED")
     const gate = (a: CoordinatorAction) => coordinatorActionBlocker(a, s) ?? (a === "assign-florist" || a === "product-photo" ? "Tiệm yêu cầu thu cọc/thanh toán trước khi cắm hoa" : null)
     expect(visibleCoordinatorActions(gate, s).map((v) => v.action)).toEqual([])
     expect(noActionReason(gate)).toBe("Tiệm yêu cầu thu cọc/thanh toán trước khi cắm hoa")
+  })
+
+  it("đơn chưa nhận (DRAFT + chờ cắm): không hiện Giao Florist / Chụp thành phẩm, lý do là phải nhận đơn (PO 17/10/2026)", () => {
+    const s = state("WAITING", "PENDING", "DRAFT")
+    expect(shown(s)).toEqual([])
+    expect(noActionReason((a) => coordinatorActionBlocker(a, s))).toMatch(/chưa được nhận/)
   })
 })

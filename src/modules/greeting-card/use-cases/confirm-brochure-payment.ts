@@ -5,6 +5,7 @@ import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { BrochurePaymentRepository } from "../infra/brochure-payment-repository"
 import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-repository"
 import { expectedPayment, parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
+import { effectivePaymentPolicy } from "../domain/workflow-gates"
 import { policyForOrder, readPaymentPlan } from "../domain/payment-plan"
 import { depositAmountVnd } from "../domain/payment-schedule"
 import { balanceCollectionBlocker } from "../domain/balance-collection"
@@ -92,7 +93,7 @@ export async function adminConfirmBrochurePayment(
   const order = await orders.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
   const shop = await repo.getShopProfile(ctx.organizationId)
-  const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
+  const policy = policyForOrder(effectivePaymentPolicy(shop.settings), order.pricing_rule_ref)
   const total = Number(order.total_vnd)
   const paid = Number(order.paid_vnd)
 
@@ -192,7 +193,7 @@ export async function coordinatorConfirmBalancePayment(
   if (balance <= 0) throw conflict("Đơn hàng đã thanh toán đủ, không cần xác nhận lần 2")
   if (paid <= 0) throw conflict("Đơn hàng chưa có cọc, không thể xác nhận thanh toán lần 2")
   const shop = await repo.getShopProfile(ctx.organizationId)
-  assertBalanceCollectible(order, policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref))
+  assertBalanceCollectible(order, policyForOrder(effectivePaymentPolicy(shop.settings), order.pricing_rule_ref))
 
   // Lấy bằng chứng ảnh bill lần 2 từ phiên
   let evidenceAssetId: string | null = null
@@ -238,7 +239,7 @@ export async function coordinatorConfirmDepositPayment(
   if (total <= 0) throw conflict("Đơn hàng chưa có giá, không thể xác nhận cọc")
 
   const shop = await repo.getShopProfile(ctx.organizationId)
-  const policy = policyForOrder(parsePaymentPolicy(shop.settings), order.pricing_rule_ref)
+  const policy = policyForOrder(effectivePaymentPolicy(shop.settings), order.pricing_rule_ref)
   const plan = readPaymentPlan(order.pricing_rule_ref)
   const pct = plan?.depositPercent ?? policy.depositPercent
   const deposit = depositAmountVnd(total, pct)

@@ -9,8 +9,8 @@ import { CoordinatorOrderCard, type BrochureOrder, type ModalState } from "./coo
 import { CoordinatorKanbanView } from "./coordinator-kanban-view"
 import { useApi } from "@/components/greeting-card/greeting-api"
 import { PendingCancellationPanel } from "@/components/greeting-card/admin/pending-cancellation-panel"
-import { parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
-import { canBypassDeliveryPhoto, canBypassFinishedPhoto, parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
+import { effectivePaymentPolicy, resolveWorkflowGates } from "@/modules/greeting-card/domain/workflow-gates"
+import { parseBrochureWorkflowPolicy } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 import { useCoordinatorWork, useNow } from "@/components/greeting-card/work/use-worklist"
 import { WORK_BUCKET_LABEL, workBucket, type WorkBucket } from "@/modules/greeting-card/domain/worklist"
 import { BrochureOrderDetailModal } from "@/components/greeting-card/brochure-order-detail-modal"
@@ -39,7 +39,9 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
   const loading = board.isLoading
   const loadOrders = () => void board.mutate()
   const org = useApi<{ settings?: Record<string, unknown> | null }>("/api/v1/organizations/current")
-  const policy = parsePaymentPolicy(org.data?.settings)
+  // Chính sách hiệu lực: cờ ảnh / thu đủ trước giao theo Quy trình vận hành — cùng nguồn với máy chủ
+  const policy = effectivePaymentPolicy(org.data?.settings)
+  const gates = resolveWorkflowGates(org.data?.settings)
   const workflowPolicy = parseBrochureWorkflowPolicy(org.data?.settings)
   const [modal, setModal] = useState<ModalState>({ type: "none" })
   const openModal = (m: ModalState) => setModal(m)
@@ -202,7 +204,6 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
           onOpen={openModal}
           workOf={workOf}
           now={now}
-          workflowPolicy={workflowPolicy}
           onRefresh={() => {
             loadOrders()
             void work.refresh()
@@ -265,7 +266,7 @@ export function CoordinatorBrochureTab({ canDecideInTransitCancel = false }: { c
         <CoordinatorActionModal
           key={`${modal.type}:${modal.orderId}`}
           modal={modal}
-          allowSkipPhoto={{ "product-photo": canBypassFinishedPhoto(workflowPolicy), "recipient-photo": canBypassDeliveryPhoto(workflowPolicy) }}
+          allowSkipPhoto={{ "product-photo": gates.canSkipFinishedPhoto, "recipient-photo": gates.canSkipDeliveryPhoto }}
           onClose={() => setModal({ type: "none" })}
           onDone={() => {
             setModal({ type: "none" })

@@ -141,6 +141,7 @@ describe("greeting_catalog_products & greeting_journey_events — cách ly tenan
       deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10),
       deliveryAddress: "1 Đường A, Quận 1, TP.HCM",
     })
+    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED" } }) // đơn đã được nhận (PO 17/10/2026)
     const assetB = await seedAsset(tenantB.ctx)
 
     await expect(
