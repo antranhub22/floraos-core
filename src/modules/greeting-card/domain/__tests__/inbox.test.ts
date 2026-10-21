@@ -97,34 +97,44 @@ describe("inboxActions — cơ chế thanh toán lần 2 và thu nợ sau giao",
       expect(claim?.tab).toBe("sales")
     })
 
-    it("Khách đang điền form đặt hoa → Sale nhận action FOLLOW_UP_LEAD", () => {
-      const fillingOrder: PipelineLike = {
+    it("Link khách đang điền form (chưa thành đơn) → Sale nhận action FOLLOW_UP_LEAD", () => {
+      const fillingLink: PipelineLike = {
         ...baseOrder,
+        id: "session-s1",
+        type: "SESSION",
+        orderId: null,
+        orderCode: null,
         currentStepId: "STEP_3_FILLING_FORM",
-        productionStatus: "WAITING",
+        productionStatus: null,
         paidVnd: 0,
         balanceVnd: 1_000_000,
       }
-      const actions = inboxActions([fillingOrder], "SALE", "sale-99")
+      const actions = inboxActions([fillingLink], "SALE", "sale-99")
       const follow = actions.find((a) => a.kind === "FOLLOW_UP_LEAD")
       expect(follow).toBeDefined()
       expect(follow?.title).toContain("Hỗ trợ khách đang điền form")
       expect(follow?.tab).toBe("sales")
     })
 
-    it("Đơn đã gửi nhưng chưa cọc → Sale nhận action REMIND_DEPOSIT", () => {
-      const pendingDepositOrder: PipelineLike = {
+    it("Đơn đã gửi, có giá, chưa chuyển khoản (đúng hình dạng thật: bước 3) → Sale nhận REMIND_DEPOSIT, không phải FOLLOW_UP_LEAD", () => {
+      const submittedUnpaid: PipelineLike = {
         ...baseOrder,
-        currentStepId: "STEP_4_PAYMENT_PENDING",
+        currentStepId: "STEP_3_FILLING_FORM",
+        orderStatus: "PENDING",
         productionStatus: "WAITING",
         paidVnd: 0,
         balanceVnd: 1_000_000,
         customerReportedPaid: false,
+        sessionStatus: "ORDER_SUBMITTED",
       }
-      const actions = inboxActions([pendingDepositOrder], "SALE", "sale-99")
-      const remind = actions.find((a) => a.kind === "REMIND_DEPOSIT")
-      expect(remind).toBeDefined()
-      expect(remind?.title).toContain("Nhắc khách thanh toán tiền cọc")
+      const kinds = inboxActions([submittedUnpaid], "SALE", "sale-99").map((a) => a.kind)
+      expect(kinds).toEqual(["REMIND_DEPOSIT"])
+      const remind = inboxActions([submittedUnpaid], "SALE", "sale-99")[0]
+      expect(remind?.title).toBe("Nhắc khách chuyển khoản")
+      expect(remind?.detail).toContain("1.000.000")
+      // Sale khác không nhận; đơn chưa báo giá (0 đ) không nhắc chuyển khoản
+      expect(inboxActions([submittedUnpaid], "SALE", "sale-other")).toEqual([])
+      expect(inboxActions([{ ...submittedUnpaid, totalVnd: 0, balanceVnd: 0 }], "SALE", "sale-99").map((a) => a.kind)).not.toContain("REMIND_DEPOSIT")
     })
 
     it("Hoa đã cắm xong & đơn đã thanh toán 100% → Sale nhận action SEND_PHOTO_QC gửi ảnh hoa cho khách", () => {
@@ -233,5 +243,34 @@ describe("inboxActions — đơn đã huỷ không còn việc theo bước (PO 
     expect(inboxActions([cancelled], "SALE", "sale-1")).toEqual([])
     expect(inboxActions([cancelled], "COORDINATOR", "coord-1")).toEqual([])
     expect(inboxActions([{ ...cancelled, isCancelled: false }], "ADMIN", "admin-1").map((a) => a.kind)).toContain("CONFIRM_PAYMENT")
+  })
+})
+
+describe("inboxActions — Điều phối đã nhận đơn khi sổ thu chưa ghi nhận tiền (PO 17/10/2026)", () => {
+  const accepted: PipelineLike = {
+    id: "ord-a", type: "ORDER", orderId: "ord-a", sessionId: "sess-a", orderCode: "DHA", sendCode: "SA",
+    customerName: "Khách", productName: "Bó hoa", totalVnd: 800_000, paidVnd: 0, balanceVnd: 800_000,
+    currentStepId: "STEP_5_PAYMENT_CONFIRMED", currentStepTitle: "", orderStatus: "CONFIRMED", productionStatus: "ASSIGNED",
+    stepStartedAt: new Date().toISOString(), stuck: null, saleId: "sale-1", sessionStatus: "PAYMENT_REPORTED", customerReportedPaid: true,
+  }
+
+  it("Điều hành nhận CONFIRM_PAYMENT 'Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển'", () => {
+    const a = inboxActions([accepted], "ADMIN", "admin-1").find((x) => x.id === "accepted-unpaid:ord-a")
+    expect(a?.kind).toBe("CONFIRM_PAYMENT")
+    expect(a?.title).toBe("Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển")
+    expect(a?.tab).toBe("payment")
+  })
+
+  it("khách chỉ gửi bill (không bấm báo chuyển) vẫn tính là đã báo", () => {
+    const billOnly = { ...accepted, customerReportedPaid: false, sessionStatus: "ORDER_SUBMITTED", paymentProofUrl: "https://bill" }
+    expect(inboxActions([billOnly], "ADMIN", "admin-1").map((x) => x.id)).toContain("accepted-unpaid:ord-a")
+  })
+
+  it("đã ghi nhận tiền, khách chưa báo, hoặc đơn đã huỷ → không sinh việc này", () => {
+    for (const o of [
+      { ...accepted, paidVnd: 400_000, balanceVnd: 400_000 },
+      { ...accepted, customerReportedPaid: false, sessionStatus: "ORDER_SUBMITTED" },
+      { ...accepted, isCancelled: true },
+    ]) expect(inboxActions([o], "ADMIN", "admin-1").map((x) => x.id)).not.toContain("accepted-unpaid:ord-a")
   })
 })

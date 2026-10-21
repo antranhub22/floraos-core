@@ -63,10 +63,16 @@ export const LINK_SITUATIONS = [
     recognize: "Đơn đặt từ link chung không gắn Sale nào (và tiệm chưa có người phụ trách mặc định).",
     owners: ["SALE"],
     steps: {
-      SALE: [{ do: "Mở đơn và liên hệ khách xác nhận thông tin.", where: { tab: "inbox", button: "Nhận đơn" } }],
+      SALE: [
+        { do: "Bấm nhận đơn ngay trong Hộp việc để ghi tên mình làm Sale phụ trách.", where: { tab: "inbox", button: "Nhận đơn" } },
+        { do: "Mở đơn và liên hệ khách xác nhận thông tin." },
+      ],
     },
     next: ["ORDER_PLACED_AWAITING_TRANSFER"],
-    notes: ["Hiện chưa có thao tác ghi tên mình vào đơn — nút chỉ mở tab Bán hàng."],
+    notes: [
+      "Hai người bấm cùng lúc thì chỉ một người nhận được; người sau thấy báo \"Đơn đã có Sale khác nhận\".",
+      "Sale chỉ xem khách của mình vẫn thấy và nhận được đơn chưa có ai phụ trách.",
+    ],
   },
   {
     id: "ORDER_PLACED_AWAITING_TRANSFER",
@@ -76,7 +82,7 @@ export const LINK_SITUATIONS = [
     owners: ["SALE"],
     informed: ["ADMIN"],
     steps: {
-      SALE: [{ do: "Nhắc khách quét mã QR chuyển khoản trên thẻ chào (gọi, Zalo hoặc nhắn tin).", where: { tab: "inbox", button: "Tư vấn" } }],
+      SALE: [{ do: "Nhắc khách quét mã QR chuyển khoản trên thẻ chào (gọi, Zalo hoặc nhắn tin) — tiền cọc hoặc trả đủ tuỳ đơn.", where: { tab: "inbox", button: "Nhắc chuyển khoản" } }],
       ADMIN: [{ do: "Tiền đã vào tài khoản dù khách chưa báo: ghi nhận ngay trên dòng đơn ở tab Điều hành (nút \"Thu tiền…\").", where: { tab: "operation" } }],
     },
     deadline: "Mặc định 15 phút — quá hạn Hộp việc của Sale báo kẹt.",
