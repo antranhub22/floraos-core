@@ -48,7 +48,7 @@ describe("greeting-card: tự huỷ đơn khi đề xuất từ chối nhận đ
     const proposal = await new CancellationRepository().createProposal(t.ctx, {
       orderId: order.orderId,
       senderRole: "COORDINATOR",
-      proposal: { type: "CANCEL_ONLY", reason: "Xưởng hết hoa hồng đỏ", refundAmountVnd: 0 },
+      proposal: { type: "CANCEL_ONLY", reason: "Xưởng hết hoa hồng đỏ", refundAmountVnd: 0, origin: "COORDINATOR_REJECT" },
     })
     await prisma.greeting_messages.update({ where: { id: proposal.id }, data: { created_at: new Date(Date.now() - 2 * 86_400_000) } })
     return { orderId: order.orderId, requestId: proposal.id }
@@ -77,6 +77,33 @@ describe("greeting-card: tự huỷ đơn khi đề xuất từ chối nhận đ
     await repo.complete(a.ctx, requestId, "Đã gọi báo khách")
     expect(await repo.listPending(a.ctx)).toEqual([])
     await expect(repo.complete(a.ctx, requestId, "")).rejects.toMatchObject({ code: "CONFLICT" })
+  })
+
+  it("bộ quét chỉ tự duyệt đề xuất từ chối nhận đơn; bỏ qua đề xuất huỷ thường và đơn đang giao (PO 17/10/2026)", async () => {
+    const product = await new ProductRepository().create(a.ctx, { code: "HOA-3", name: "Bó 3", attributes: { price: 500_000 } })
+    const catalog = await new GreetingCardRepository().createCatalog(a.ctx, { code: "bo-3", name: "Bộ 3", productIds: [product.id], createdBy: a.userId })
+    const place = async () => {
+      const link = await createSendLink(a.ctx, { catalogId: catalog.id })
+      await selectBrochureProduct(link.sendCode, product.id)
+      return (await submitBrochureOrder(link.sendCode, ORDER)).orderId
+    }
+    const generic = await place()
+    const inTransit = await place()
+    const old = new Date(Date.now() - 2 * 86_400_000)
+    const g = await new CancellationRepository().createProposal(a.ctx, {
+      orderId: generic, senderRole: "COORDINATOR", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý giữa chừng", refundAmountVnd: 0 },
+    })
+    const t = await new CancellationRepository().createProposal(a.ctx, {
+      orderId: inTransit, senderRole: "COORDINATOR", proposal: { type: "CANCEL_ONLY", reason: "[Điều phối từ chối nhận đơn] Hết hoa", refundAmountVnd: 0 },
+    })
+    await prisma.greeting_messages.updateMany({ where: { id: { in: [g.id, t.id] } }, data: { created_at: old } })
+    await prisma.orders.update({ where: { id: inTransit }, data: { delivery_status: "DELIVERING" } })
+
+    const listed = await new CancellationFollowUpRepository().listExpiredCoordinatorRejections(new Date())
+    expect(listed.map((r) => r.id)).toEqual([])
+    await runBackgroundSweep()
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: generic } })).status).not.toBe("CANCELLED")
+    expect((await prisma.orders.findUniqueOrThrow({ where: { id: inTransit } })).status).not.toBe("CANCELLED")
   })
 
   it("khoản hoàn chờ ở 'Cần hoàn tiền' không ghi được lần nữa bằng nút Hoàn tiền của sổ thu (không hoàn trùng)", async () => {

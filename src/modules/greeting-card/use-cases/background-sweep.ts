@@ -6,6 +6,7 @@ import { CancellationFollowUpRepository } from "../infra/cancellation-follow-up-
 import { DismissalRepository } from "../infra/dismissal-repository"
 import { DISMISSAL_TIMEOUT_MS } from "../domain/dismissal-policy"
 import { parsePaymentPolicy, DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES } from "../domain/brochure-payment-policy"
+import { paymentRejectedAtOf } from "../domain/payment-rejection"
 import { NOTIFY_EVENTS, type NotifyEvent } from "../domain/customer-notifications"
 import {
   AUTO_CANCEL_REASON, MIN_AUTO_CONFIRM_PROOF_MS, PAYMENT_TIMEOUT_REASON, RETRY_BACKOFF_MS, RETRY_WINDOW_MS, STALE_SENDING_MS,
@@ -68,6 +69,7 @@ export async function runBackgroundSweep(
       {
         status: o.status, totalVnd: Number(o.total_vnd), paidVnd: Number(o.paid_vnd), createdAt: startedAt,
         customerReportedPaid: o.greeting_sessions[0]?.status === "PAYMENT_REPORTED",
+        paymentRejectedAt: paymentRejectedAtOf(o.pricing_rule_ref),
       },
       parsePaymentPolicy(o.organization.settings),
       now,

@@ -3,7 +3,8 @@
 import React, { useState } from "react"
 import { CheckCircle2, ShieldCheck, X, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { apiSend } from "@/components/greeting-card/greeting-api"
+import { apiSend, useApi } from "@/components/greeting-card/greeting-api"
+import { DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES, parsePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 
 interface CoordinatorAcceptRejectModalProps {
   mode: "accept" | "reject"
@@ -36,6 +37,9 @@ export function CoordinatorAcceptRejectModal({
   const [reason, setReason] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Thời gian chờ Điều hành duyệt theo cài đặt của tiệm (cùng nguồn với bảng Điều phối — SWR dùng chung bộ đệm)
+  const org = useApi<{ settings?: Record<string, unknown> | null }>(isAccept ? null : "/api/v1/organizations/current")
+  const approvalMinutes = parsePaymentPolicy(org.data?.settings).cancellationApprovalTimeoutMinutes ?? DEFAULT_CANCELLATION_APPROVAL_TIMEOUT_MINUTES
 
   async function handleSubmit() {
     setBusy(true)
@@ -103,7 +107,7 @@ export function CoordinatorAcceptRejectModal({
         <p className="text-body-sm text-text-muted leading-relaxed">
           {isAccept
             ? "Xác nhận xưởng có đầy đủ hoa và nhân lực để hoàn thành đơn hàng. Đơn sẽ chuyển sang trạng thái Đã xác nhận để tiếp tục phân công Florist cắm hoa."
-            : "Đề xuất không nhận đơn sẽ được gửi lên Điều hành phê duyệt hủy & hoàn tiền cho khách. Nếu Điều hành không duyệt trong vòng 15 phút, đơn sẽ tự động hủy theo đề xuất."}
+            : `Đề xuất không nhận đơn sẽ được gửi lên Điều hành phê duyệt hủy & hoàn tiền cho khách. Nếu Điều hành không duyệt trong vòng ${approvalMinutes} phút, đơn sẽ tự động hủy theo đề xuất.`}
         </p>
 
         {isAccept ? (

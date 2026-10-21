@@ -1,6 +1,7 @@
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
 import { parsePaymentPolicy, paymentHoldUntil } from "../domain/brochure-payment-policy"
 import { policyForOrder } from "../domain/payment-plan"
+import { paymentRejectedAtOf } from "../domain/payment-rejection"
 import { buildPaymentInstructions } from "../adapters/vietqr-helper"
 import type { BrochurePaymentInstructions } from "../domain/greeting-card-types"
 
@@ -17,6 +18,6 @@ export function paymentInstructionsFor(
   const policy = policyForOrder(parsePaymentPolicy(shopSettings), order.pricingRuleRef)
   const base = buildPaymentInstructions(parseBrochurePaymentConfig(shopSettings), order, policy, orderCode)
   if (!base) return null
-  const holdUntil = paymentHoldUntil(policy, order)
+  const holdUntil = paymentHoldUntil(policy, { ...order, paymentRejectedAt: paymentRejectedAtOf(order.pricingRuleRef) })
   return { ...base, holdUntil, ...(holdUntil && policy.paymentTimeoutMinutes ? { cancelOnExpiry: true } : {}) }
 }

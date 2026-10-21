@@ -251,6 +251,19 @@ export function firstPaymentAmountVnd(totalVnd: number, pricingRuleRef: unknown,
 }
 
 /**
+ * Số tiền AI đối soát bill cần thấy: Lần 2 = phần còn lại; Lần 1 = đúng khoản Lần 1 máy chủ ghi sổ
+ * (`firstPaymentAmountVnd` — cọc làm tròn lên nghìn, đơn cũ theo % cọc hiện tại của tiệm).
+ */
+export function proofExpectedAmountVnd(
+  purpose: "DEPOSIT" | "BALANCE",
+  order: { totalVnd: number; balanceVnd: number; pricingRuleRef: unknown },
+  shopDepositPercent: number,
+): number {
+  if (purpose === "BALANCE") return Math.max(0, order.balanceVnd)
+  return firstPaymentAmountVnd(order.totalVnd, order.pricingRuleRef, shopDepositPercent)
+}
+
+/**
  * Lỗi cấu hình (tiếng Việt) để màn cài đặt chặn lưu thay vì âm thầm bỏ dòng sai lúc đọc.
  * Rỗng = hợp lệ.
  */

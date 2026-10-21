@@ -309,12 +309,16 @@ export function quoteBlocker(order: { status: string; totalVnd: number }, totalV
 /**
  * Hạn giữ đơn (ISO) khi tiệm bật hạn thanh toán / giữ đơn và khách chưa trả đồng nào; ngược lại
  * `null`. Hạn thanh toán (`paymentTimeoutMinutes`) thắng giữ đơn cũ (`holdMinutes`).
+ * Điều hành vừa báo "Chưa nhận được tiền" → khách có thêm một hạn mới đủ số phút cấu hình,
+ * tính từ lúc báo: hạn = max(hạn gốc, lúc báo + số phút) (PO 17/10/2026).
  */
 export function paymentHoldUntil(
   policy: BrochurePaymentPolicy,
-  order: { paidVnd: number; createdAt?: Date | undefined },
+  order: { paidVnd: number; createdAt?: Date | undefined; paymentRejectedAt?: Date | null | undefined },
 ): string | null {
   const minutes = policy.paymentTimeoutMinutes ?? policy.holdMinutes ?? 0
   if (minutes <= 0 || order.paidVnd > 0 || !order.createdAt) return null
-  return new Date(order.createdAt.getTime() + minutes * 60_000).toISOString()
+  const original = order.createdAt.getTime() + minutes * 60_000
+  const renewed = order.paymentRejectedAt ? order.paymentRejectedAt.getTime() + minutes * 60_000 : 0
+  return new Date(Math.max(original, renewed)).toISOString()
 }

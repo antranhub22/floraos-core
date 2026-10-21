@@ -170,7 +170,7 @@
 - **Hạn:** Mặc định 15 phút.
 - **Hệ thống tự làm:** Tiệm bật "AI đọc bill" và "tự duyệt bill khớp": bill khớp 100% được tự xác nhận sau 15 phút. Nhãn bill: Khớp bill / Thiếu–Thừa / Sai STK nhận / Bill nghi vấn / Ảnh mờ; chưa có kết quả đọc tự động thì đối chiếu tay.
 - **Tiếp theo có thể là:** [Đã thu tiền (cọc hoặc đủ) — đơn vào xưởng](#deposit-paid-waiting-production) · [Đơn chờ Điều phối nhận](#order-awaiting-accept) · [Điều phối được tự duyệt tiền cọc](#coordinator-deposit-approval) · [Đã đặt đơn — chờ khách chuyển khoản](#order-placed-awaiting-transfer)
-- **Lưu ý:** Đã quá hạn thanh toán mà báo "Chưa nhận được tiền" thì đơn sẽ tự huỷ ngay ở lượt quét kế tiếp.
+- **Lưu ý:** Báo "Chưa nhận được tiền" cho khách thêm một hạn thanh toán mới đủ số phút tiệm cài, tính từ lúc báo — quá hạn mới mà vẫn chưa có tiền thì đơn tự huỷ.
 
 ### Điều phối đã nhận đơn — Điều hành chưa ghi nhận tiền
 
@@ -226,9 +226,9 @@
 - **Ai làm:** Điều hành, Điều phối
 - **Bước tiếp theo:**
   - **Điều hành:** Đối chiếu sao kê rồi bấm "Phê duyệt đợt 2…" trên dòng đơn. *(Điều hành)*
+  - **Điều hành:** Sao kê không có khoản lần 2: báo khách chưa nhận được tiền — bill lần 2 bị bỏ, khách được nhắc chuyển lại. *(Điều hành → nút "Chưa nhận được tiền")*
   - **Điều phối:** Tiệm cho phép thì xác nhận ngay trên thẻ đơn để giao hoa; nếu thẻ ghi "Chờ Điều hành xác nhận" thì chờ Điều hành. *(Điều phối → nút "Xác nhận Đã Nhận Đủ Tiền (Lần 2)")*
-- **Tiếp theo có thể là:** [Hoa xong — giao cho shipper](#ready-to-dispatch)
-- **Lưu ý:** Hiện chưa có nút "Chưa nhận được tiền" cho lần 2 — sai bill thì nhắn khách qua Sale.
+- **Tiếp theo có thể là:** [Hoa xong — giao cho shipper](#ready-to-dispatch) · [Hoa xong — chờ khách trả phần còn lại](#second-payment-due)
 
 ### Đã giao còn nợ
 
@@ -356,7 +356,7 @@
 - **Bước tiếp theo:**
   - **Điều hành:** Đọc lý do, xem đơn đã thu bao nhiêu rồi phê duyệt hoặc từ chối. Phê duyệt chỉ đổi trạng thái đơn — tiền hoàn chuyển ở bước riêng. *(Điều hành → nút "Phê duyệt")*
   - **Điều hành:** Không đồng ý thì từ chối và ghi lý do để người đề xuất biết. *(Điều hành → nút "Từ chối")*
-- **Hạn:** Đề xuất của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất của Sale: không có hạn.
+- **Hạn:** Đề xuất "từ chối nhận đơn" của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất huỷ / hoàn tiền khác (của Sale hay Điều phối): không có hạn, luôn cần người duyệt.
 - **Hệ thống tự làm:** Đơn đang giao không tự duyệt — cần Điều hành hoặc một Điều phối khác duyệt. Người đề xuất nhận tin kết quả.
 - **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
 - **Lưu ý:** Đơn đang giao: Điều phối có quyền giao hàng duyệt được ở tab Điều phối, nhưng không tự duyệt đề xuất của chính mình.
@@ -373,7 +373,8 @@
   - **Sale:** Mở chi tiết đơn, gửi đề xuất kèm lý do cho Điều hành duyệt. *(Chi tiết đơn → nút "Đề xuất Hủy / Hoàn tiền đơn này")*
   - **Điều phối:** Trên thẻ đơn ở tab Điều phối (hoặc chi tiết đơn), gửi đề xuất kèm lý do. *(Điều phối → nút "Đề xuất Hủy / Hoàn tiền đơn này")*
 - **Tiếp theo có thể là:** [Đề xuất huỷ / hoàn tiền chờ duyệt](#cancellation-proposal-pending) · [Điều hành huỷ đơn trực tiếp](#ledger-direct-cancel)
-- **Lưu ý:** Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm.
+- **Lưu ý:** Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm — máy chủ cũng chặn, và thẻ đơn ở tab Điều phối ghi lý do thay cho đường dẫn.
+- **Lưu ý:** Mỗi đơn chỉ một đề xuất đang chờ duyệt; đơn đã giao xong cần hoàn một phần thì Điều hành ghi hoàn trên sổ thu.
 - **Lưu ý:** Hoàn tiền chỉ chọn được khi đơn đã thu tiền; hoàn một phần phải nhỏ hơn số đã thu.
 
 ### Điều phối không nhận được đơn
@@ -386,17 +387,18 @@
   - **Điều phối:** Bấm từ chối, chọn hoặc ghi lý do — hệ thống gửi đề xuất huỷ (có hoàn tiền nếu đã thu) cho Điều hành. *(Điều phối → nút "Từ chối (Hoàn tiền)")*
 - **Hạn:** Quyết trong thời gian chuẩn bước "Xác nhận tiền về" (mặc định 30 phút).
 - **Tiếp theo có thể là:** [Đề xuất huỷ / hoàn tiền chờ duyệt](#cancellation-proposal-pending)
+- **Lưu ý:** Chỉ từ chối được khi đơn còn chờ nhận; đơn đã nhận, đang cắm hay đang giao thì dùng "Đề xuất Hủy / Hoàn tiền" (không tự duyệt khi quá hạn).
 
 ### Đơn tự huỷ vì Điều hành không duyệt kịp
 
 <a id="cancellation-auto-approved"></a>Mã: `CANCELLATION_AUTO_APPROVED`
 
-- **Nhận biết:** Đề xuất huỷ của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.
+- **Nhận biết:** Đề xuất "từ chối nhận đơn" của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.
 - **Ai làm:** Điều hành
 - **Cần biết:** Sale
 - **Bước tiếp theo:**
   - **Điều hành:** Xử lý việc "Cần hoàn tiền" / "Đơn tự huỷ — cần liên hệ khách" trong Hộp việc. *(Hộp việc)*
-- **Hệ thống tự làm:** Hệ thống kiểm mỗi phút; đơn đang giao hoặc đã giao không tự huỷ.
+- **Hệ thống tự làm:** Hệ thống kiểm mỗi phút, chỉ với đề xuất từ chối nhận đơn; đơn đã huỷ, đang giao hoặc đã giao bị bỏ qua (không tự huỷ).
 - **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
 
 ### Cần hoàn tiền / liên hệ khách sau khi huỷ
@@ -456,7 +458,7 @@
 - **Ai làm:** Điều hành
 - **Bước tiếp theo:**
   - **Điều hành:** Chuyển khoản cho khách trước, rồi ghi số tiền và lý do hoàn trên dòng đơn. *(Điều hành → nút "Hoàn tiền")*
-- **Lưu ý:** Số hoàn không vượt số đã thu. Trạng thái đơn không đổi.
+- **Lưu ý:** Số hoàn không vượt số đã thu. Trạng thái đơn và số còn phải thu không đổi — hoàn tiền không tạo nợ "Đã giao còn nợ".
 
 ### Chờ duyệt bỏ hiển thị đơn/link chưa trả tiền
 

@@ -13,6 +13,7 @@ import {
 } from "../domain/payment-proof-analysis"
 import { parseBrochurePaymentConfig } from "../domain/brochure-commerce-rules"
 import { parsePaymentPolicy } from "../domain/brochure-payment-policy"
+import { proofExpectedAmountVnd } from "../domain/payment-plan"
 import type { TenantContext } from "@/core/tenancy"
 import { log } from "@/core/observability/log"
 
@@ -49,18 +50,12 @@ export async function processPaymentProofVisionJob(
     const shopBank = parseBrochurePaymentConfig(session.organization.settings)
     const order = session.order
 
-    // Tính toán số tiền mong đợi cần thu (Cọc hay Trả đủ hay Đợt 2)
-    let expectedAmountVnd = Number(order.total_vnd)
-    if (purpose === "BALANCE") {
-      expectedAmountVnd = Math.max(0, Number(order.balance_vnd))
-    } else {
-      // Đợt 1: nếu đã cọc thì là cọc, nếu trả đủ thì là toàn bộ
-      const pricingRef = order.pricing_rule_ref as { paymentPlan?: { depositPercent?: number } } | null
-      const depositPct = pricingRef?.paymentPlan?.depositPercent ?? 0
-      if (depositPct > 0 && depositPct < 100) {
-        expectedAmountVnd = Math.round((Number(order.total_vnd) * depositPct) / 100)
-      }
-    }
+    // Số tiền cần thấy trên bill: cùng công thức máy chủ ghi sổ (cọc làm tròn lên nghìn; đơn cũ theo % tiệm)
+    const expectedAmountVnd = proofExpectedAmountVnd(
+      purpose,
+      { totalVnd: Number(order.total_vnd), balanceVnd: Number(order.balance_vnd), pricingRuleRef: order.pricing_rule_ref },
+      parsePaymentPolicy(session.organization.settings).depositPercent,
+    )
 
     // 2. Lấy dữ liệu ảnh từ storage qua Repo
     const asset = await repo.findAssetForVerification(organizationId, assetId)
