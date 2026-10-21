@@ -28,6 +28,7 @@
 - Chính (1): **Xử lý** (từ Hộp việc → mở đúng tab, cuộn tới đúng thẻ đơn và nhấn viền)
 - Phụ (≤ 2): Nhắn tin (chọn "Gửi cho": Điều hành / Điều phối / Sale phụ trách / một người) · Trả lời (về đúng người đã nhắn)
 - Xin giảm giá (ô soạn tin → "Xin giảm giá", chỉ đơn đã đặt): % hoặc số tiền + lý do → Điều hành duyệt ngay trong Hộp việc hoặc trong trao đổi: Duyệt như xin / Duyệt mức khác / Không duyệt (bắt buộc ghi chú); trần do Điều hành đặt trong Cài đặt, mặc định 25%
+- Đơn đã huỷ khi khách đã báo chuyển khoản (Điều hành, PO 17/10/2026): việc "Đơn đã huỷ nhưng khách báo đã chuyển khoản" xử lý ngay trong Hộp việc — xem ảnh bill, nhập số tiền đã hoàn → **Đã hoàn tiền cho khách** / **Không nhận được tiền**. Đơn đã huỷ không còn sinh việc theo bước
 
 - **Sao chép link** (mọi nơi có nút Sao chép): link luôn mang tên người bấm — link riêng ghi mốc gửi; link bộ sưu tập tạo `/s/<mã>` riêng. Không hiện đường link gốc để chép tay (xem trước chỉ trong khung xem trước)
 - Bán hàng (Sale) có 2 cách xem trên cùng tập khách/đơn của quy trình theo dõi (08/10/2026, như Điều phối): **Kanban** (mặc định — 9 cột, mỗi bước 1→9 một cột riêng, ghi rõ ai phụ trách bước và số thẻ "cần bạn"; trong cột việc kẹt của Sale lên đầu; thẻ: khách, mã đơn/link, mẫu, giá trị, thời gian ở bước, cảnh báo kẹt, Gọi/Zalo/Nhắn tin) · **Danh sách thẻ** (thẻ đầy đủ có thanh 9 bước). Phạm vi "Khách của tôi/Tất cả khách" và lọc nhóm việc dùng chung cho cả hai; mặc định ẩn khách đã xong (cột Bước 9 nhắc bấm lọc "Xong")

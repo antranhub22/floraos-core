@@ -84,10 +84,10 @@ function ProofVerificationCard({
 
           {/* Ba nhánh hiển thị rõ ràng — không lấp lửng */}
           {!analysis && (
-            // Chưa có kết quả AI (đang xử lý ngầm — thường chỉ vài giây sau khi khách tải lên)
+            // Chưa có kết quả đọc tự động (tiệm tắt "AI đọc bill" — mặc định — hoặc đang đọc) → đối chiếu tay
             <p className="text-caption text-text-muted flex items-center gap-1">
-              <Clock size={11} className="animate-spin shrink-0" />
-              <span>Đang đọc dữ liệu biên lai...</span>
+              <Clock size={11} className="shrink-0" />
+              <span>Chờ đối chiếu — so ảnh bill với sao kê ngân hàng</span>
             </p>
           )}
 

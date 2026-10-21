@@ -14,6 +14,8 @@ import { getCurrentOrganization } from "@/modules/organization/use-cases/get-cur
 import { GREETING_CARD_CAPABILITY } from "../domain/greeting-card-capabilities"
 import { changeRequestActions } from "./order-change"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
+import { ReportedPaymentCheckRepository } from "../infra/reported-payment-check-repository"
+import { GreetingCardRepository } from "../infra/greeting-card-repository"
 
 export interface InboxThread {
   key: string
@@ -97,6 +99,19 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
           requestId: r.id, requester: names.get(r.sender_id) ?? "Sale", reason: r.body, baseTotalVnd: p.baseTotalVnd,
           requestedVnd: p.requestedVnd, percent: typeof p.percent === "number" ? p.percent : null, maxPercent,
         },
+      })
+    }
+    // Đơn đã huỷ khi khách đã báo chuyển khoản mà chưa ghi nhận tiền → kiểm sao kê, hoàn nếu đã nhận (PO 17/10/2026)
+    const reported = await new ReportedPaymentCheckRepository().listPending(ctx, scope, now)
+    const proofs = await new GreetingCardRepository().getPaymentProofAssetsMap(ctx.organizationId, reported.flatMap((r) => (r.proofAssetId ? [r.proofAssetId] : [])))
+    for (const r of reported) {
+      actions.unshift({
+        id: `cancelled-reported-payment:${r.orderId}`, kind: "CANCELLED_REPORTED_PAYMENT",
+        title: "Đơn đã huỷ nhưng khách báo đã chuyển khoản",
+        detail: `Đơn #${r.code} · kiểm tra sao kê, đã nhận tiền thì hoàn cho khách`,
+        orderId: r.orderId, sessionId: r.sessionId, customerName: r.customerName,
+        imageUrl: pipeline.find((i) => i.orderId === r.orderId)?.productImageUrl ?? null, tab: "payment", urgency: 2600,
+        reportedPayment: { orderId: r.orderId, expectedVnd: r.expectedVnd, proofUrl: r.proofAssetId ? proofs.get(r.proofAssetId)?.url ?? null : null },
       })
     }
     const unmatched = await new GreetingIntegrationRepository().listPaymentEvents(ctx, { status: "UNMATCHED", limit: 50 })
