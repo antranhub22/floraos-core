@@ -95,7 +95,7 @@ describe("Tải dữ liệu cửa hàng — bản sao lưu ZIP", () => {
     const rows = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets["Khách hàng"] as XLSX.WorkSheet)
     expect(rows.map((r) => r["Tên"])).toEqual(["Chị Lan"])
 
-    expect(zip.FullPaths.some((p) => p.endsWith("anh-goc/bo-hong.jpg"))).toBe(true)
+    expect(zip.FullPaths.some((p: string) => p.endsWith("anh-goc/bo-hong.jpg"))).toBe(true)
   })
 
   it("tiệm khác không thấy bản sao lưu của tiệm này", async () => {

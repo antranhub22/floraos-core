@@ -80,9 +80,9 @@ describe("ZipArchive", () => {
     zip.add("anh-goc/a.jpg", new Uint8Array([1, 2, 3]))
 
     const read = XLSX.CFB.read(Buffer.from(zip.toBytes()), { type: "buffer" })
-    const names = read.FullPaths.filter((p) => !p.endsWith("/"))
-    expect(names.some((p) => p.endsWith("doc-truoc.txt"))).toBe(true)
-    expect(names.some((p) => p.endsWith("anh-goc/a.jpg"))).toBe(true)
+    const names = read.FullPaths.filter((p: string) => !p.endsWith("/"))
+    expect(names.some((p: string) => p.endsWith("doc-truoc.txt"))).toBe(true)
+    expect(names.some((p: string) => p.endsWith("anh-goc/a.jpg"))).toBe(true)
 
     const xlsxEntry = XLSX.CFB.find(read, "du-lieu.xlsx")
     const wb = XLSX.read(xlsxEntry?.content as Uint8Array, { type: "array" })
