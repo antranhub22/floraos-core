@@ -204,7 +204,7 @@ export function BrochureStepTimeoutSettings() {
                 <span>4. Tự động duyệt ảnh hoa nếu khách không phản hồi</span>
               </label>
               <p className="text-caption text-text-muted">
-                Tính từ lúc thợ hoa tải ảnh thành phẩm. Hết thời gian này hệ thống tự duyệt để kịp giờ giao hoa.
+                Tính từ lúc thợ hoa tải ảnh thành phẩm. Hết thời gian này hệ thống tự duyệt để kịp giờ giao hoa; tắt tự duyệt (hoặc quy trình chọn Tính từ lúc thợ hoa tải ảnh thành phẩm. Hết thời gian này hệ thống tự duyệt để kịp giờ giao hoa.quot;Bắt buộc khách bấm duyệtTính từ lúc thợ hoa tải ảnh thành phẩm. Hết thời gian này hệ thống tự duyệt để kịp giờ giao hoa.quot;) thì đơn chờ khách bấm duyệt.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">

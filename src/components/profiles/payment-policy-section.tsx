@@ -62,6 +62,7 @@ export function PaymentPolicySection() {
         <PolicyMatrixTable
           policy={policy}
           onChange={edit}
+          settings={org.data?.settings}
           disabled={saving}
         />
       )}

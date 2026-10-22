@@ -257,12 +257,14 @@ export function expectedPayment(
  * - Đơn đặt cọc (paidVnd > 0 && paidVnd < totalVnd): LUÔN chặn đến khi Điều hành hoặc
  *   Điều phối xác nhận khoản thanh toán lần 2 — bất kể chính sách requireFullBeforeDispatch.
  *   Sau xác nhận, paid_vnd = total_vnd → điều kiện này tự mở.
- * - Đơn chưa thu gì: chặn chỉ khi tiệm bật requireFullBeforeDispatch.
+ * - Đơn chưa thu gì: chặn chỉ khi tiệm bật requireFullBeforeDispatch — đơn hoả tốc được miễn (cùng luật
+ *   `shouldBlockDispatchForBalance` của Quy trình vận hành). Giá trị cờ lấy từ `effectivePaymentPolicy`.
  */
 export function paymentGateBlocker(
   action: CoordinatorAction,
   policy: BrochurePaymentPolicy,
-  money: { totalVnd: number; paidVnd: number }
+  money: { totalVnd: number; paidVnd: number },
+  context?: { isUrgent?: boolean | undefined },
 ): string | null {
   const producing = action === "assign-florist" || action === "product-photo"
   if (producing && policy.requirePaidBeforeProduction && money.paidVnd <= 0) {
@@ -277,7 +279,7 @@ export function paymentGateBlocker(
       return "Đơn đặt cọc — cần Điều hành hoặc Điều phối xác nhận đã nhận tiền lần 2 trước khi giao ship"
     }
     // Đơn chưa báo giá hoặc chưa thu tiền: chặn nếu tiệm yêu cầu thu đủ trước khi giao
-    if (policy.requireFullBeforeDispatch) {
+    if (policy.requireFullBeforeDispatch && !context?.isUrgent) {
       if (!hasQuote) return "Đơn chưa báo giá — báo giá và thu đủ tiền trước khi giao hoa"
       if (money.paidVnd <= 0) return "Tiệm yêu cầu thu đủ tiền trước khi giao hoa"
     }

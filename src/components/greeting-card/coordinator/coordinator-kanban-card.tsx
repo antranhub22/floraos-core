@@ -1,22 +1,22 @@
 "use client"
 
-import { PhotoApprovalNote, photoWaitBlocker } from "./photo-approval-note"
+import { PhotoApprovalNote } from "./photo-approval-note"
 import React from "react"
-import { Clock, UserCheck, Camera, Truck, CheckCircle2, ShieldCheck, XCircle } from "lucide-react"
+import { Clock, ShieldCheck, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import type { OrderTimeTier } from "@/modules/greeting-card/domain/order-time-tier"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
-import { coordinatorActionBlocker, coordinatorAcceptanceBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
-import { paymentGateBlocker } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { coordinatorAcceptanceBlocker } from "@/modules/greeting-card/domain/brochure-commerce-rules"
+import { coordinatorBlockerOf } from "@/modules/greeting-card/domain/coordinator-card-actions"
+import { CoordinatorCardActions } from "./coordinator-card-actions"
+import { coordinatorFactsOf } from "./coordinator-order-facts"
+import { DeliveryFailureNote } from "./delivery-failure-note"
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 import type { CoordinatorKanbanColDef } from "./coordinator-kanban-view"
-import {
-  isUrgentOrder,
-  type BrochureWorkflowPolicy,
-} from "@/modules/greeting-card/domain/brochure-workflow-policy"
+import { isUrgentOrder } from "@/modules/greeting-card/domain/brochure-workflow-policy"
 
 interface CoordinatorKanbanCardProps {
   order: BrochureOrder
@@ -26,7 +26,6 @@ interface CoordinatorKanbanCardProps {
   policy: BrochurePaymentPolicy
   onOpen: (m: ModalState) => void
   onOpenDetail: () => void
-  workflowPolicy?: BrochureWorkflowPolicy | undefined
   /** Giờ hiện tại (tick từ tab) — đếm ngược chờ khách duyệt ảnh */
   now: number
 }
@@ -39,7 +38,6 @@ export function CoordinatorKanbanCard({
   policy,
   onOpen,
   onOpenDetail,
-  workflowPolicy,
   now,
 }: CoordinatorKanbanCardProps) {
   const { product } = o
@@ -49,20 +47,12 @@ export function CoordinatorKanbanCard({
     deliveryDate: o.delivery_window?.date,
     deliveryTimeSlot: o.delivery_window?.timeSlot,
   })
-  // Giao ship khi chưa qua bước ảnh: theo cài đặt ảnh QC của tiệm, khớp kiểm tra ở máy chủ
-  const canSkipPhoto = policy.requireProductPhotoQC === false
-
-  const blockerOf = (action: CoordinatorAction) =>
-    coordinatorActionBlocker(
-      action,
-      {
-        status: o.status,
-        productionStatus: o.production_status,
-        deliveryStatus: o.delivery_status,
-      },
-      { skipPhoto: canSkipPhoto },
-    ) ?? paymentGateBlocker(action, policy, { totalVnd: o.total_vnd, paidVnd: o.paid_vnd })
-    ?? (action === "dispatch-shipping" ? photoWaitBlocker(o.photo_approval, now) : null)
+  // Cùng hàm chặn với Lưới thẻ và máy chủ (policy = chính sách hiệu lực theo Quy trình vận hành)
+  const blockerOf = coordinatorBlockerOf(coordinatorFactsOf(o), policy, { isUrgent, nowMs: now })
+  const acceptBlocker = coordinatorAcceptanceBlocker(
+    { status: o.status, productionStatus: o.production_status, deliveryStatus: o.delivery_status },
+    { paidVnd: o.paid_vnd, paymentProofUrl: work?.paymentProofUrl || o.payment_proof_url },
+  )
 
   // Viền và nền theo tầng thời gian
   let tierBorder = "border-border"
@@ -158,99 +148,35 @@ export function CoordinatorKanbanCard({
       </button>
 
       <PhotoApprovalNote approval={o.photo_approval} now={now} />
-      {/* Quick Action buttons depending on state */}
+      <DeliveryFailureNote deliveryStatus={o.delivery_status} deliveryWindow={o.delivery_window} />
+      {/* Cùng thanh tác vụ với Lưới thẻ (PO 17/10/2026): không lệch nút, không hiện nút bị chặn */}
       {col.id !== "DELIVERED" && (
-        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-border/40">
-          {col.id === "PENDING" && (() => {
-            const paymentProofUrl = work?.paymentProofUrl || o.payment_proof_url
-            const acceptBlocker = coordinatorAcceptanceBlocker(
-              { status: o.status, productionStatus: o.production_status, deliveryStatus: o.delivery_status },
-              { paidVnd: o.paid_vnd, paymentProofUrl },
-            )
-            if (acceptBlocker !== null) return (
+        <div className="flex flex-col gap-1.5">
+          {acceptBlocker === null && (
+            <div className="flex gap-1.5 pt-1 border-t border-border/40">
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={() => onOpen({ type: "accept-order", orderId: o.id, orderCode: o.code })}
+                className="h-7 text-caption gap-1 px-2 flex-1 bg-success hover:bg-success/90 text-white font-extrabold"
+              >
+                <ShieldCheck size={12} />
+                Nhận đơn
+              </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={!!blockerOf("assign-florist")}
-                onClick={() => onOpen({ type: "florist", orderId: o.id, orderCode: o.code })}
-                className="h-7 text-caption gap-1 px-2 flex-1"
+                onClick={() => onOpen({ type: "reject-order", orderId: o.id, orderCode: o.code })}
+                className="h-7 text-caption gap-1 px-2 border-danger/40 text-danger hover:bg-danger-bg"
               >
-                <UserCheck size={12} />
-                Giao Florist
+                <XCircle size={12} />
+                Từ chối
               </Button>
-            )
-            return (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  onClick={() => onOpen({ type: "accept-order", orderId: o.id, orderCode: o.code })}
-                  className="h-7 text-caption gap-1 px-2 flex-1 bg-success hover:bg-success/90 text-white font-extrabold"
-                >
-                  <ShieldCheck size={12} />
-                  Nhận đơn
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onOpen({ type: "reject-order", orderId: o.id, orderCode: o.code })}
-                  className="h-7 text-caption gap-1 px-2 border-danger/40 text-danger hover:bg-danger-bg"
-                >
-                  <XCircle size={12} />
-                  Từ chối
-                </Button>
-              </>
-            )
-          })()}
-          {(col.id === "ASSIGNED" || col.id === "ARRANGING") && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!!blockerOf("product-photo")}
-              onClick={() => onOpen({ type: "product-photo", orderId: o.id, orderCode: o.code })}
-              className="h-7 text-caption gap-1 px-2 flex-1"
-            >
-              <Camera size={12} />
-              Ảnh TP
-            </Button>
+            </div>
           )}
-          {col.id === "READY" && (() => {
-            const isWaitingSecondPayment =
-              o.paid_vnd > 0 &&
-              o.paid_vnd < o.total_vnd &&
-              policy.requireFullBeforeDispatch
-            return (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!!blockerOf("dispatch-shipping")}
-                title={blockerOf("dispatch-shipping") ?? undefined}
-                onClick={() => onOpen({ type: "dispatch", orderId: o.id, orderCode: o.code })}
-                className={`h-7 text-caption gap-1 px-2 flex-1 ${isWaitingSecondPayment ? "border-warning/50 text-warning bg-warning-bg/30" : ""}`}
-              >
-                <Truck size={12} />
-                {isWaitingSecondPayment ? "Chờ TT lần 2" : "Giao Ship"}
-              </Button>
-            )
-          })()}
-          {col.id === "DELIVERING" && (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={!!blockerOf("recipient-photo")}
-              onClick={() => onOpen({ type: "recipient-photo", orderId: o.id, orderCode: o.code })}
-              className="h-7 text-caption gap-1 px-2 flex-1"
-            >
-              <CheckCircle2 size={12} />
-              Ảnh nhận
-            </Button>
-          )}
+          <CoordinatorCardActions order={o} policy={policy} isUrgent={isUrgent} blockerOf={blockerOf} onOpen={onOpen} compact />
         </div>
       )}
     </div>

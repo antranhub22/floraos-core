@@ -1,17 +1,18 @@
 "use client"
 
-import { PhotoApprovalNote, photoWaitBlocker, type PhotoApprovalState } from "./photo-approval-note"
+import { PhotoApprovalNote, type PhotoApprovalState } from "./photo-approval-note"
 import React from "react"
 import { MapPin, Calendar, CheckCircle2, ExternalLink } from "lucide-react"
-import { coordinatorActionBlocker, type CoordinatorAction } from "@/modules/greeting-card/domain/brochure-commerce-rules"
-import { paymentGateBlocker, type BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
+import { coordinatorBlockerOf } from "@/modules/greeting-card/domain/coordinator-card-actions"
+import { coordinatorFactsOf } from "./coordinator-order-facts"
 import { FlowerImage } from "@/components/greeting-card/flower-image"
 import { CoordinatorProgressStrip } from "./coordinator-progress-strip"
 import { WorkStatus } from "@/components/greeting-card/work/work-status"
 import type { TrackingPipelineItem } from "@/modules/greeting-card/domain/tracking-pipeline-types"
 import type { OrderProductView } from "@/modules/greeting-card/domain/order-product-view"
 import { readDeliveryNote } from "@/modules/greeting-card/domain/delivery-note"
-import { readDeliveryFailures } from "@/modules/greeting-card/domain/delivery-failure"
+import { DeliveryFailureNote } from "./delivery-failure-note"
 import { StaffNametagGroup } from "@/components/greeting-card/staff-nametag"
 import { CoordinatorCardDecisionBlocks } from "./coordinator-card-decision-blocks"
 import { CoordinatorCardActions } from "./coordinator-card-actions"
@@ -92,8 +93,6 @@ export function CoordinatorOrderCard({
   const phone = order.delivery_address?.phone || ""
   const address = order.delivery_address?.street || ""
   const delivery = readDeliveryNote(order.delivery_address)
-  const failures = readDeliveryFailures(order.delivery_window)
-  const lastFailure = order.delivery_status === "FAILED" ? failures.at(-1) : undefined
   const date = order.delivery_window?.date || ""
   const timeSlot = order.delivery_window?.timeSlot || "Trong ngày"
   const awaitingQuote = order.total_vnd <= 0
@@ -104,14 +103,8 @@ export function CoordinatorOrderCard({
 
   const isUrgent = isUrgentOrder({ deliveryDate: order.delivery_window?.date, deliveryTimeSlot: order.delivery_window?.timeSlot })
 
-  // Giao ship khi chưa qua bước ảnh: theo cài đặt ảnh QC của tiệm, khớp kiểm tra ở máy chủ
-  const blockerOf = (action: CoordinatorAction) =>
-    coordinatorActionBlocker(
-      action,
-      { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status },
-      { skipPhoto: policy.requireProductPhotoQC === false },
-    ) ?? paymentGateBlocker(action, policy, { totalVnd: order.total_vnd, paidVnd: order.paid_vnd })
-    ?? (action === "dispatch-shipping" ? photoWaitBlocker(order.photo_approval, now) : null)
+  // Cùng hàm chặn với Kanban và máy chủ (policy = chính sách hiệu lực theo Quy trình vận hành)
+  const blockerOf = coordinatorBlockerOf(coordinatorFactsOf(order), policy, { isUrgent, nowMs: now })
 
   return (
     <div data-focus-key={order.id} className={`bg-surface rounded-2xl border p-5 shadow-sm flex flex-col gap-4 ${work?.stuck?.owner === "COORDINATOR" ? "border-danger/50" : "border-border"}`}>
@@ -205,12 +198,7 @@ export function CoordinatorOrderCard({
             )}
           </div>
         )}
-        {lastFailure && (
-          <div role="status" className="rounded-lg bg-warning-bg px-2 py-1.5 text-caption text-warning">
-            <span className="font-bold">Giao lần {failures.length} chưa thành công:</span> {lastFailure.reasonLabel}
-            {lastFailure.note ? ` — ${lastFailure.note}` : ""}. Hẹn lại với khách rồi bấm &ldquo;Giao lại&rdquo;.
-          </div>
-        )}
+        <DeliveryFailureNote deliveryStatus={order.delivery_status} deliveryWindow={order.delivery_window} />
         {order.card_message && (
           <div className="text-caption italic text-text border-t border-border pt-1.5 mt-0.5">
             Thiệp: &ldquo;{order.card_message}&rdquo;
@@ -238,7 +226,7 @@ export function CoordinatorOrderCard({
 
       {/* Tác vụ của bước hiện tại (PO 16/10/2026) */}
       {!isDelivered && (
-        <CoordinatorCardActions order={order} policy={policy} workflowPolicy={workflowPolicy} isUrgent={isUrgent} blockerOf={blockerOf} onOpen={onOpen} />
+        <CoordinatorCardActions order={order} policy={policy} isUrgent={isUrgent} blockerOf={blockerOf} onOpen={onOpen} />
       )}
     </div>
   )

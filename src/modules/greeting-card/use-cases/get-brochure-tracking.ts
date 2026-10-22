@@ -10,7 +10,8 @@ import { snapshotFromOrder } from "../domain/order-change-request"
 import { customerChangeSection } from "./order-change"
 import { customerSubstituteSection } from "./substitute"
 import { latestFailureForCustomer } from "../domain/delivery-failure"
-import { parsePaymentPolicy, resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
+import { resolveRequirePaymentProof } from "../domain/brochure-payment-policy"
+import { effectivePaymentPolicy } from "../domain/workflow-gates"
 import { orderPaymentSummary } from "../domain/payment-summary"
 import { paymentInstructionsFor } from "./payment-instructions"
 import { customerVisiblePaidVnd } from "../domain/deposit-acknowledgement"
@@ -72,24 +73,26 @@ export async function getBrochureTracking(
 
   // SPEC #3 + PO 15/10/2026 (mục 4): khách duyệt ảnh thành phẩm theo chế độ tiệm chọn — cùng luật
   // với chặn giao ship ở Điều phối. Chế độ "Bỏ qua" không hỏi khách.
-  const storePolicy = parsePaymentPolicy(order.organization?.settings)
   const catalogFilters = order.greeting_sessions.find((s) => s.catalog?.filters)?.catalog?.filters as Record<string, unknown> | null | undefined
   const approval = productPhotoUrls.length > 0
-    ? orderPhotoApproval(order, order.organization?.settings, storePolicy.productPhotoReviewMinutes, new Date())
+    ? orderPhotoApproval(order, order.organization?.settings, new Date())
     : null
   const photoApproval: {
     status: "NONE" | "PENDING" | "APPROVED" | "AUTO_APPROVED"
     uploadedAt: string | null
     countdownMinutes: number
+    /** Hết giờ có tự duyệt không — `false`: khách phải bấm duyệt thì tiệm mới giao */
+    autoApprove: boolean
     approvedAt: string | null
   } = approval && approval.status !== "BYPASSED"
-    ? { status: approval.status, uploadedAt: approval.uploadedAt, countdownMinutes: approval.countdownMinutes, approvedAt: approval.approvedAt }
-    : { status: "NONE", uploadedAt: null, countdownMinutes: approval?.countdownMinutes ?? 10, approvedAt: null }
+    ? { status: approval.status, uploadedAt: approval.uploadedAt, countdownMinutes: approval.countdownMinutes, autoApprove: approval.autoApprove, approvedAt: approval.approvedAt }
+    : { status: "NONE", uploadedAt: null, countdownMinutes: approval?.countdownMinutes ?? 10, autoApprove: approval?.autoApprove ?? true, approvedAt: null }
 
   const orgSettings = (order as { organization?: { settings?: unknown } }).organization?.settings
   const slaConfig = parseStepSla(orgSettings)
   const timeline = calculateExpectedStepTimeline(deliveryWindow.date, deliveryWindow.timeSlot, slaConfig)
-  const policy = parsePaymentPolicy(orgSettings)
+  // Cờ thu đủ trước giao theo Quy trình vận hành (cùng nguồn với chặn giao ship ở máy chủ)
+  const policy = effectivePaymentPolicy(orgSettings)
   const ledgerPaidVnd = Number(order.paid_vnd)
   // Điều phối đã tiếp nhận đơn có bill mà Điều hành chưa ghi sổ → khách vẫn thấy đã nhận khoản Lần 1 (PO 15/10/2026)
   const customerReported = order.greeting_sessions.some((s) => s.status === "PAYMENT_REPORTED" || Boolean(s.payment_proof_asset_id))

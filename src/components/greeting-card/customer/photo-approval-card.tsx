@@ -10,6 +10,8 @@ export interface PhotoApprovalCardProps {
   sendCode?: string | null | undefined
   uploadedAt: string
   countdownMinutes: number
+  /** `false` = tiệm không tự duyệt khi hết giờ — không đếm ngược, chờ khách bấm */
+  autoApprove?: boolean | undefined
   /** Đơn đặt cọc còn nợ: sau xác nhận ảnh sẽ hiện mã QR thanh toán lần 2. */
   hasBalanceDue?: boolean
   onApproved: () => void
@@ -20,6 +22,7 @@ export function PhotoApprovalCard({
   sendCode,
   uploadedAt,
   countdownMinutes,
+  autoApprove = true,
   hasBalanceDue = false,
   onApproved,
 }: PhotoApprovalCardProps) {
@@ -30,7 +33,7 @@ export function PhotoApprovalCard({
   const [timeLeftMs, setTimeLeftMs] = useState(() => Math.max(0, expireTime - Date.now()))
 
   React.useEffect(() => {
-    if (timeLeftMs <= 0) return
+    if (!autoApprove || timeLeftMs <= 0) return
     const timer = setInterval(() => {
       const left = Math.max(0, expireTime - Date.now())
       setTimeLeftMs(left)
@@ -40,7 +43,7 @@ export function PhotoApprovalCard({
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [expireTime, onApproved, timeLeftMs])
+  }, [autoApprove, expireTime, onApproved, timeLeftMs])
 
   async function handleApprove() {
     setApproving(true)
@@ -69,9 +72,11 @@ export function PhotoApprovalCard({
           <Clock size={16} className="text-primary animate-pulse" />
           <span>Xác nhận hình ảnh sản phẩm</span>
         </span>
-        <span className="text-body-sm font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-lg tabular-nums">
-          {mm}:{ss}
-        </span>
+        {autoApprove && (
+          <span className="text-body-sm font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-lg tabular-nums">
+            {mm}:{ss}
+          </span>
+        )}
       </div>
 
       <p className="text-caption text-text-muted leading-relaxed">
@@ -79,6 +84,10 @@ export function PhotoApprovalCard({
         {hasBalanceDue ? (
           <>
             Sau khi xác nhận, bạn sẽ được hướng dẫn <strong>thanh toán phần còn lại</strong> để cửa hàng tiến hành giao hoa.
+          </>
+        ) : !autoApprove ? (
+          <>
+            Cửa hàng sẽ <strong>giao hoa sau khi bạn xác nhận</strong> hình ảnh này.
           </>
         ) : (
           <>
@@ -93,7 +102,7 @@ export function PhotoApprovalCard({
         type="button"
         size="sm"
         onClick={() => void handleApprove()}
-        disabled={approving || timeLeftMs <= 0}
+        disabled={approving || (autoApprove && timeLeftMs <= 0)}
         className="h-10 w-full gap-1.5 rounded-xl font-bold bg-primary text-white"
       >
         <CheckCircle2 size={16} />
