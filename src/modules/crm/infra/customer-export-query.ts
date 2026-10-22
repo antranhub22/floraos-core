@@ -16,6 +16,7 @@ export interface CustomerExportFilter {
 export async function queryCustomersForExport(ctx: TenantContext, filter: CustomerExportFilter = {}) {
   const where = {
     organization_id: ctx.organizationId,
+    deleted_at: null,
     ...(filter.tier ? { tier: filter.tier as never } : {}),
     ...(filter.search
       ? {

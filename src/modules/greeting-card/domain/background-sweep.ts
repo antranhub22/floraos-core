@@ -25,7 +25,11 @@ export type HoldAction = "NONE" | "REMIND" | "CANCEL" | "FAIL_PAYMENT"
  * đã thu đồng nào, hay đã khác DRAFT thì không đụng.
  */
 export function holdAction(
-  order: { status: string; totalVnd: number; paidVnd: number; createdAt: Date; customerReportedPaid: boolean },
+  order: {
+    status: string; totalVnd: number; paidVnd: number; createdAt: Date; customerReportedPaid: boolean
+    /** Mốc Điều hành báo "Chưa nhận được tiền" — khách có thêm một hạn mới tính từ đây. */
+    paymentRejectedAt?: Date | null | undefined
+  },
   policy: BrochurePaymentPolicy,
   now: Date = new Date(),
 ): HoldAction {

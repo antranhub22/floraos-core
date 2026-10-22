@@ -2,10 +2,11 @@ import type { TenantContext } from "@/core/tenancy"
 import { conflict, notFound, validationFailed } from "@/core/http/errors"
 import { mediaSelectionError } from "../domain/media-limits"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
-import { coordinatorAcceptanceBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { coordinatorAcceptanceBlocker, coordinatorActionBlocker, coordinatorRejectBlocker, type CoordinatorAction } from "../domain/brochure-commerce-rules"
+import { COORDINATOR_REJECT_ORIGIN, COORDINATOR_REJECT_REASON_PREFIX } from "../domain/cancellation-request"
 import { coordinatorBlockerOf } from "../domain/coordinator-card-actions"
 import { effectivePaymentPolicy, isUrgentDeliveryWindow, resolveWorkflowGates } from "../domain/workflow-gates"
-import { paymentGateBlocker } from "../domain/brochure-payment-policy"
+import { paymentGateBlocker, parsePaymentPolicy } from "../domain/brochure-payment-policy"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
 import { queueOrderNotification } from "./notify-customer"
 import {
@@ -261,22 +262,23 @@ export async function coordinatorRejectBrochureOrder(
 ) {
   const order = await repo.findBrochureOrder(ctx, orderId)
   if (!order) throw notFound()
-  if (order.status === "CANCELLED") throw conflict("Đơn hàng đã được huỷ trước đó")
+  // Chỉ đơn còn chờ Điều phối nhận mới "từ chối nhận đơn" được (cùng luật nút trên giao diện) — đơn đã
+  // nhận / đang cắm / đang giao phải qua "Đề xuất Hủy / Hoàn tiền" (không được tự duyệt khi quá hạn)
+  const rejectBlocker = coordinatorRejectBlocker({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
+  if (rejectBlocker) throw conflict(rejectBlocker)
   const reasonText = input.reason?.trim() || "Điều phối từ chối nhận đơn (quá tải hoặc không đáp ứng mẫu hoa)"
-  // Bấm lặp / hai người cùng bấm → không tạo hai đề xuất huỷ cho một đơn
-  if ((await cancellationRepo.listPending(ctx)).some((r) => r.order_id === orderId)) {
-    throw conflict("Đơn này đã có đề xuất huỷ đang chờ Điều hành duyệt")
-  }
-  
+  // Đề xuất đang chờ cho cùng đơn (bấm lặp / hai người cùng bấm) bị `createProposal` chặn 409
+
   // Điều phối từ chối nhận đơn -> gửi Đề xuất Hủy & Hoàn tiền toàn phần lên Điều hành phê duyệt
   const result = await cancellationRepo.createProposal(ctx, {
     orderId,
     senderRole: "COORDINATOR",
     proposal: {
       type: Number(order.paid_vnd) > 0 ? "FULL_REFUND" : "CANCEL_ONLY",
-      reason: `[Điều phối từ chối nhận đơn] ${reasonText}`,
+      reason: `${COORDINATOR_REJECT_REASON_PREFIX} ${reasonText}`,
       refundAmountVnd: Number(order.paid_vnd),
       note: "Điều phối xác định không thể cung ứng đơn hàng theo yêu cầu khách.",
+      origin: COORDINATOR_REJECT_ORIGIN,
     },
   })
   return {

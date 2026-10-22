@@ -78,14 +78,21 @@ export function coordinatorAcceptanceBlocker(
   s: OrderProgressState,
   payment: { paidVnd: number; paymentProofUrl?: string | null | undefined },
 ): string | null {
+  const stage = acceptanceStageBlocker(s)
+  if (stage) return stage
+  const hasProof = Boolean(payment.paymentProofUrl)
+  if (payment.paidVnd <= 0 && !hasProof) return "Chưa có thông tin chuyển khoản từ khách"
+  return null
+}
+
+/** Đơn còn ở bước chờ Điều phối nhận (chưa huỷ, chưa giao, chưa xác nhận, chưa vào sản xuất)? */
+function acceptanceStageBlocker(s: OrderProgressState): string | null {
   if (s.status === "CANCELLED") return "Đơn hàng đã huỷ"
   if (s.status === "COMPLETED" || s.deliveryStatus === "DELIVERED") return "Đơn hàng đã giao xong"
   if (s.status === "CONFIRMED" || s.status === "PROCESSING") return "Đơn đã được xác nhận nhận đơn"
   if (s.productionStatus === "ASSIGNED" || s.productionStatus === "ARRANGING" || s.productionStatus === "READY") {
     return "Đơn đã vào sản xuất"
   }
-  const hasProof = Boolean(payment.paymentProofUrl)
-  if (payment.paidVnd <= 0 && !hasProof) return "Chưa có thông tin chuyển khoản từ khách"
   return null
 }
 
@@ -98,6 +105,19 @@ export function isOrderAccepted(s: OrderProgressState): boolean {
 }
 
 export const NOT_ACCEPTED_REASON = "Đơn chưa được nhận — bấm \"Nhận đơn\" trước khi giao florist, chụp ảnh hay giao ship"
+
+/**
+ * Điều phối "từ chối nhận đơn" (POST orders/[id]/reject) chỉ khi đơn còn ở bước chờ nhận — cùng mốc vòng
+ * đời với nút Xác nhận/Từ chối (không đòi đã có tiền: đơn chưa thanh toán vẫn từ chối được). Đơn đã nhận,
+ * đang cắm, đang giao… phải qua "Đề xuất Hủy / Hoàn tiền".
+ */
+export function coordinatorRejectBlocker(s: OrderProgressState): string | null {
+  const blocker = acceptanceStageBlocker(s)
+    ?? (s.productionStatus === "QUALITY_CHECK" ? "Đơn đã vào sản xuất" : null)
+    ?? (s.deliveryStatus === "DISPATCHED" || s.deliveryStatus === "DELIVERING" ? "Đơn đang giao" : null)
+  if (!blocker || s.status === "CANCELLED") return blocker
+  return `${blocker} — không còn ở bước chờ nhận đơn. Dùng "Đề xuất Hủy / Hoàn tiền" nếu cần huỷ đơn.`
+}
 
 /**
  * Trả lý do chặn (tiếng Việt) hoặc `null` nếu được làm. Bản cũ cho bấm cả

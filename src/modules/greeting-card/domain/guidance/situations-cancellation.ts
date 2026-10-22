@@ -15,7 +15,7 @@ export const CANCELLATION_SITUATIONS = [
         { do: "Không đồng ý thì từ chối và ghi lý do để người đề xuất biết.", where: { tab: "operation", button: "Từ chối" } },
       ],
     },
-    deadline: "Đề xuất của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất của Sale: không có hạn.",
+    deadline: "Đề xuất \"từ chối nhận đơn\" của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất huỷ / hoàn tiền khác (của Sale hay Điều phối): không có hạn, luôn cần người duyệt.",
     automation: "Đơn đang giao không tự duyệt — cần Điều hành hoặc một Điều phối khác duyệt. Người đề xuất nhận tin kết quả.",
     next: ["CANCELLATION_REFUND_DUE", "CANCELLATION_AUTO_APPROVED", "SALE_CANCELLATION_REMINDER"],
     notes: [
@@ -36,7 +36,8 @@ export const CANCELLATION_SITUATIONS = [
     },
     next: ["CANCELLATION_PROPOSAL_PENDING", "LEDGER_DIRECT_CANCEL"],
     notes: [
-      "Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm.",
+      "Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm — máy chủ cũng chặn, và thẻ đơn ở tab Điều phối ghi lý do thay cho đường dẫn.",
+      "Mỗi đơn chỉ một đề xuất đang chờ duyệt; đơn đã giao xong cần hoàn một phần thì Điều hành ghi hoàn trên sổ thu.",
       "Hoàn tiền chỉ chọn được khi đơn đã thu tiền; hoàn một phần phải nhỏ hơn số đã thu.",
     ],
   },
@@ -51,18 +52,19 @@ export const CANCELLATION_SITUATIONS = [
     },
     deadline: "Quyết trong thời gian chuẩn bước \"Xác nhận tiền về\" (mặc định 30 phút).",
     next: ["CANCELLATION_PROPOSAL_PENDING"],
+    notes: ["Chỉ từ chối được khi đơn còn chờ nhận; đơn đã nhận, đang cắm hay đang giao thì dùng \"Đề xuất Hủy / Hoàn tiền\" (không tự duyệt khi quá hạn)."],
   },
   {
     id: "CANCELLATION_AUTO_APPROVED",
     group: "CANCELLATION",
     title: "Đơn tự huỷ vì Điều hành không duyệt kịp",
-    recognize: "Đề xuất huỷ của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.",
+    recognize: "Đề xuất \"từ chối nhận đơn\" của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.",
     owners: ["ADMIN"],
     informed: ["SALE"],
     steps: {
       ADMIN: [{ do: "Xử lý việc \"Cần hoàn tiền\" / \"Đơn tự huỷ — cần liên hệ khách\" trong Hộp việc.", where: { tab: "inbox" } }],
     },
-    automation: "Hệ thống kiểm mỗi phút; đơn đang giao hoặc đã giao không tự huỷ.",
+    automation: "Hệ thống kiểm mỗi phút, chỉ với đề xuất từ chối nhận đơn; đơn đã huỷ, đang giao hoặc đã giao bị bỏ qua (không tự huỷ).",
     next: ["CANCELLATION_REFUND_DUE", "SALE_CANCELLATION_REMINDER"],
   },
   {
@@ -84,15 +86,18 @@ export const CANCELLATION_SITUATIONS = [
   {
     id: "SALE_CANCELLATION_REMINDER",
     group: "CANCELLATION",
-    title: "Sale báo khách: đơn bị Điều phối huỷ",
-    recognize: "Sale nhận tin hệ thống \"Đơn #… đã bị Điều phối huỷ (đã được duyệt)\" trong Hộp việc → Tin nhắn.",
+    title: "Sale báo khách: đơn khách đã đặt bị huỷ",
+    recognize: "Hộp việc của Sale phụ trách có việc \"Báo khách: đơn #… đã bị huỷ\" — đơn khách đã đặt bị nhân viên huỷ (sổ thu, duyệt đề xuất huỷ) hoặc đề xuất huỷ của Điều phối được tự duyệt.",
     owners: ["SALE"],
     informed: ["ADMIN"],
     steps: {
-      SALE: [{ do: "Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn.", where: { tab: "inbox" } }],
+      SALE: [
+        { do: "Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn." },
+        { do: "Báo xong thì bấm xác nhận ngay trong Hộp việc để đóng việc.", where: { tab: "inbox", button: "Đã báo khách" } },
+      ],
     },
-    deadline: "Trong 2 tiếng kể từ lúc duyệt huỷ (giờ cụ thể ghi trong tin).",
-    automation: "Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ.",
+    deadline: "Trong 2 tiếng kể từ lúc huỷ — quá hạn việc lên đầu Hộp việc như đơn kẹt.",
+    automation: "Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ (khi Điều phối huỷ). Không tạo việc cho đơn hệ thống tự huỷ vì quá hạn thanh toán hay đơn bỏ hiển thị; việc chỉ nhắc trong 7 ngày.",
     next: ["CANCELLATION_REFUND_DUE"],
   },
   {
@@ -136,7 +141,7 @@ export const CANCELLATION_SITUATIONS = [
       ADMIN: [{ do: "Chuyển khoản cho khách trước, rồi ghi số tiền và lý do hoàn trên dòng đơn.", where: { tab: "operation", button: "Hoàn tiền" } }],
     },
     next: [],
-    notes: ["Số hoàn không vượt số đã thu. Trạng thái đơn không đổi."],
+    notes: ["Số hoàn không vượt số đã thu. Trạng thái đơn và số còn phải thu không đổi — hoàn tiền không tạo nợ \"Đã giao còn nợ\"."],
   },
   {
     id: "DISMISSAL_PENDING",
@@ -145,7 +150,10 @@ export const CANCELLATION_SITUATIONS = [
     recognize: "Sale hoặc Điều phối đề xuất bỏ hiển thị một link hoặc đơn chưa trả đồng nào (khách đổi ý, chỉ hỏi giá, trùng…).",
     owners: ["ADMIN"],
     steps: {
-      ADMIN: [{ do: "Ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối.", where: { tab: "tracking", button: "Duyệt" } }],
+      ADMIN: [
+        { do: "Hộp việc hiện đề xuất kèm lý do và người đề xuất: duyệt hoặc từ chối ngay tại đó.", where: { tab: "inbox", button: "Duyệt bỏ hiển thị" } },
+        { do: "Hoặc ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối.", where: { tab: "tracking", button: "Duyệt" } },
+      ],
       SALE: [{ do: "Đề xuất: bấm biểu tượng bỏ hiển thị trên thẻ đơn ở Kanban, chọn lý do.", where: { tab: "tracking", button: "Xác nhận bỏ hiển thị" } }],
       COORDINATOR: [{ do: "Đề xuất như Sale.", where: { tab: "tracking", button: "Xác nhận bỏ hiển thị" } }],
     },

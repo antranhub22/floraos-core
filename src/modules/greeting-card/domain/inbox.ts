@@ -3,99 +3,11 @@
  * Pure TypeScript — nhận dữ liệu đã đọc, không truy vấn.
  */
 import type { MessageRole } from "./internal-message"
-import type { StuckInfo } from "./step-sla"
 import type { TrackingPipelineStepId } from "./tracking-pipeline-types"
-import type { ChangeItem } from "./order-change-request"
+import type { InboxAction, InboxTab, PipelineLike } from "./inbox-types"
+import { isDepositPendingApproval } from "./deposit-acknowledgement"
 
-/** Tab nơi xử lý việc đó trên trang Thẻ chào. */
-export type InboxTab = "payment" | "sales" | "coordinator" | "tracking"
-
-export interface InboxAction {
-  id: string
-  kind:
-    | "STUCK"
-    | "CONFIRM_PAYMENT"
-    | "QUOTE"
-    | "ASSIGN"
-    | "UNMATCHED_PAYMENTS"
-    | "DISCOUNT"
-    | "CHANGE_REQUEST"
-    | "REDELIVER"
-    | "CANCELLATION_REQUEST"
-    | "REMIND_BALANCE_PAYMENT"
-    | "WAITING_SECOND_PAYMENT"
-    | "COLLECT_POST_DELIVERY_BALANCE"
-    | "FOLLOW_UP_LEAD"
-    | "REMIND_DEPOSIT"
-    | "CLAIM_ORDER"
-    | "SEND_PHOTO_QC"
-    | "DELIVERY_FAILED_SALE_CONTACT"
-    | "CHECK_ARRANGING_PROGRESS"
-    | "QC_INSPECTION"
-    | "ASSIGN_SHIPPER"
-    | "CANCELLATION_FOLLOW_UP"
-    | "CANCELLED_REPORTED_PAYMENT"
-  title: string
-  detail: string
-  orderId: string | null
-  sessionId: string | null
-  customerName: string | null
-  imageUrl: string | null
-  tab: InboxTab
-  /** Càng lớn càng gấp — kẹt quá lâu lên đầu. */
-  urgency: number
-  /** Chỉ với DISCOUNT: để Điều hành duyệt/từ chối ngay trong Hộp việc. */
-  discount?: {
-    requestId: string
-    requester: string
-    reason: string
-    baseTotalVnd: number
-    requestedVnd: number
-    percent: number | null
-    maxPercent: number
-  } | undefined
-  /** Chỉ với CANCELLATION_FOLLOW_UP: đơn hệ thống tự huỷ, Điều hành xác nhận đã hoàn tiền / liên hệ khách. */
-  followUp?: { requestId: string; refundDueVnd: number; reason: string } | undefined
-  /** Chỉ với CANCELLED_REPORTED_PAYMENT: đơn đã huỷ, khách đã báo chuyển khoản — kiểm sao kê rồi chốt. */
-  reportedPayment?: { orderId: string; expectedVnd: number; proofUrl: string | null } | undefined
-  /** Chỉ với CHANGE_REQUEST: khách xin đổi gì — duyệt/từ chối ngay trong Hộp việc. */
-  change?: {
-    requestId: string
-    changes: ChangeItem[]
-    note: string | null
-    expectedFeeDeltaVnd: number
-    requestedAt: string
-  } | undefined
-}
-
-export interface PipelineLike {
-  id: string
-  type: "ORDER" | "SESSION"
-  orderId?: string | null | undefined
-  sessionId: string
-  orderCode?: string | null | undefined
-  sendCode: string
-  customerName: string
-  productName: string
-  productImageUrl?: string | null | undefined
-  totalVnd: number
-  paidVnd?: number | undefined
-  balanceVnd?: number | undefined
-  currentStepId: TrackingPipelineStepId
-  currentStepTitle: string
-  productionStatus?: string | null | undefined
-  deliveryStatus?: string | null | undefined
-  stepStartedAt: string
-  stuck: StuckInfo | null
-  saleId: string | null
-  coordinatorId?: string | null | undefined
-  /** Lần giao gần nhất không thành công — chờ Điều phối giao lại */
-  deliveryFailed?: boolean | undefined
-  sessionStatus?: string | null | undefined
-  customerReportedPaid?: boolean | undefined
-  /** Đơn đã huỷ / đã bỏ hiển thị — không còn việc thu tiền, cắm, giao */
-  isCancelled?: boolean | undefined
-}
+export type { InboxAction, InboxActionKind, InboxTab, PipelineLike } from "./inbox-types"
 
 const TAB_OF_ROLE: Record<MessageRole, InboxTab> = { ADMIN: "payment", SALE: "sales", COORDINATOR: "coordinator" }
 const COORDINATOR_STEPS = new Set<TrackingPipelineStepId>(["STEP_5_PAYMENT_CONFIRMED", "STEP_6_ARRANGING", "STEP_7_READY_QC", "STEP_8_DELIVERING", "STEP_9_COMPLETED"])
@@ -133,7 +45,17 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
 
     // --- 1. NGHIỆP VỤ ĐIỀU HÀNH (ADMIN) ---
     if (role === "ADMIN") {
-      if (i.type === "ORDER" && hasDeposit && isReported) {
+      // Điều phối đã nhận đơn khi sổ thu còn 0 đ — đơn đã qua bước 4 nên nhánh "Đối chiếu" bên dưới không bắt được
+      const acceptedUnpaid = i.type === "ORDER" && isDepositPendingApproval({
+        status: i.orderStatus ?? "", productionStatus: i.productionStatus, totalVnd: total, paidVnd: paid,
+        customerReported: isReported || Boolean(i.paymentProofUrl),
+      })
+      if (acceptedUnpaid) {
+        out.push({
+          ...base, id: `accepted-unpaid:${i.id}`, kind: "CONFIRM_PAYMENT", title: "Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển",
+          detail: `${code(i)} · Khách đã báo chuyển khoản, sổ thu chưa ghi nhận đồng nào`, tab: "payment", urgency: 1300,
+        })
+      } else if (i.type === "ORDER" && hasDeposit && isReported) {
         out.push({
           ...base,
           id: `approve-balance-pay:${i.id}`,
@@ -163,15 +85,7 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
     // --- 2. NGHIỆP VỤ SALE ---
     if (role === "SALE") {
       if (isUnassignedSale) {
-        out.push({
-          ...base,
-          id: `claim-order:${i.id}`,
-          kind: "CLAIM_ORDER",
-          title: "Tiếp nhận đơn mới chưa có Sale phụ trách",
-          detail: `${code(i)} · ${i.customerName} · ${i.productName}`,
-          tab: "sales",
-          urgency: 700,
-        })
+        out.push(claimOrderAction(i))
       } else if (isMySale) {
         if (i.deliveryFailed && !isDelivered) {
           out.push({
@@ -213,17 +127,18 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
             tab: "sales",
             urgency: 420,
           })
-        } else if (i.currentStepId === "STEP_4_PAYMENT_PENDING" && !isReported && paid === 0) {
+        } else if (i.type === "ORDER" && i.currentStepId === "STEP_3_FILLING_FORM" && total > 0 && paid === 0 && !isReported) {
+          // Đơn đã gửi, đã có giá, khách chưa chuyển khoản — đơn chưa chuyển tiền luôn nằm ở bước 3
           out.push({
             ...base,
             id: `remind-deposit:${i.id}`,
             kind: "REMIND_DEPOSIT",
-            title: "Nhắc khách thanh toán tiền cọc",
-            detail: `${code(i)} · Cần đặt cọc để xưởng chuẩn bị hoa`,
+            title: "Nhắc khách chuyển khoản",
+            detail: `${code(i)} · Khách đã đặt đơn, chưa chuyển khoản ${total.toLocaleString("vi-VN")} đ (cọc hoặc trả đủ)`,
             tab: "sales",
             urgency: 550,
           })
-        } else if (i.currentStepId === "STEP_3_FILLING_FORM") {
+        } else if (i.type === "SESSION" && i.currentStepId === "STEP_3_FILLING_FORM") {
           out.push({
             ...base,
             id: `follow-up-lead:${i.id}`,
@@ -318,6 +233,15 @@ export function inboxActions(items: PipelineLike[], role: MessageRole, userId: s
   }
 
   return out.sort((a, b) => b.urgency - a.urgency)
+}
+
+/** Việc "nhận đơn" cho Sale khi đơn chưa có Sale phụ trách — dùng chung cho bảng theo dõi và đơn ngoài phạm vi xem. */
+export function claimOrderAction(i: Pick<PipelineLike, "id" | "orderId" | "sessionId" | "orderCode" | "sendCode" | "customerName" | "productName" | "productImageUrl">): InboxAction {
+  return {
+    orderId: i.orderId ?? null, sessionId: i.sessionId || null, customerName: i.customerName, imageUrl: i.productImageUrl ?? null,
+    id: `claim-order:${i.id}`, kind: "CLAIM_ORDER", title: "Tiếp nhận đơn mới chưa có Sale phụ trách",
+    detail: `${i.orderCode ? `Đơn ${i.orderCode}` : `Link ${i.sendCode}`} · ${i.customerName} · ${i.productName}`, tab: "sales", urgency: 700,
+  }
 }
 
 /** Đơn đổi bước trong `hours` giờ gần nhất mà người này cần biết. */

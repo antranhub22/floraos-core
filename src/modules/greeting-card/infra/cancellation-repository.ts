@@ -7,7 +7,10 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import {
   type CancellationPayload,
   type CancellationProposal,
+  PENDING_PROPOSAL_EXISTS,
   autoApprovedNotice,
+  canProposeCancellation,
+  isCoordinatorRejectProposal,
   isInTransit,
   resolveRefundVnd,
   validateCancellationProposalData,
@@ -63,6 +66,15 @@ export class CancellationRepository {
   ) {
     const order = await this.getOrderSummary(ctx, input.orderId)
     if (!order) throw notFound()
+    // Cùng luật với nút trên giao diện, kiểm trên đơn THẬT: đã huỷ / đã giao xong / thợ đang cắm → 409
+    const lifecycle = canProposeCancellation(order)
+    if (!lifecycle.allowed) throw conflict(lifecycle.reason ?? "Không thể đề xuất huỷ/hoàn cho đơn này.")
+    // Mỗi đơn chỉ một đề xuất đang chờ duyệt (bấm lặp, hai người cùng đề xuất)
+    const pending = await this.db.greeting_messages.findFirst({
+      where: scopedWhere(ctx, { kind: "CANCELLATION_REQUEST", order_id: order.id, payload: { path: ["status"], equals: "PENDING" } }),
+      select: { id: true },
+    })
+    if (pending) throw conflict(PENDING_PROPOSAL_EXISTS)
 
     const err = validateCancellationProposalData(input.proposal, order)
     if (err) throw validationFailed({ proposal: err })
@@ -128,6 +140,8 @@ export class CancellationRepository {
 
       const payload = obj(req.payload) as unknown as CancellationPayload
       if (payload.status !== "PENDING") throw conflict("Yêu cầu này đã được xử lý trước đó")
+      // Hệ thống chỉ tự duyệt đề xuất "Điều phối từ chối nhận đơn" — đề xuất huỷ / hoàn thường luôn cần người duyệt
+      if (auto && !isCoordinatorRejectProposal(payload)) throw conflict("Đề xuất này cần Điều hành duyệt")
 
       const order = await tx.orders.findFirst({
         where: scopedWhere(ctx, { id: req.order_id }),

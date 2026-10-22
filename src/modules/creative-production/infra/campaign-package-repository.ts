@@ -73,7 +73,7 @@ export class CampaignPackageRepository {
   }
 
   findById(ctx: TenantContext, id: string): Promise<campaign_packages | null> {
-    return this.db.campaign_packages.findFirst({ where: scopedWhere(ctx, { id }) })
+    return this.db.campaign_packages.findFirst({ where: scopedWhere(ctx, { id, deleted_at: null }) })
   }
 
   list(
@@ -82,6 +82,7 @@ export class CampaignPackageRepository {
   ): Promise<campaign_packages[]> {
     return this.db.campaign_packages.findMany({
       where: scopedWhere(ctx, {
+        deleted_at: null,
         ...(options.masterAssetId ? { master_asset_id: options.masterAssetId } : {}),
         ...(options.status ? { status: options.status } : {}),
       }),

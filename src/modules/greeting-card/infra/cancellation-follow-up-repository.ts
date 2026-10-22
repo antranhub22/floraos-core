@@ -4,7 +4,11 @@ import { conflict, notFound } from "@/core/http/errors"
 import { prisma } from "@/core/tenancy/infra/prisma"
 import { scopedData, scopedWhere, type TenantContext } from "@/core/tenancy"
 import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
-import { needsFollowUp, type CancellationPayload } from "../domain/cancellation-request"
+import {
+  COORDINATOR_REJECT_ORIGIN, COORDINATOR_REJECT_REASON_PREFIX, canAutoApproveForOrder, isCoordinatorRejectProposal, needsFollowUp,
+  type CancellationPayload,
+} from "../domain/cancellation-request"
+import { moneyAfterRefund } from "../domain/refund-ledger"
 import { CancellationRepository } from "./cancellation-repository"
 
 type Loose = Record<string, unknown>
@@ -18,19 +22,55 @@ const obj = (v: unknown): Loose => (v && typeof v === "object" ? (v as Loose) : 
 export class CancellationFollowUpRepository {
   constructor(private readonly db = prisma, private readonly cancellations = new CancellationRepository(db)) {}
 
-  /** Đề xuất từ chối nhận đơn của Điều phối còn PENDING, tạo trước `before` (bộ quét lọc kỹ theo từng tiệm). */
-  async listExpiredCoordinatorRejections(before: Date, take = 50) {
-    return this.db.greeting_messages.findMany({
-      where: {
-        kind: "CANCELLATION_REQUEST",
-        sender_role: "COORDINATOR",
-        created_at: { lte: before },
-        payload: { path: ["status"], equals: "PENDING" },
-      },
-      select: { id: true, organization_id: true, order_id: true, created_at: true, organization: { select: { settings: true } } },
-      orderBy: { created_at: "asc" },
-      take,
-    })
+  /**
+   * Đề xuất "Điều phối từ chối nhận đơn" còn PENDING, tạo trước `before` (bộ quét lọc kỹ hạn theo từng tiệm).
+   * CHỈ loại từ chối nhận đơn (`payload.origin`, bản ghi cũ theo tiền tố lý do) — đề xuất huỷ / hoàn tiền
+   * thường của Điều phối luôn chờ người duyệt. Bỏ qua đề xuất của đơn không thể tự huỷ (đã huỷ, đã giao,
+   * đang giao) để chúng không chiếm chỗ mỗi phút; đọc theo trang, có trần số trang.
+   */
+  async listExpiredCoordinatorRejections(before: Date, take = 50, pageSize = 200, maxPages = 5) {
+    const picked: Array<{ id: string; organization_id: string; order_id: string | null; created_at: Date; organization: { settings: Prisma.JsonValue } }> = []
+    let cursor: string | undefined
+    for (let page = 0; page < maxPages && picked.length < take; page += 1) {
+      const rows = await this.db.greeting_messages.findMany({
+        where: {
+          kind: "CANCELLATION_REQUEST",
+          sender_role: "COORDINATOR",
+          created_at: { lte: before },
+          AND: [
+            { payload: { path: ["status"], equals: "PENDING" } },
+            {
+              OR: [
+                { payload: { path: ["origin"], equals: COORDINATOR_REJECT_ORIGIN } },
+                { payload: { path: ["reason"], string_starts_with: COORDINATOR_REJECT_REASON_PREFIX } },
+              ],
+            },
+          ],
+        },
+        select: { id: true, organization_id: true, order_id: true, created_at: true, payload: true, organization: { select: { settings: true } } },
+        orderBy: [{ created_at: "asc" }, { id: "asc" }],
+        take: pageSize,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      })
+      if (rows.length === 0) break
+      cursor = rows[rows.length - 1]?.id
+      const orderIds = [...new Set(rows.flatMap((r) => (r.order_id ? [r.order_id] : [])))]
+      const orders = orderIds.length
+        ? await this.db.orders.findMany({ where: { id: { in: orderIds } }, select: { id: true, organization_id: true, status: true, delivery_status: true } })
+        : []
+      const byId = new Map(orders.map((o) => [o.id, o]))
+      for (const r of rows) {
+        const order = r.order_id ? byId.get(r.order_id) : undefined
+        // Đơn phải cùng tổ chức với đề xuất — không bao giờ huỷ chéo tiệm
+        if (!order || order.organization_id !== r.organization_id) continue
+        if (!isCoordinatorRejectProposal(r.payload)) continue
+        if (!canAutoApproveForOrder({ status: order.status, deliveryStatus: order.delivery_status })) continue
+        picked.push({ id: r.id, organization_id: r.organization_id, order_id: r.order_id, created_at: r.created_at, organization: r.organization })
+        if (picked.length >= take) break
+      }
+      if (rows.length < pageSize) break
+    }
+    return picked
   }
 
   /** Tự duyệt huỷ do quá hạn — không ghi sổ hoàn, đánh dấu việc chờ Điều hành, báo Điều hành. */
@@ -104,7 +144,7 @@ export class CancellationFollowUpRepository {
 
       const order = await tx.orders.findFirst({
         where: scopedWhere(ctx, { id: req.order_id }),
-        select: { id: true, total_vnd: true, paid_vnd: true },
+        select: { id: true, total_vnd: true, paid_vnd: true, balance_vnd: true },
       })
       if (!order) throw notFound()
       if (refundVnd > Number(order.paid_vnd)) throw conflict("Số tiền hoàn vượt quá số tiền đã thu, vui lòng kiểm tra sổ thu")
@@ -118,10 +158,11 @@ export class CancellationFollowUpRepository {
             collected_by: ctx.userId, collected_at: now, note: `Hoàn tiền ${payload.autoApproved ? "đơn tự huỷ" : "theo đề xuất đã duyệt"}${doneNote ? `: ${doneNote}` : ""}`,
           }),
         })
-        const newPaid = Number(order.paid_vnd) - refundVnd
+        // Hoàn không tạo nợ phải thu — cùng luật sổ thu (`domain/refund-ledger.ts`)
+        const after = moneyAfterRefund({ paidVnd: Number(order.paid_vnd), balanceVnd: Number(order.balance_vnd) }, refundVnd)
         const moved = await tx.orders.updateMany({
           where: scopedWhere(ctx, { id: order.id, paid_vnd: order.paid_vnd }),
-          data: { paid_vnd: newPaid, balance_vnd: Number(order.total_vnd) - newPaid },
+          data: { paid_vnd: after.paidVnd, balance_vnd: after.balanceVnd },
         })
         if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")
       }

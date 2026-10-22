@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { AccountStorageHub } from "@/components/storage/account-storage-hub"
+import { StoreExportButton } from "@/components/storage/store-export-button"
 import { Button } from "@/components/ui/button"
 import { Camera, Plus, Sparkles, Folder } from "lucide-react"
 import { useI18n } from "@/lib/i18n"
@@ -25,6 +26,7 @@ export default function KhoDuLieuPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <StoreExportButton />
           <Link href="/tai-anh">
             <Button variant="primary" className="flex items-center gap-2 font-bold h-10 px-4 shadow-xs">
               <Camera size={16} strokeWidth={2} />

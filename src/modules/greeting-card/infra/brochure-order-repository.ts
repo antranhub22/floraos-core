@@ -4,7 +4,7 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { conflict } from "@/core/http/errors"
 import { resolveCoordinatorId } from "../domain/coordinator-owner"
 import { sortByDelivery } from "../domain/coordinator-board"
-import type { delivery_status, order_status, production_status } from "@/generated/prisma/client"
+import type { Prisma, delivery_status, order_status, production_status } from "@/generated/prisma/client"
 
 export const ORDER_STATUSES: readonly order_status[] = [
   "DRAFT", "CONFIRMED", "PROCESSING", "DELIVERED", "COMPLETED", "CANCELLED",
@@ -189,7 +189,7 @@ export class BrochureOrderRepository {
       where: scopedWhere(ctx, { id: orderId, source: "BROCHURE" }),
       include: {
         qc_records: { select: { notes: true, created_at: true } },
-        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true, catalog: { select: { filters: true } } } },
+        greeting_sessions: { select: { id: true, send_code: true, status: true, payment_proof_asset_id: true, payment_proof_balance_asset_id: true, catalog: { select: { filters: true } } } },
       },
     })
   }
@@ -271,6 +271,7 @@ export class BrochureOrderRepository {
       noteAppend?: string | undefined
       /** Ảnh/video của lần chụp này — một bản ghi QC chứa cả bộ */
       qcAssetIds?: readonly string[] | undefined
+      pricingRuleRef?: Record<string, unknown> | undefined
     }
   ) {
     return this.db.$transaction(async (tx) => {
@@ -302,6 +303,7 @@ export class BrochureOrderRepository {
           ...(input.productionStatus ? { production_status: input.productionStatus } : {}),
           ...(input.deliveryStatus ? { delivery_status: input.deliveryStatus } : {}),
           ...(input.orderStatus ? { status: input.orderStatus } : {}),
+          ...(input.pricingRuleRef ? { pricing_rule_ref: input.pricingRuleRef as Prisma.InputJsonValue } : {}),
           ...(input.noteAppend
             ? { internal_note: [order.internal_note, input.noteAppend].filter(Boolean).join("\n") }
             : {}),

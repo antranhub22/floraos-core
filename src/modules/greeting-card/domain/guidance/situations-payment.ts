@@ -19,7 +19,7 @@ export const PAYMENT_SITUATIONS = [
     deadline: "Mặc định 15 phút.",
     automation: "Tiệm bật \"AI đọc bill\" và \"tự duyệt bill khớp\": bill khớp 100% được tự xác nhận sau 15 phút. Nhãn bill: Khớp bill / Thiếu–Thừa / Sai STK nhận / Bill nghi vấn / Ảnh mờ; chưa có kết quả đọc tự động thì đối chiếu tay.",
     next: ["DEPOSIT_PAID_WAITING_PRODUCTION", "ORDER_AWAITING_ACCEPT", "COORDINATOR_DEPOSIT_APPROVAL", "ORDER_PLACED_AWAITING_TRANSFER"],
-    notes: ["Đã quá hạn thanh toán mà báo \"Chưa nhận được tiền\" thì đơn sẽ tự huỷ ngay ở lượt quét kế tiếp."],
+    notes: ["Báo \"Chưa nhận được tiền\" cho khách thêm một hạn thanh toán mới đủ số phút tiệm cài, tính từ lúc báo — quá hạn mới mà vẫn chưa có tiền thì đơn tự huỷ."],
   },
   {
     id: "DEPOSIT_PENDING_ADMIN_APPROVAL",
@@ -28,10 +28,12 @@ export const PAYMENT_SITUATIONS = [
     recognize: "Thẻ đơn ghi \"Đơn do Điều phối xác nhận – Điều hành chưa duyệt đã nhận tiền\".",
     owners: ["ADMIN"],
     steps: {
-      ADMIN: [{ do: "Đối chiếu sao kê rồi phê duyệt khoản khách đã chuyển trên dòng đơn (lọc \"Khách báo đã chuyển\").", where: { tab: "operation" } }],
+      ADMIN: [
+        { do: "Hộp việc báo \"Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển\": bấm vào để mở đơn.", where: { tab: "inbox", button: "Xử lý" } },
+        { do: "Đối chiếu sao kê rồi phê duyệt khoản khách đã chuyển trên dòng đơn (lọc \"Khách báo đã chuyển\").", where: { tab: "operation" } },
+      ],
     },
     next: ["DEPOSIT_PAID_WAITING_PRODUCTION"],
-    notes: ["Việc này chưa hiện trong Hộp việc của Điều hành — cần vào tab Điều hành để thấy."],
   },
   {
     id: "COORDINATOR_DEPOSIT_APPROVAL",
@@ -78,11 +80,13 @@ export const PAYMENT_SITUATIONS = [
     recognize: "Đơn đã cọc, khách báo đã chuyển lần 2 (thường kèm bill).",
     owners: ["ADMIN", "COORDINATOR"],
     steps: {
-      ADMIN: [{ do: "Đối chiếu sao kê rồi bấm \"Phê duyệt đợt 2…\" trên dòng đơn.", where: { tab: "operation" } }],
+      ADMIN: [
+        { do: "Đối chiếu sao kê rồi bấm \"Phê duyệt đợt 2…\" trên dòng đơn.", where: { tab: "operation" } },
+        { do: "Sao kê không có khoản lần 2: báo khách chưa nhận được tiền — bill lần 2 bị bỏ, khách được nhắc chuyển lại.", where: { tab: "operation", button: "Chưa nhận được tiền" } },
+      ],
       COORDINATOR: [{ do: "Tiệm cho phép thì xác nhận ngay trên thẻ đơn để giao hoa; nếu thẻ ghi \"Chờ Điều hành xác nhận\" thì chờ Điều hành.", where: { tab: "coordination", button: "Xác nhận Đã Nhận Đủ Tiền (Lần 2)" } }],
     },
-    next: ["READY_TO_DISPATCH"],
-    notes: ["Hiện chưa có nút \"Chưa nhận được tiền\" cho lần 2 — sai bill thì nhắn khách qua Sale."],
+    next: ["READY_TO_DISPATCH", "SECOND_PAYMENT_DUE"],
   },
   {
     id: "POST_DELIVERY_DEBT",

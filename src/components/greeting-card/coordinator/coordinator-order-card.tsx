@@ -55,7 +55,7 @@ export type ModalState =
   | { type: "substitute"; orderId: string; orderCode: string }
   | { type: "accept-order"; orderId: string; orderCode: string }
   | { type: "reject-order"; orderId: string; orderCode: string }
-  | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number; deliveryStatus?: string }
+  | { type: "cancel-proposal"; orderId: string; orderCode: string; totalVnd: number; paidVnd: number; status: string; productionStatus?: string | null; deliveryStatus?: string }
   | { type: "confirm-balance"; orderId: string; orderCode: string; balanceVnd: number; proofUrl: string | null }
   | { type: "confirm-deposit"; orderId: string; orderCode: string; depositVnd: number | null; proofUrl: string | null }
   | { type: "detail"; order: BrochureOrder }

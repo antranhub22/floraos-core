@@ -7,6 +7,7 @@ import type { CoordinatorAction } from "@/modules/greeting-card/domain/brochure-
 import type { BrochurePaymentPolicy } from "@/modules/greeting-card/domain/brochure-payment-policy"
 import { dispatchActionLabel, noActionReason, visibleCoordinatorActions } from "@/modules/greeting-card/domain/coordinator-card-actions"
 import { substituteLockReason } from "@/modules/greeting-card/domain/substitute-proposal"
+import { canProposeCancellation } from "@/modules/greeting-card/domain/cancellation-request"
 import type { BrochureOrder, ModalState } from "./coordinator-order-card"
 import { coordinatorFactsOf } from "./coordinator-order-facts"
 
@@ -34,6 +35,8 @@ export function CoordinatorCardActions({
   compact?: boolean
 }) {
   const actions = visibleCoordinatorActions(blockerOf, { status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
+  // Cùng luật vòng đời máy chủ kiểm khi tạo đề xuất: đã huỷ / đã giao / thợ đang cắm → không hiện link
+  const cancelCheck = canProposeCancellation({ status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })
   const substituteLock = substituteLockReason({ status: order.status, deliveryStatus: order.delivery_status })
   const dispatchLabel = dispatchActionLabel(coordinatorFactsOf(order), policy, isUrgent)
   const label = (a: CoordinatorAction) => (a === "dispatch-shipping" ? dispatchLabel : ACTION_VIEW[a].label)
@@ -82,13 +85,17 @@ export function CoordinatorCardActions({
         </Button>
       )}
 
-      <button
-        type="button"
-        onClick={() => onOpen({ type: "cancel-proposal", orderId: order.id, orderCode: order.code, totalVnd: order.total_vnd, paidVnd: order.paid_vnd, deliveryStatus: order.delivery_status })}
-        className="col-span-2 text-caption text-text-muted hover:text-danger hover:underline text-center pt-1 transition-colors"
-      >
-        Đề xuất Hủy / Hoàn tiền đơn này
-      </button>
+      {cancelCheck.allowed ? (
+        <button
+          type="button"
+          onClick={() => onOpen({ type: "cancel-proposal", orderId: order.id, orderCode: order.code, totalVnd: order.total_vnd, paidVnd: order.paid_vnd, status: order.status, productionStatus: order.production_status, deliveryStatus: order.delivery_status })}
+          className="col-span-2 text-caption text-text-muted hover:text-danger hover:underline text-center pt-1 transition-colors"
+        >
+          Đề xuất Hủy / Hoàn tiền đơn này
+        </button>
+      ) : (
+        <p className="col-span-2 text-caption text-text-muted text-center pt-1">{cancelCheck.reason}</p>
+      )}
     </div>
   )
 }

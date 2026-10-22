@@ -118,11 +118,6 @@ export class AssetRepository {
    * chức, không qua `delete` theo khoá chính, cùng lý do như
    * `BranchRepository.update` (`YC-T4`).
    */
-  async delete(ctx: TenantContext, id: string): Promise<boolean> {
-    const result = await this.db.assets.deleteMany({ where: scopedWhere(ctx, { id }) })
-    return result.count > 0
-  }
-
   /**
    * Master Image do MỘT job M04a sinh ra. `assets` không có cột `job_id`
    * (đặc tả 07 mục 5 không khai), nên worker ghi `job_id` vào `metadata` và

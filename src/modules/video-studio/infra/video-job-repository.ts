@@ -95,7 +95,7 @@ export class VideoJobRepository {
     id: string
   ): Promise<VideoJobWithScenes | null> {
     return this.db.video_jobs.findFirst({
-      where: scopedWhere(ctx, { id }),
+      where: scopedWhere(ctx, { id, deleted_at: null }),
       include: {
         scenes: {
           orderBy: { scene_index: "asc" },
@@ -120,6 +120,7 @@ export class VideoJobRepository {
 
     return this.db.video_jobs.findMany({
       where: scopedWhere(ctx, {
+        deleted_at: null,
         ...(options.productId ? { product_id: options.productId } : {}),
         ...(options.format ? { format: options.format } : {}),
         ...(options.stage ? { stage: options.stage } : {}),

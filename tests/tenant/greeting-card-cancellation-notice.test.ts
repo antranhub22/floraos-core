@@ -52,7 +52,7 @@ describe("greeting-card: thông báo huỷ cho khách + nhắc Sale", () => {
 
   it("đã thu tiền: khách thấy hạn 2 tiếng + số hoàn; Sale phụ trách nhận tin nhắc; tổ chức khác không thấy", async () => {
     const order = await placeOrder()
-    await prisma.orders.update({ where: { id: order.orderId }, data: { status: "CONFIRMED", paid_vnd: 250_000, balance_vnd: 250_000 } })
+    await prisma.orders.update({ where: { id: order.orderId }, data: { paid_vnd: 250_000, balance_vnd: 250_000 } })
     const { proposalId } = await coordinatorRejectBrochureOrder(a.ctx, order.orderId, { reason: "Hết hoa hồng" })
     await cancellations.decide(a.ctx, { requestId: proposalId, approve: true, note: "" })
 

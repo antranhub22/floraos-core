@@ -18,7 +18,34 @@ export interface CancellationProposal {
   reason: string
   refundAmountVnd: number
   note?: string | undefined
+  /** Nguồn đề xuất — chỉ đề xuất "Điều phối từ chối nhận đơn" mới được hệ thống tự duyệt khi quá hạn. */
+  origin?: typeof COORDINATOR_REJECT_ORIGIN | undefined
 }
+
+export const COORDINATOR_REJECT_ORIGIN = "COORDINATOR_REJECT"
+/** Tiền tố lý do của đề xuất từ chối nhận đơn — bản ghi cũ (trước khi có `origin`) nhận diện theo đây. */
+export const COORDINATOR_REJECT_REASON_PREFIX = "[Điều phối từ chối nhận đơn]"
+
+/** Đề xuất do Điều phối từ chối nhận đơn (không phải đề xuất huỷ / hoàn tiền thường)? */
+export function isCoordinatorRejectProposal(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false
+  const p = payload as { origin?: unknown; reason?: unknown }
+  if (p.origin === COORDINATOR_REJECT_ORIGIN) return true
+  return typeof p.reason === "string" && p.reason.startsWith(COORDINATOR_REJECT_REASON_PREFIX)
+}
+
+/**
+ * Đơn còn có thể bị hệ thống tự huỷ khi đề xuất quá hạn: chưa huỷ, chưa giao xong, không đang giao
+ * (đơn đang giao bắt buộc có người duyệt). Bộ quét bỏ qua đơn không thoả để không thử lại vô ích mỗi phút.
+ */
+export function canAutoApproveForOrder(order: { status: string; deliveryStatus: string | null | undefined }): boolean {
+  if (order.status === "CANCELLED" || order.status === "COMPLETED") return false
+  if (order.deliveryStatus === "DELIVERED") return false
+  return !isInTransit(order.deliveryStatus)
+}
+
+/** Lý do 409 khi đơn đã có một đề xuất huỷ / hoàn tiền đang chờ duyệt. */
+export const PENDING_PROPOSAL_EXISTS = "Đơn này đã có đề xuất huỷ đang chờ Điều hành duyệt"
 
 export interface CancellationPayload extends CancellationProposal {
   status: CancellationStatus

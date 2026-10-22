@@ -15,7 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { TrashItem } from "@/modules/storage/domain/trash-types"
+import { TRASH_TYPE_LABELS, type TrashItem, type TrashItemType } from "@/modules/storage/domain/trash-types"
 import { readApiError } from "@/components/greeting-card/api-error"
 
 interface StorageTrashTabProps {
@@ -26,6 +26,7 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
   const [items, setItems] = useState<TrashItem[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [typeFilter, setTypeFilter] = useState<TrashItemType | "ALL">("ALL")
   const [restoringId, setRestoringId] = useState<string | null>(null)
   const [purgingId, setPurgingId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
@@ -103,7 +104,9 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
     }
   }
 
+  const presentTypes = Array.from(new Set(items.map((item) => item.type)))
   const filteredItems = items.filter((item) => {
+    if (typeFilter !== "ALL" && item.type !== typeFilter) return false
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase().trim()
     return (
@@ -172,6 +175,24 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
         />
       </div>
 
+      {/* Type filter */}
+      {presentTypes.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc theo loại">
+          {(["ALL", ...presentTypes] as const).map((type) => (
+            <Button
+              key={type}
+              type="button"
+              size="sm"
+              variant={typeFilter === type ? "primary" : "outline"}
+              onClick={() => setTypeFilter(type)}
+              className="h-7 px-2.5 text-caption font-bold"
+            >
+              {type === "ALL" ? "Tất cả" : TRASH_TYPE_LABELS[type]}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {/* Items Grid */}
       {loading ? (
         <div className="py-12 flex items-center justify-center gap-2 text-text-muted">
@@ -183,7 +204,7 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
           <Trash2 size={36} className="text-text-muted/40 mb-2" />
           <p className="text-body-sm font-bold text-foreground">Thùng rác hiện đang trống</p>
           <p className="text-caption text-text-muted mt-1">
-            Không có ảnh hoặc sản phẩm nào bị xóa trong vòng 30 ngày qua.
+            Không có mục nào bị xóa trong vòng 30 ngày qua.
           </p>
         </div>
       ) : (
@@ -211,24 +232,29 @@ export function StorageTrashTab({ onItemRestored }: StorageTrashTabProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="px-2 py-0.5 rounded-md bg-surface-alt text-caption text-text-muted font-bold">
-                        {item.type === "PRODUCT"
-                          ? "Mẫu hoa"
-                          : item.type === "RAW_ASSET"
-                          ? "Ảnh gốc"
-                          : "Ảnh duyệt"}
+                        {TRASH_TYPE_LABELS[item.type]}
                       </span>
 
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-caption font-extrabold ${
-                          isDangerCountdown
-                            ? "bg-danger-bg text-danger border border-danger/30"
-                            : "bg-warning-bg text-warning border border-warning/30"
-                        }`}
-                      >
-                        {item.daysRemaining > 0
-                          ? `Còn ${item.daysRemaining} ngày`
-                          : "Sắp xóa tự động"}
-                      </span>
+                      {item.retained ? (
+                        <span
+                          className="px-2 py-0.5 rounded-md text-caption font-extrabold bg-info-bg text-info border border-info-border"
+                          title="Mục này đã có giao dịch nên được giữ lại để đối soát, không tự xóa"
+                        >
+                          Giữ lại để đối soát
+                        </span>
+                      ) : (
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-caption font-extrabold ${
+                            isDangerCountdown
+                              ? "bg-danger-bg text-danger border border-danger/30"
+                              : "bg-warning-bg text-warning border border-warning/30"
+                          }`}
+                        >
+                          {item.daysRemaining > 0
+                            ? `Còn ${item.daysRemaining} ngày`
+                            : "Sắp xóa tự động"}
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-body-sm font-bold text-foreground truncate mt-1.5" title={item.name}>
