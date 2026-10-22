@@ -50,6 +50,35 @@ describe("rejectReportedPayment — Điều hành: chưa nhận được tiền"
     await expect(rejectReportedPayment(ctx, "o-1", {}, orders, repo)).rejects.toMatchObject({ status: 409 })
   })
 
+  it("Lần 1: ghi mốc từ chối vào pricing_rule_ref để khách có một hạn thanh toán mới", async () => {
+    const { orders, repo } = setup({ ...reported, pricing_rule_ref: { quotedAt: "x" } })
+    const at = new Date("2026-10-17T10:00:00Z")
+    await rejectReportedPayment(ctx, "o-1", {}, orders, repo, at)
+    expect(orders.applyProgress).toHaveBeenCalledWith(ctx, expect.anything(), expect.objectContaining({
+      pricingRuleRef: { quotedAt: "x", paymentRejectedAt: at.toISOString() },
+    }))
+  })
+
+  it("Lần 2 (đơn đã cọc, khách báo chuyển phần còn lại): bỏ bill lần 2, phiên về ORDER_SUBMITTED, nhắc khách", async () => {
+    const balance = {
+      id: "o-2", code: "DH2", status: "CONFIRMED", paid_vnd: 300_000, total_vnd: 1_000_000, pricing_rule_ref: null,
+      greeting_sessions: [{ id: "s-2", status: "PAYMENT_REPORTED", payment_proof_asset_id: "a-1", payment_proof_balance_asset_id: "a-2" }],
+    }
+    const { orders, repo } = setup(balance)
+    const res = await rejectReportedPayment(ctx, "o-2", { reason: "Chưa thấy tiền lần 2" }, orders, repo)
+    expect(repo.updateSession).toHaveBeenCalledWith("s-2", { status: "ORDER_SUBMITTED", paymentProofBalanceAssetId: null })
+    const progress = vi.mocked(orders.applyProgress).mock.calls[0]?.[2]
+    expect(progress).toMatchObject({ eventType: "PAYMENT_NOT_RECEIVED", noteAppend: expect.stringContaining("lần 2") })
+    expect(progress).not.toHaveProperty("pricingRuleRef")
+    expect(queueOrderNotification).toHaveBeenCalledWith("org-1", "o-2", "PAYMENT_REMINDER")
+    expect(res.payment).toBe("BALANCE")
+  })
+
+  it("đơn đã thu đủ → 409", async () => {
+    const { orders, repo } = setup({ ...reported, paid_vnd: 500_000, total_vnd: 500_000 })
+    await expect(rejectReportedPayment(ctx, "o-1", {}, orders, repo)).rejects.toMatchObject({ status: 409 })
+  })
+
   it("đơn không thuộc tổ chức → 404", async () => {
     const { orders, repo } = setup(null)
     await expect(rejectReportedPayment(ctx, "o-x", {}, orders, repo)).rejects.toMatchObject({ status: 404 })

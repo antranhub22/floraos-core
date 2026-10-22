@@ -3,6 +3,8 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest"
 
 import { CancellationRepository } from "@/modules/greeting-card/infra/cancellation-repository"
 import { CancellationFollowUpRepository } from "@/modules/greeting-card/infra/cancellation-follow-up-repository"
+import { BrochurePaymentRepository } from "@/modules/greeting-card/infra/brochure-payment-repository"
+import { BrochureOrderRepository } from "@/modules/greeting-card/infra/brochure-order-repository"
 
 import { disconnectDatabase, prisma, resetDatabase } from "../helpers/database"
 import { createTenant, type Tenant } from "../helpers/fixtures"
@@ -108,8 +110,9 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
 
   it("đơn đã giao xong: không duyệt huỷ được (409), đề xuất vẫn chờ; huỷ được thì trả lại mã giảm giá (Đợt 2-I)", async () => {
     const delivered = await order(a, 500_000)
-    await prisma.orders.update({ where: { id: delivered }, data: { delivery_status: "DELIVERED", status: "COMPLETED" } })
+    // Đề xuất gửi lúc chưa giao; đơn giao xong trong lúc chờ duyệt
     const p1 = await repo.createProposal(a.ctx, { orderId: delivered, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } })
+    await prisma.orders.update({ where: { id: delivered }, data: { delivery_status: "DELIVERED", status: "COMPLETED" } })
     await expect(repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" })).rejects.toMatchObject({ code: "CONFLICT" })
     expect((await prisma.orders.findUniqueOrThrow({ where: { id: delivered } })).status).toBe("COMPLETED")
     expect(await repo.listPending(a.ctx)).toHaveLength(1)
@@ -123,9 +126,10 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
 
   it("hai khoản hoàn cùng lúc trên một đơn: không ghi đè số đã thu, tổng hoàn không vượt số đã thu", async () => {
     const orderId = await order(a, 300_000)
+    // Mỗi đơn chỉ một đề xuất đang chờ: đề xuất thứ hai gửi sau khi đề xuất đầu đã duyệt
     const p1 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Hoa dập", refundAmountVnd: 200_000 } })
-    const p2 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Giao trễ", refundAmountVnd: 200_000 } })
     await repo.decide(a.ctx, { requestId: p1.id, approve: true, note: "" })
+    const p2 = await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "PARTIAL_REFUND", reason: "Giao trễ", refundAmountVnd: 200_000 } })
     await repo.decide(a.ctx, { requestId: p2.id, approve: true, note: "" })
     const followUps = new CancellationFollowUpRepository()
     const results = await Promise.allSettled([followUps.complete(a.ctx, p1.id, ""), followUps.complete(a.ctx, p2.id, "")])
@@ -134,5 +138,37 @@ describe("đề xuất hủy / hoàn tiền Thẻ chào", () => {
     expect(Number(after.paid_vnd)).toBe(100_000)
     const refunds = await prisma.order_payments.findMany({ where: { order_id: orderId, kind: "REFUND" } })
     expect(refunds.reduce((sum, r) => sum + Number(r.amount_vnd), 0)).toBe(200_000)
+  })
+
+  it("vòng đời đề xuất kiểm trên đơn thật (PO 17/10/2026): đã huỷ / đã giao / thợ đang cắm → 409; đề xuất thứ hai khi còn đề xuất chờ → 409", async () => {
+    const cases: Array<Record<string, string>> = [
+      { status: "CANCELLED" },
+      { status: "COMPLETED", delivery_status: "DELIVERED" },
+      { production_status: "ARRANGING" },
+    ]
+    for (const data of cases) {
+      const orderId = await order(a, 0)
+      await prisma.orders.update({ where: { id: orderId }, data })
+      await expect(repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } }))
+        .rejects.toMatchObject({ code: "CONFLICT" })
+    }
+    const orderId = await order(a, 0)
+    await repo.createProposal(a.ctx, { orderId, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } })
+    await expect(repo.createProposal(a.ctx, { orderId, senderRole: "COORDINATOR", proposal: { type: "CANCEL_ONLY", reason: "Hết hoa", refundAmountVnd: 0 } }))
+      .rejects.toMatchObject({ code: "CONFLICT" })
+    // Đề xuất chờ của tổ chức khác không chặn (và đơn của A vẫn 404 với B)
+    await expect(repo.createProposal(b.ctx, { orderId, senderRole: "SALE", proposal: { type: "CANCEL_ONLY", reason: "Khách đổi ý", refundAmountVnd: 0 } }))
+      .rejects.toMatchObject({ code: "NOT_FOUND" })
+  })
+
+  it("hoàn tiền đơn đã giao xong không tạo nợ phải thu (PO 17/10/2026)", async () => {
+    const orderId = await order(a, 500_000)
+    await prisma.orders.update({ where: { id: orderId }, data: { delivery_status: "DELIVERED", status: "COMPLETED" } })
+    await new BrochurePaymentRepository().refund(a.ctx, orderId, { amountVnd: 100_000, reason: "Đền bù hoa dập" })
+    const after = await prisma.orders.findUniqueOrThrow({ where: { id: orderId } })
+    expect(Number(after.paid_vnd)).toBe(400_000)
+    expect(Number(after.balance_vnd)).toBe(0)
+    expect(await new BrochureOrderRepository().listDeliveredWithDebt(a.ctx, null)).toEqual([])
+    await expect(new BrochurePaymentRepository().refund(b.ctx, orderId, { amountVnd: 1, reason: "x" })).rejects.toMatchObject({ code: "NOT_FOUND" })
   })
 })

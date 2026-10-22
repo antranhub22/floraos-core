@@ -6,6 +6,7 @@ import { recordAuditLog } from "@/modules/audit/use-cases/record-audit-log"
 import { cancelBlocker, quoteBlocker } from "../domain/brochure-payment-policy"
 import { quotedTotalAfterPromotion } from "../domain/promotion-pricing"
 import { IN_TRANSIT_CANCEL_WARNING, isInTransit } from "../domain/cancellation-request"
+import { moneyAfterRefund } from "../domain/refund-ledger"
 
 export interface IncomingPayment {
   amountVnd: number
@@ -148,13 +149,14 @@ export class BrochurePaymentRepository {
     const paidBefore = Number(order.paid_vnd)
     if (!Number.isInteger(input.amountVnd) || input.amountVnd <= 0) throw unprocessable("Số tiền hoàn không hợp lệ")
     if (input.amountVnd > paidBefore) throw unprocessable("Không thể hoàn quá số tiền đã thu")
-    const paidAfter = paidBefore - input.amountVnd
-    const total = Number(order.total_vnd)
+    // Hoàn không tạo nợ phải thu: giữ nguyên số còn phải thu (`domain/refund-ledger.ts`)
+    const after = moneyAfterRefund({ paidVnd: paidBefore, balanceVnd: Number(order.balance_vnd) }, input.amountVnd)
+    const paidAfter = after.paidVnd
 
     return this.db.$transaction(async (tx) => {
       const moved = await tx.orders.updateMany({
         where: { id: order.id, organization_id: ctx.organizationId, paid_vnd: order.paid_vnd, total_vnd: order.total_vnd },
-        data: { paid_vnd: paidAfter, balance_vnd: total - paidAfter },
+        data: { paid_vnd: paidAfter, balance_vnd: after.balanceVnd },
       })
       if (moved.count === 0) throw conflict("Đơn hàng vừa được cập nhật thanh toán, vui lòng tải lại")
       const payment = await tx.order_payments.create({

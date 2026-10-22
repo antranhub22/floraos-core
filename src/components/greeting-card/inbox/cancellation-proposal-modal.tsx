@@ -17,6 +17,9 @@ interface Props {
   orderCode: string
   totalVnd: number
   paidVnd: number
+  /** Trạng thái THẬT của đơn — kiểm cùng luật vòng đời với máy chủ (đã huỷ / đã giao / thợ đang cắm) */
+  status: string
+  productionStatus?: string | null | undefined
   /** Đơn đang giao → hiện cảnh báo shipper đang trên đường */
   deliveryStatus?: string | null | undefined
   onClose: () => void
@@ -28,6 +31,8 @@ export function CancellationProposalModal({
   orderCode,
   totalVnd,
   paidVnd,
+  status,
+  productionStatus,
   deliveryStatus,
   onClose,
   onSuccess,
@@ -57,7 +62,7 @@ export function CancellationProposalModal({
         refundAmountVnd: refundNum,
         note: note.trim(),
       },
-      { status: "CONFIRMED", totalVnd, paidVnd }
+      { status, productionStatus, deliveryStatus, totalVnd, paidVnd }
     )
 
     if (validationError) {

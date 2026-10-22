@@ -131,9 +131,23 @@ describe("Điều phối tiếp nhận và từ chối đơn hàng", () => {
         proposal: expect.objectContaining({
           type: "FULL_REFUND",
           reason: expect.stringContaining("Hết hoa tươi cùng tông màu"),
+          origin: "COORDINATOR_REJECT",
         }),
       })
     )
+  })
+
+  it("đơn đã nhận / đang cắm / đang giao → không từ chối nhận đơn được (409), không tạo đề xuất", async () => {
+    for (const state of [
+      { status: "CONFIRMED", production_status: "WAITING", delivery_status: "PENDING" },
+      { status: "PROCESSING", production_status: "ARRANGING", delivery_status: "PENDING" },
+      { status: "PROCESSING", production_status: "READY", delivery_status: "DELIVERING" },
+    ]) {
+      const repo = { findBrochureOrder: vi.fn().mockResolvedValue({ id: "o", code: "DH", total_vnd: 500_000, paid_vnd: 500_000, ...state }) } as unknown as BrochureOrderRepository
+      const cancellations = { createProposal: vi.fn() } as unknown as CancellationRepository
+      await expect(coordinatorRejectBrochureOrder(ctx, "o", { reason: "Hết hoa" }, cancellations, repo)).rejects.toMatchObject({ status: 409 })
+      expect(cancellations.createProposal).not.toHaveBeenCalled()
+    }
   })
 
   it("Xác nhận thanh toán gắn đúng tag MANUAL_ADMIN và AUTO_SYSTEM_15M", async () => {

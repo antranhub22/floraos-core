@@ -229,6 +229,8 @@ export function OrderDetailFooter({
           orderCode={target.orderCode ?? "---"}
           totalVnd={target.totalVnd ?? 0}
           paidVnd={target.paidVnd ?? 0}
+          status={target.status ?? "DRAFT"}
+          productionStatus={target.productionStatus}
           deliveryStatus={target.deliveryStatus}
           onClose={() => setShowCancelModal(false)}
           onSuccess={() => {

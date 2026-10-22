@@ -57,6 +57,8 @@ export function CoordinatorActionModal({ modal, onClose, onDone, allowSkipPhoto 
         orderCode={modal.orderCode}
         totalVnd={modal.totalVnd}
         paidVnd={modal.paidVnd}
+        status={modal.status}
+        productionStatus={modal.productionStatus}
         deliveryStatus={modal.deliveryStatus}
         onClose={onClose}
         onSuccess={onDone}

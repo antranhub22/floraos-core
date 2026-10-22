@@ -14,6 +14,7 @@ import { AlertTriangle, Info } from "lucide-react"
 import { useNow } from "@/components/greeting-card/work/use-worklist"
 import { OrderPaymentProofView } from "@/components/greeting-card/order-payment-proof-view"
 import { balanceCollectionBlocker } from "@/modules/greeting-card/domain/balance-collection"
+import { rejectablePayment } from "@/modules/greeting-card/domain/payment-rejection"
 
 const FIELD = "w-full h-10 px-3 rounded-lg border border-border bg-background text-body text-foreground"
 
@@ -78,8 +79,13 @@ export function AdminOrderActionDialog({
   const inTransit = isInTransit(order.delivery_status)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Điều hành cảnh báo khoản Lần 1 khách đã báo nhưng tiền chưa về (PO 15/10/2026)
-  const canRejectReported = type === "collect" && order.paid_vnd === 0 && (isReported || Boolean(order.paymentProofUrl))
+  // Điều hành cảnh báo khoản khách đã báo nhưng tiền chưa về — Lần 1 (PO 15/10/2026) và Lần 2 (PO 17/10/2026)
+  const rejectable = rejectablePayment({
+    status: order.status, totalVnd: order.total_vnd, paidVnd: order.paid_vnd,
+    sessionStatus: isReported ? "PAYMENT_REPORTED" : null,
+    hasFirstProof: Boolean(order.paymentProofUrl), hasBalanceProof: Boolean(order.paymentProofBalanceUrl),
+  })
+  const canRejectReported = type === "collect" && "kind" in rejectable
   const [rejecting, setRejecting] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
 
@@ -252,7 +258,7 @@ export function AdminOrderActionDialog({
         )}
         {canRejectReported && rejecting && (
           <div role="alert" className="p-3.5 rounded-xl bg-danger-bg border border-danger/30 flex flex-col gap-2">
-            <span className="font-bold text-caption text-danger">Chưa nhận được tiền khách báo chuyển?</span>
+            <span className="font-bold text-caption text-danger">Chưa nhận được {"kind" in rejectable && rejectable.kind === "BALANCE" ? "phần còn lại" : "tiền"} khách báo chuyển?</span>
             <p className="text-body-sm text-foreground/80">Trang của khách sẽ quay lại chờ chuyển khoản và hiện lại mã QR. Sự việc được ghi vào lịch sử đơn.</p>
             <input value={rejectReason} maxLength={500} onChange={(e) => setRejectReason(e.target.value)} placeholder="Lý do (vd: bill sai tài khoản, chuyển thiếu)" aria-label="Lý do chưa nhận được tiền" className={FIELD} />
             <div className="flex justify-end gap-2">

@@ -15,7 +15,7 @@ export const CANCELLATION_SITUATIONS = [
         { do: "Không đồng ý thì từ chối và ghi lý do để người đề xuất biết.", where: { tab: "operation", button: "Từ chối" } },
       ],
     },
-    deadline: "Đề xuất của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất của Sale: không có hạn.",
+    deadline: "Đề xuất \"từ chối nhận đơn\" của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất huỷ / hoàn tiền khác (của Sale hay Điều phối): không có hạn, luôn cần người duyệt.",
     automation: "Đơn đang giao không tự duyệt — cần Điều hành hoặc một Điều phối khác duyệt. Người đề xuất nhận tin kết quả.",
     next: ["CANCELLATION_REFUND_DUE", "CANCELLATION_AUTO_APPROVED", "SALE_CANCELLATION_REMINDER"],
     notes: [
@@ -36,7 +36,8 @@ export const CANCELLATION_SITUATIONS = [
     },
     next: ["CANCELLATION_PROPOSAL_PENDING", "LEDGER_DIRECT_CANCEL"],
     notes: [
-      "Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm.",
+      "Không đề xuất được khi đơn đã huỷ, đã giao xong, hoặc thợ đang cắm — máy chủ cũng chặn, và thẻ đơn ở tab Điều phối ghi lý do thay cho đường dẫn.",
+      "Mỗi đơn chỉ một đề xuất đang chờ duyệt; đơn đã giao xong cần hoàn một phần thì Điều hành ghi hoàn trên sổ thu.",
       "Hoàn tiền chỉ chọn được khi đơn đã thu tiền; hoàn một phần phải nhỏ hơn số đã thu.",
     ],
   },
@@ -51,18 +52,19 @@ export const CANCELLATION_SITUATIONS = [
     },
     deadline: "Quyết trong thời gian chuẩn bước \"Xác nhận tiền về\" (mặc định 30 phút).",
     next: ["CANCELLATION_PROPOSAL_PENDING"],
+    notes: ["Chỉ từ chối được khi đơn còn chờ nhận; đơn đã nhận, đang cắm hay đang giao thì dùng \"Đề xuất Hủy / Hoàn tiền\" (không tự duyệt khi quá hạn)."],
   },
   {
     id: "CANCELLATION_AUTO_APPROVED",
     group: "CANCELLATION",
     title: "Đơn tự huỷ vì Điều hành không duyệt kịp",
-    recognize: "Đề xuất huỷ của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.",
+    recognize: "Đề xuất \"từ chối nhận đơn\" của Điều phối quá thời gian duyệt — hệ thống đã tự huỷ đơn và báo Điều hành.",
     owners: ["ADMIN"],
     informed: ["SALE"],
     steps: {
       ADMIN: [{ do: "Xử lý việc \"Cần hoàn tiền\" / \"Đơn tự huỷ — cần liên hệ khách\" trong Hộp việc.", where: { tab: "inbox" } }],
     },
-    automation: "Hệ thống kiểm mỗi phút; đơn đang giao hoặc đã giao không tự huỷ.",
+    automation: "Hệ thống kiểm mỗi phút, chỉ với đề xuất từ chối nhận đơn; đơn đã huỷ, đang giao hoặc đã giao bị bỏ qua (không tự huỷ).",
     next: ["CANCELLATION_REFUND_DUE", "SALE_CANCELLATION_REMINDER"],
   },
   {
@@ -139,7 +141,7 @@ export const CANCELLATION_SITUATIONS = [
       ADMIN: [{ do: "Chuyển khoản cho khách trước, rồi ghi số tiền và lý do hoàn trên dòng đơn.", where: { tab: "operation", button: "Hoàn tiền" } }],
     },
     next: [],
-    notes: ["Số hoàn không vượt số đã thu. Trạng thái đơn không đổi."],
+    notes: ["Số hoàn không vượt số đã thu. Trạng thái đơn và số còn phải thu không đổi — hoàn tiền không tạo nợ \"Đã giao còn nợ\"."],
   },
   {
     id: "DISMISSAL_PENDING",

@@ -78,4 +78,26 @@ describe("processPaymentProofVisionJob", () => {
     expect(proofs.transactionCodeUsedElsewhere).toHaveBeenCalledWith("org-1", "FT999", "a2")
     expect(res?.status).toBe("SUSPICIOUS")
   })
+
+  it("số tiền mong đợi Lần 1 = cọc làm tròn lên nghìn theo bản chụp kế hoạch trên đơn", async () => {
+    callCapability.mockResolvedValueOnce({
+      kind: "xong",
+      output: { amountVnd: 138_000, isSuccessStatus: true, receiverAccountNumber: "0123456789", transactionCode: "FT1" },
+    })
+    const repo = {
+      findSessionForVerification: vi.fn().mockResolvedValue({
+        sale_id: null,
+        order: { total_vnd: 456_789, balance_vnd: 456_789, pricing_rule_ref: { paymentPlan: { policy: "DEPOSIT_30" } } },
+        organization: { settings: { ...AI_ON, brochure_payment: { bankId: "VCB", accountNo: "0123456789", accountName: "TIEM HOA" } } },
+      }),
+      findAssetForVerification: vi.fn().mockResolvedValue({ storage_key: "k", mime_type: "image/jpeg", metadata: {} }),
+      updateAssetMetadata: vi.fn().mockResolvedValue({ count: 1 }),
+    } as unknown as GreetingCardRepository
+    const proofs = { transactionCodeUsedElsewhere: vi.fn().mockResolvedValue(false) } as unknown as PaymentProofRepository
+
+    const res = await processPaymentProofVisionJob({ assetId: "a9", organizationId: "org-1", sendCode: "T01-001", purpose: "DEPOSIT" }, repo, proofs)
+
+    expect(res?.expectedAmountVnd).toBe(138_000)
+    expect(res?.amountDifferenceVnd).toBe(0)
+  })
 })
