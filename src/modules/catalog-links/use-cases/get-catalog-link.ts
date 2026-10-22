@@ -7,7 +7,7 @@ export async function getCatalogLinkBySlug(slug: string): Promise<CatalogLinkRes
 
   const link = await repo.findBySlug(slug)
   if (!link) return null
-  if (link.is_revoked) return null
+  if (link.is_revoked || link.deleted_at) return null
 
   return {
     id: link.id,

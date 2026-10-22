@@ -114,6 +114,29 @@ export class S3StorageProvider implements StorageProvider {
     return new Uint8Array(await res.arrayBuffer())
   }
 
+  /** S3/R2 trả 204 cả khi khoá không tồn tại; 404 cũng coi là đã xoá. */
+  async remove(key: string): Promise<void> {
+    const canonicalUri = this.duongDan(key)
+    const headers = tieuDeUyQuyen({
+      info: this.info,
+      method: "DELETE",
+      host: this.host,
+      canonicalUri,
+      headers: {},
+      payloadHash: sha256Hex(""),
+      now: new Date(),
+    })
+
+    const res = await fetch(`${this.protocol}://${this.host}${canonicalUri}`, {
+      method: "DELETE",
+      headers,
+    })
+
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`Kho tệp từ chối xoá ${key}: ${res.status}`)
+    }
+  }
+
   async signedUrl(
     key: string,
     expiresInSeconds: number,

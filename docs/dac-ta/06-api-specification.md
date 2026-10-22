@@ -121,7 +121,7 @@ Endpoint duyệt luôn tách khỏi endpoint sinh kết quả: `POST /x/:id/appr
 | POST | `/assets` | `G2` | Ghi nhận asset sau khi tải xong |
 | GET | `/assets/:id` | `G1` | |
 | GET | `/assets/:id/view-url` | `G1` | Trả URL có chữ ký xem an toàn |
-| DELETE | `/assets/:id` | `G3` | |
+| DELETE | `/assets/:id` | `G3` | Bỏ ảnh vào Thùng rác 30 ngày (mục 25.4), không xoá cứng |
 
 `POST /assets/upload-url` **tự sinh `storage_key`** theo `org/<organization_id>/<product_id>/<asset_id>.<ext>`. Client không đề xuất đường dẫn; nhận đường dẫn từ client là mở đường ghi đè chéo tổ chức.
 
@@ -478,7 +478,7 @@ Liên kết thu hồi được nhưng không xoá được: một mã QR đã d�
 | POST | `/crm/customers` | `Q2` | |
 | GET | `/crm/customers/:id` | `Q1` · `Q3` · `Q4` | |
 | PATCH | `/crm/customers/:id` | `Q3` · `Q4` | |
-| DELETE | `/crm/customers/:id` | `Q4` | Thay cho `POST /customers/:id/archive` của bản cũ |
+| DELETE | `/crm/customers/:id` | `Q4` | Thay cho `POST /customers/:id/archive` của bản cũ. Bỏ vào Thùng rác 30 ngày (mục 25.4), không xoá cứng |
 | GET | `/crm/customers/:id/master-index` | `Q1` | Customer Master Index — SSOT một khách |
 | POST | `/crm/customers/:id/occasions` | `Q5` | |
 | POST | `/crm/customers/:id/consent` | `Q6` | Cơ sở đồng ý, có mốc thời gian |
@@ -876,7 +876,24 @@ Bảng hiện trạng 05/10/2026 của Thẻ chào (phía tiệm và phía khác
 
 | Method | Path | Năng lực | Ghi chú |
 |---|---|---|---|
-| GET · POST | `/storage/trash` | `G3` \| `L4` \| `A3` \| `B6` *(kiểm ở use-case)* | Liệt kê / chuyển vào thùng rác `{ id, type: RAW_ASSET \| APPROVED_ANALYSIS \| PRODUCT }`. Chỉ vai Điều hành (một trong bốn mã) |
-| POST | `/storage/trash/:id/restore` | như trên | Khôi phục `{ type }` |
-| DELETE | `/storage/trash/:id` | như trên | Xoá vĩnh viễn, `?type=` bắt buộc |
+| GET · POST | `/storage/trash` | `G3` \| `L4` \| `A3` \| `B6` *(kiểm ở use-case)* | Liệt kê / chuyển vào thùng rác `{ id, type }`, `type` ∈ `RAW_ASSET · APPROVED_ANALYSIS · PRODUCT · CUSTOMER · GREETING_CATALOG · CATALOG_LINK · CONTENT_DRAFT · CAMPAIGN_PACKAGE · VIDEO · VOUCHER` (`TRASH_ITEM_TYPES`, `src/modules/storage/domain/trash-types.ts`). Chỉ vai Điều hành (một trong bốn mã). Mục trả về có `retained: true` khi quá hạn nhưng được giữ để đối soát |
+| POST | `/storage/trash/:id/restore` | như trên | Khôi phục `{ type }` về đúng trạng thái trước khi xoá (vd. sản phẩm nháp vẫn là nháp) |
+| DELETE | `/storage/trash/:id` | như trên | Xoá vĩnh viễn, `?type=` bắt buộc. 409 `CONFLICT` khi mục đã có giao dịch (catalog thẻ chào có phiên khách, mã giảm giá đã dùng) |
+
+Quy tắc (PO duyệt 17/10/2026):
+- "Đang ở thùng rác" = cột `deleted_at` (+ `deleted_by`) trên bảng gốc: `products`, `assets`, `customers`, `greeting_catalogs`, `catalog_links`, `content_drafts`, `campaign_packages`, `video_jobs`, `vouchers`. Bảng con ẩn theo cha. Mọi màn danh sách/chi tiết lọc `deleted_at: null`; bản ghi cũ chỉ mang `trashed_at` trong JSON vẫn được nhận.
+- `DELETE /crm/customers/:id`, `DELETE /assets/:id` và xoá catalog thẻ chào đều **bỏ vào thùng rác**, không xoá cứng. Mỗi lần bỏ/khôi phục/xoá hẳn ghi `audit_logs` (`trash.move` · `trash.restore` · `trash.purge` · `trash.auto_purge`).
+- Bộ dọn nền chạy mỗi giờ trong tiến trình web (`src/instrumentation.ts` → `trash-purge-scheduler.ts`, tắt bằng `TRASH_PURGE=off`): xoá hẳn mục quá 30 ngày kể cả tệp ảnh trong kho (khi không còn bản ghi nào dùng chung khoá), tối đa 200 mục/loại/vòng.
+- Đơn hàng không có thùng rác — chỉ huỷ, không xoá.
+
+### 25.5 Tải dữ liệu cửa hàng (bản sao lưu ZIP)
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/storage/export` | `R13` | Lượt xuất gần nhất của tổ chức (`null` khi chưa có): `status` ∈ `PENDING · PROCESSING · COMPLETED · FAILED · EXPIRED`, `downloadUrl` (URL ký, chỉ khi `COMPLETED` và còn hạn 24 giờ), `sizeBytes`, `counts`, `imageCount`, `skippedImageCount` |
+| POST | `/storage/export` | `R13` | 202 — xếp một lượt xuất vào hàng đợi; đang có lượt chờ/chạy thì trả lại lượt đó. Ghi `audit_logs` `store.export.request` |
+
+- Job `generation_jobs.feature = "store.export"` (không trừ credit), nhận bằng `claimNext` trong tiến trình web (`src/instrumentation.ts` → `store-export-scheduler.ts`, 20 giây/vòng, tắt bằng `STORE_EXPORT_WORKER=off`).
+- ZIP (`org/<org>/exports/<job>.zip`): `doc-truoc.txt`, `du-lieu-cua-hang.xlsx` (Sản phẩm · Khách hàng · Đơn hàng · Mã giảm giá, bỏ mục trong Thùng rác), `data.json` (21 bảng của tổ chức, kể cả mục trong Thùng rác), `anh-goc/` (ảnh `ORIGINAL` đang dùng, trần 100 MB/lượt; phần vượt ghi ở `anh-bo-qua.txt`). KHÔNG chứa `integration_tokens`, `greeting_integrations`, `chat_channel_integrations`, `audit_logs`.
+- Tệp ZIP bị xoá khỏi kho sau 24 giờ (`output.file_removed = true`).
 

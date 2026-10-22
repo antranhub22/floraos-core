@@ -69,7 +69,7 @@ export class CustomerRepository {
         occasions: true,
         consents: true,
         // MI-2 (ĐP-1.6, 26/09/2026): "khả dụng" = chưa dùng VÀ chưa hết hạn — trước bản này chỉ lọc is_used, voucher hết hạn vẫn hiện ra được.
-        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
+        vouchers: { where: { is_used: false, deleted_at: null, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -78,11 +78,11 @@ export class CustomerRepository {
 
   async getById(ctx: TenantContext, id: string): Promise<CustomerMasterIndex | null> {
     const row = await prisma.customers.findFirst({
-      where: { id, organization_id: ctx.organizationId },
+      where: { id, organization_id: ctx.organizationId, deleted_at: null },
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
+        vouchers: { where: { is_used: false, deleted_at: null, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -90,13 +90,22 @@ export class CustomerRepository {
     return this.mapToMasterIndex(row)
   }
 
+  /** SĐT là khoá duy nhất cả với khách trong Thùng rác — tạo trùng phải báo để khôi phục. */
+  async isPhoneInTrash(ctx: TenantContext, phone: string): Promise<boolean> {
+    const row = await prisma.customers.findFirst({
+      where: { phone, organization_id: ctx.organizationId, deleted_at: { not: null } },
+      select: { id: true },
+    })
+    return row !== null
+  }
+
   async findByPhone(ctx: TenantContext, phone: string): Promise<CustomerMasterIndex | null> {
     const row = await prisma.customers.findFirst({
-      where: { phone, organization_id: ctx.organizationId },
+      where: { phone, organization_id: ctx.organizationId, deleted_at: null },
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
+        vouchers: { where: { is_used: false, deleted_at: null, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
@@ -106,7 +115,7 @@ export class CustomerRepository {
 
   async update(ctx: TenantContext, id: string, input: UpdateCustomerInput): Promise<CustomerMasterIndex | null> {
     const existing = await prisma.customers.findFirst({
-      where: { id, organization_id: ctx.organizationId },
+      where: { id, organization_id: ctx.organizationId, deleted_at: null },
     })
     if (!existing) return null
 
@@ -125,21 +134,11 @@ export class CustomerRepository {
       include: {
         occasions: true,
         consents: true,
-        vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
+        vouchers: { where: { is_used: false, deleted_at: null, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
       },
     })
 
     return this.mapToMasterIndex(updated)
-  }
-
-  async delete(ctx: TenantContext, id: string): Promise<boolean> {
-    const existing = await prisma.customers.findFirst({
-      where: { id, organization_id: ctx.organizationId },
-    })
-    if (!existing) return false
-
-    await prisma.customers.delete({ where: { id } })
-    return true
   }
 
   async list(
@@ -149,6 +148,7 @@ export class CustomerRepository {
   ): Promise<{ items: CustomerMasterIndex[]; total: number }> {
     const where: Prisma.customersWhereInput = {
       organization_id: ctx.organizationId,
+      deleted_at: null,
       ...(filters?.tier ? { tier: filters.tier } : {}),
       ...(filters?.search
         ? {
@@ -167,7 +167,7 @@ export class CustomerRepository {
         include: {
           occasions: true,
           consents: true,
-          vouchers: { where: { is_used: false, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
+          vouchers: { where: { is_used: false, deleted_at: null, OR: [{ expires_at: null }, { expires_at: { gt: new Date() } }] } },
         },
         orderBy: { updated_at: "desc" },
         take: pagination?.limit ?? 50,

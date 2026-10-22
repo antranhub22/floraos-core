@@ -86,7 +86,7 @@ export class BrochureCheckoutRepository {
   /** Mã giảm giá theo mã (không phân biệt hoa thường) trong đúng tổ chức. */
   async findVoucher(organizationId: string, code: string): Promise<VoucherFacts | null> {
     const v = await this.db.vouchers.findFirst({
-      where: { organization_id: organizationId, code: { equals: code.trim(), mode: "insensitive" } },
+      where: { organization_id: organizationId, deleted_at: null, code: { equals: code.trim(), mode: "insensitive" } },
     })
     if (!v) return null
     return {
@@ -154,8 +154,12 @@ export class BrochureCheckoutRepository {
 
   async findOrCreateCustomer(data: Pick<CreateBrochureOrderData, "organizationId" | "customerPhone" | "customerName" | "deliveryAddress"> & { email?: string | undefined }) {
     const where = { organization_id: data.organizationId, phone: data.customerPhone }
-    const existing = await this.db.customers.findFirst({ where, select: { id: true, email: true } })
+    const existing = await this.db.customers.findFirst({ where, select: { id: true, email: true, deleted_at: true } })
     if (existing) {
+      // Khách trong Thùng rác đặt lại đơn → đưa hồ sơ trở lại danh sách, không để đơn trỏ vào mục sắp bị dọn.
+      if (existing.deleted_at) {
+        await this.db.customers.update({ where: { id: existing.id }, data: { deleted_at: null, deleted_by: null } })
+      }
       if (data.email && !existing.email) {
         await this.db.customers.update({ where: { id: existing.id }, data: { email: data.email } }).catch(() => null)
       }
@@ -245,7 +249,7 @@ export class BrochureCheckoutRepository {
 
       if (data.voucherId) {
         const used = await tx.vouchers.updateMany({
-          where: { id: data.voucherId, organization_id: data.organizationId, is_used: false },
+          where: { id: data.voucherId, organization_id: data.organizationId, is_used: false, deleted_at: null },
           data: { is_used: true, used_at: new Date(), order_id: order.id },
         })
         if (used.count === 0) throw conflict("Mã giảm giá vừa được sử dụng cho đơn khác")

@@ -9,6 +9,7 @@ import { RoleRepository } from "@/modules/organization/infra/role-repository"
 import { WorkspaceRepository } from "@/modules/organization/infra/workspace-repository"
 import { AssetRepository } from "@/modules/assets/infra/asset-repository"
 import { AuditLogRepository } from "@/modules/audit/infra/audit-log-repository"
+import { TrashRepository } from "@/modules/storage/infra/trash-repository"
 import { GenerationJobRepository } from "@/modules/jobs/infra/generation-job-repository"
 import { UsageRepository } from "@/modules/usage/infra/usage-repository"
 import { BrandProfileRepository } from "@/modules/profiles/infra/brand-profile-repository"
@@ -154,7 +155,9 @@ describe("cách ly tenant ở tầng repository", () => {
     expect(await repository.findById(a.ctx, created.id)).not.toBeNull()
     expect(await repository.findById(b.ctx, created.id)).toBeNull()
     expect(await repository.list(b.ctx, { limit: 10 })).toEqual([])
-    expect(await repository.delete(b.ctx, created.id)).toBe(false)
+    // Xoá ảnh = bỏ vào Thùng rác (không còn xoá thẳng) — B vẫn không chạm được ảnh của A.
+    expect(await new TrashRepository().moveToTrash(b.ctx, { type: "RAW_ASSET", id: created.id })).toBe(false)
+    expect(await new TrashRepository().permanentDelete(b.ctx, { type: "RAW_ASSET", id: created.id })).toBe("not_found")
 
     const stillThere = await repository.findById(a.ctx, created.id)
     expect(stillThere).not.toBeNull()

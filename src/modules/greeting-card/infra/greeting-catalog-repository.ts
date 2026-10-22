@@ -212,9 +212,12 @@ export class GreetingCatalogRepository {
   /** Ẩn/khôi phục catalog và ghi `audit_logs` trong CÙNG transaction — không có thay đổi nào thiếu dấu vết. */
   async setCatalogActiveWithAudit(ctx: TenantContext, id: string, isActive: boolean, audit: RecordAuditLogInput) {
     await this.db.$transaction(async (tx) => {
+      // Ẩn = bỏ vào Thùng rác 30 ngày (src/modules/storage); khôi phục ở đây hay ở Thùng rác đều gỡ dấu.
       const result = await tx.greeting_catalogs.updateMany({
         where: scopedWhere(ctx, { id }),
-        data: { is_active: isActive },
+        data: isActive
+          ? { is_active: true, deleted_at: null, deleted_by: null }
+          : { is_active: false, deleted_at: new Date(), deleted_by: ctx.userId },
       })
       if (result.count === 0) throw notFound()
       await new AuditLogRepository(tx).record(ctx, audit)

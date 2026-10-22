@@ -2436,3 +2436,26 @@ model decision_registry {
   updated_at DateTime @updatedAt
 }
 ```
+
+## 30. Thùng rác 30 ngày — cột `deleted_at` / `deleted_by` (17/10/2026, PO duyệt)
+
+Chín bảng gốc nhận thêm hai cột tuỳ chọn và một chỉ mục; chỉ THÊM cột, không đổi cột cũ nên `db push` không mất dữ liệu:
+
+| Bảng | Ghi chú |
+|---|---|
+| `products` | Bỏ vào thùng rác vẫn đặt `status = ARCHIVED` (màn cũ tự ẩn); trạng thái trước cất ở `attributes.trash_previous_status` để khôi phục đúng |
+| `assets` | Tương tự: `state = ARCHIVED`, trạng thái trước ở `metadata.trash_previous_status` |
+| `customers`, `greeting_catalogs`, `catalog_links`, `content_drafts`, `campaign_packages`, `video_jobs`, `vouchers` | Chỉ dùng `deleted_at`; `greeting_catalogs` đồng thời `is_active = false` |
+
+```prisma
+  /// Thùng rác 30 ngày (src/modules/storage): null = đang dùng.
+  deleted_at DateTime?
+  deleted_by String?
+
+  @@index([organization_id, deleted_at])
+```
+
+- `deleted_at IS NULL` = đang dùng. Mọi truy vấn danh sách/chi tiết của các bảng trên lọc `deleted_at: null`; bảng con ẩn theo cha.
+- Khoá duy nhất vẫn tính cả bản ghi trong thùng rác (`customers.phone`, `content_drafts` theo ảnh+chủ đề+mode…): tạo trùng SĐT khách → 409 nhắc khôi phục; viết lại bài nháp đã xoá → lấy lại bản cũ.
+- Xoá hẳn sau 30 ngày (bộ dọn nền, đặc tả 06 mục 25.4) không áp cho bản ghi có giao dịch: `greeting_catalogs` đã có `greeting_sessions`, `vouchers.is_used = true` — giữ ẩn để đối soát.
+- Bản ghi cũ (trước khi có cột) đánh dấu bằng `trashed_at` trong JSON vẫn được nhận và dọn đúng hạn.

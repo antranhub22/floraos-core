@@ -43,6 +43,8 @@ const mockAsset: assets = {
   approved_at: null,
   created_by: "user-1",
   created_at: new Date(),
+  deleted_at: null,
+  deleted_by: null,
 }
 
 const mockFindById = vi.fn()

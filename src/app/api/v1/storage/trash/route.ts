@@ -2,11 +2,12 @@ import { z } from "zod"
 import { validationFailed } from "@/core/http/errors"
 import { handle, jsonResponse } from "@/core/http/response"
 import { requireTenantContext } from "@/modules/organization/use-cases/resolve-session"
+import { TRASH_ITEM_TYPES } from "@/modules/storage/domain/trash-types"
 import { getTrashList, moveToTrash } from "@/modules/storage/use-cases/manage-trash"
 
 const moveTrashSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["RAW_ASSET", "APPROVED_ANALYSIS", "PRODUCT"]),
+  type: z.enum(TRASH_ITEM_TYPES),
 })
 
 export const GET = handle(async (request: Request) => {
