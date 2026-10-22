@@ -86,15 +86,18 @@ export const CANCELLATION_SITUATIONS = [
   {
     id: "SALE_CANCELLATION_REMINDER",
     group: "CANCELLATION",
-    title: "Sale báo khách: đơn bị Điều phối huỷ",
-    recognize: "Sale nhận tin hệ thống \"Đơn #… đã bị Điều phối huỷ (đã được duyệt)\" trong Hộp việc → Tin nhắn.",
+    title: "Sale báo khách: đơn khách đã đặt bị huỷ",
+    recognize: "Hộp việc của Sale phụ trách có việc \"Báo khách: đơn #… đã bị huỷ\" — đơn khách đã đặt bị nhân viên huỷ (sổ thu, duyệt đề xuất huỷ) hoặc đề xuất huỷ của Điều phối được tự duyệt.",
     owners: ["SALE"],
     informed: ["ADMIN"],
     steps: {
-      SALE: [{ do: "Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn.", where: { tab: "inbox" } }],
+      SALE: [
+        { do: "Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn." },
+        { do: "Báo xong thì bấm xác nhận ngay trong Hộp việc để đóng việc.", where: { tab: "inbox", button: "Đã báo khách" } },
+      ],
     },
-    deadline: "Trong 2 tiếng kể từ lúc duyệt huỷ (giờ cụ thể ghi trong tin).",
-    automation: "Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ.",
+    deadline: "Trong 2 tiếng kể từ lúc huỷ — quá hạn việc lên đầu Hộp việc như đơn kẹt.",
+    automation: "Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ (khi Điều phối huỷ). Không tạo việc cho đơn hệ thống tự huỷ vì quá hạn thanh toán hay đơn bỏ hiển thị; việc chỉ nhắc trong 7 ngày.",
     next: ["CANCELLATION_REFUND_DUE"],
   },
   {
@@ -147,7 +150,10 @@ export const CANCELLATION_SITUATIONS = [
     recognize: "Sale hoặc Điều phối đề xuất bỏ hiển thị một link hoặc đơn chưa trả đồng nào (khách đổi ý, chỉ hỏi giá, trùng…).",
     owners: ["ADMIN"],
     steps: {
-      ADMIN: [{ do: "Ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối.", where: { tab: "tracking", button: "Duyệt" } }],
+      ADMIN: [
+        { do: "Hộp việc hiện đề xuất kèm lý do và người đề xuất: duyệt hoặc từ chối ngay tại đó.", where: { tab: "inbox", button: "Duyệt bỏ hiển thị" } },
+        { do: "Hoặc ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối.", where: { tab: "tracking", button: "Duyệt" } },
+      ],
       SALE: [{ do: "Đề xuất: bấm biểu tượng bỏ hiển thị trên thẻ đơn ở Kanban, chọn lý do.", where: { tab: "tracking", button: "Xác nhận bỏ hiển thị" } }],
       COORDINATOR: [{ do: "Đề xuất như Sale.", where: { tab: "tracking", button: "Xác nhận bỏ hiển thị" } }],
     },

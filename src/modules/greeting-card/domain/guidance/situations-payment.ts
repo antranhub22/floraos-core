@@ -28,10 +28,12 @@ export const PAYMENT_SITUATIONS = [
     recognize: "Thẻ đơn ghi \"Đơn do Điều phối xác nhận – Điều hành chưa duyệt đã nhận tiền\".",
     owners: ["ADMIN"],
     steps: {
-      ADMIN: [{ do: "Đối chiếu sao kê rồi phê duyệt khoản khách đã chuyển trên dòng đơn (lọc \"Khách báo đã chuyển\").", where: { tab: "operation" } }],
+      ADMIN: [
+        { do: "Hộp việc báo \"Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển\": bấm vào để mở đơn.", where: { tab: "inbox", button: "Xử lý" } },
+        { do: "Đối chiếu sao kê rồi phê duyệt khoản khách đã chuyển trên dòng đơn (lọc \"Khách báo đã chuyển\").", where: { tab: "operation" } },
+      ],
     },
     next: ["DEPOSIT_PAID_WAITING_PRODUCTION"],
-    notes: ["Việc này chưa hiện trong Hộp việc của Điều hành — cần vào tab Điều hành để thấy."],
   },
   {
     id: "COORDINATOR_DEPOSIT_APPROVAL",

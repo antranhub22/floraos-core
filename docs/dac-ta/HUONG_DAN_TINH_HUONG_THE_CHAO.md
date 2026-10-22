@@ -9,7 +9,7 @@
 
 **Điều hành** (19): [Đơn chọn mẫu chưa niêm yết giá — chờ báo giá](#order-awaiting-quote) · [Khách báo đã chuyển khoản — chờ xác nhận tiền](#first-payment-reported) · [Điều phối đã nhận đơn — Điều hành chưa ghi nhận tiền](#deposit-pending-admin-approval) · [Khách báo đã chuyển phần còn lại](#second-payment-reported) · [Đã giao còn nợ](#post-delivery-debt) · [Có khoản tiền vào chưa khớp đơn](#unmatched-bank-transfer) · [Chưa nhận đơn được: tiệm yêu cầu thu tiền trước khi cắm](#accept-blocked-by-payment) · [Khách xin đổi thông tin đơn](#customer-change-request-pending) · [Sale xin giảm giá cho đơn](#discount-request-pending) · [Khách cần hoá đơn VAT](#vat-invoice-request) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Đề xuất huỷ / hoàn tiền chờ duyệt](#cancellation-proposal-pending) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Đơn đã huỷ nhưng khách báo đã chuyển khoản](#cancelled-reported-payment) · [Điều hành huỷ đơn trực tiếp](#ledger-direct-cancel) · [Ghi nhận hoàn tiền trên sổ thu](#ledger-refund) · [Chờ duyệt bỏ hiển thị đơn/link chưa trả tiền](#dismissal-pending) · [Đã bỏ hiển thị — có thể khôi phục](#dismissed-restorable)
 
-**Sale** (11): [Đã tạo link — chưa gửi khách](#link-created-not-sent) · [Đã gửi link — khách chưa mở](#link-sent-not-opened) · [Khách đang xem / đã chọn mẫu nhưng chưa đặt](#customer-browsing) · [Đơn mới chưa có Sale phụ trách](#order-unassigned-sale) · [Đã đặt đơn — chờ khách chuyển khoản](#order-placed-awaiting-transfer) · [Hoa xong — chờ khách trả phần còn lại](#second-payment-due) · [Đã giao còn nợ](#post-delivery-debt) · [Giao không thành công — hẹn giao lại](#delivery-failed) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Cần huỷ hoặc hoàn tiền một đơn](#cancellation-propose) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
+**Sale** (11): [Đã tạo link — chưa gửi khách](#link-created-not-sent) · [Đã gửi link — khách chưa mở](#link-sent-not-opened) · [Khách đang xem / đã chọn mẫu nhưng chưa đặt](#customer-browsing) · [Đơn mới chưa có Sale phụ trách](#order-unassigned-sale) · [Đã đặt đơn — chờ khách chuyển khoản](#order-placed-awaiting-transfer) · [Hoa xong — chờ khách trả phần còn lại](#second-payment-due) · [Đã giao còn nợ](#post-delivery-debt) · [Giao không thành công — hẹn giao lại](#delivery-failed) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Cần huỷ hoặc hoàn tiền một đơn](#cancellation-propose) · [Sale báo khách: đơn khách đã đặt bị huỷ](#sale-cancellation-reminder)
 
 **Điều phối** (14): [Điều phối được tự duyệt tiền cọc](#coordinator-deposit-approval) · [Khách báo đã chuyển phần còn lại](#second-payment-reported) · [Đơn chờ Điều phối nhận](#order-awaiting-accept) · [Đã nhận đơn — chờ giao thợ cắm](#order-accepted-awaiting-florist) · [Thợ đang cắm hoa](#arranging-in-progress) · [Hoa xong — giao cho shipper](#ready-to-dispatch) · [Đang giao — chờ ảnh người nhận](#delivering) · [Giao không thành công — hẹn giao lại](#delivery-failed) · [Không làm được đúng mẫu — đề xuất mẫu khác](#substitute-proposal) · [Khách đã trả lời đề xuất mẫu khác](#substitute-answered) · [Khách xin đổi thông tin đơn](#customer-change-request-pending) · [Đơn kẹt quá thời gian chuẩn của bước](#step-stuck) · [Cần huỷ hoặc hoàn tiền một đơn](#cancellation-propose) · [Điều phối không nhận được đơn](#coordinator-rejects-order)
 
@@ -72,9 +72,11 @@
 - **Nhận biết:** Đơn đặt từ link chung không gắn Sale nào (và tiệm chưa có người phụ trách mặc định).
 - **Ai làm:** Sale
 - **Bước tiếp theo:**
-  - **Sale:** Mở đơn và liên hệ khách xác nhận thông tin. *(Hộp việc → nút "Nhận đơn")*
+  - **Sale:** Bấm nhận đơn ngay trong Hộp việc để ghi tên mình làm Sale phụ trách. *(Hộp việc → nút "Nhận đơn")*
+  - **Sale:** Mở đơn và liên hệ khách xác nhận thông tin.
 - **Tiếp theo có thể là:** [Đã đặt đơn — chờ khách chuyển khoản](#order-placed-awaiting-transfer)
-- **Lưu ý:** Hiện chưa có thao tác ghi tên mình vào đơn — nút chỉ mở tab Bán hàng.
+- **Lưu ý:** Hai người bấm cùng lúc thì chỉ một người nhận được; người sau thấy báo "Đơn đã có Sale khác nhận".
+- **Lưu ý:** Sale chỉ xem khách của mình vẫn thấy và nhận được đơn chưa có ai phụ trách.
 
 ### Đã đặt đơn — chờ khách chuyển khoản
 
@@ -85,7 +87,7 @@
 - **Cần biết:** Điều hành
 - **Bước tiếp theo:**
   - **Điều hành:** Tiền đã vào tài khoản dù khách chưa báo: ghi nhận ngay trên dòng đơn ở tab Điều hành (nút "Thu tiền…"). *(Điều hành)*
-  - **Sale:** Nhắc khách quét mã QR chuyển khoản trên thẻ chào (gọi, Zalo hoặc nhắn tin). *(Hộp việc → nút "Tư vấn")*
+  - **Sale:** Nhắc khách quét mã QR chuyển khoản trên thẻ chào (gọi, Zalo hoặc nhắn tin) — tiền cọc hoặc trả đủ tuỳ đơn. *(Hộp việc → nút "Nhắc chuyển khoản")*
 - **Hạn:** Mặc định 15 phút — quá hạn Hộp việc của Sale báo kẹt.
 - **Hệ thống tự làm:** Quá hạn giữ đơn: hệ thống nhắc khách một lần; tiệm bật tự huỷ hoặc hạn thanh toán thì đơn tự huỷ (khách đã báo chuyển khoản thì không huỷ).
 - **Tiếp theo có thể là:** [Khách báo đã chuyển khoản — chờ xác nhận tiền](#first-payment-reported) · [Đơn tự huỷ vì quá hạn thanh toán](#payment-timeout-cancelled)
@@ -179,9 +181,9 @@
 - **Nhận biết:** Thẻ đơn ghi "Đơn do Điều phối xác nhận – Điều hành chưa duyệt đã nhận tiền".
 - **Ai làm:** Điều hành
 - **Bước tiếp theo:**
+  - **Điều hành:** Hộp việc báo "Điều phối đã nhận đơn — xác nhận tiền khách đã chuyển": bấm vào để mở đơn. *(Hộp việc → nút "Xử lý")*
   - **Điều hành:** Đối chiếu sao kê rồi phê duyệt khoản khách đã chuyển trên dòng đơn (lọc "Khách báo đã chuyển"). *(Điều hành)*
 - **Tiếp theo có thể là:** [Đã thu tiền (cọc hoặc đủ) — đơn vào xưởng](#deposit-paid-waiting-production)
-- **Lưu ý:** Việc này chưa hiện trong Hộp việc của Điều hành — cần vào tab Điều hành để thấy.
 
 ### Điều phối được tự duyệt tiền cọc
 
@@ -358,7 +360,7 @@
   - **Điều hành:** Không đồng ý thì từ chối và ghi lý do để người đề xuất biết. *(Điều hành → nút "Từ chối")*
 - **Hạn:** Đề xuất "từ chối nhận đơn" của Điều phối: hệ thống tự duyệt sau thời gian Điều hành đặt trong Cài đặt (mặc định 15 phút). Đề xuất huỷ / hoàn tiền khác (của Sale hay Điều phối): không có hạn, luôn cần người duyệt.
 - **Hệ thống tự làm:** Đơn đang giao không tự duyệt — cần Điều hành hoặc một Điều phối khác duyệt. Người đề xuất nhận tin kết quả.
-- **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
+- **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Đơn tự huỷ vì Điều hành không duyệt kịp](#cancellation-auto-approved) · [Sale báo khách: đơn khách đã đặt bị huỷ](#sale-cancellation-reminder)
 - **Lưu ý:** Đơn đang giao: Điều phối có quyền giao hàng duyệt được ở tab Điều phối, nhưng không tự duyệt đề xuất của chính mình.
 - **Lưu ý:** Hoàn một phần chỉ Điều hành duyệt.
 
@@ -399,7 +401,7 @@
 - **Bước tiếp theo:**
   - **Điều hành:** Xử lý việc "Cần hoàn tiền" / "Đơn tự huỷ — cần liên hệ khách" trong Hộp việc. *(Hộp việc)*
 - **Hệ thống tự làm:** Hệ thống kiểm mỗi phút, chỉ với đề xuất từ chối nhận đơn; đơn đã huỷ, đang giao hoặc đã giao bị bỏ qua (không tự huỷ).
-- **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Sale báo khách: đơn bị Điều phối huỷ](#sale-cancellation-reminder)
+- **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due) · [Sale báo khách: đơn khách đã đặt bị huỷ](#sale-cancellation-reminder)
 
 ### Cần hoàn tiền / liên hệ khách sau khi huỷ
 
@@ -413,17 +415,18 @@
 - **Hạn:** Khách được hứa liên hệ (và hoàn tiền) trong 2 tiếng kể từ lúc duyệt huỷ — khi đơn bị Điều phối huỷ.
 - **Lưu ý:** Trong lúc chờ, sổ thu không cho bấm "Hoàn tiền" trên đơn này để tránh hoàn hai lần.
 
-### Sale báo khách: đơn bị Điều phối huỷ
+### Sale báo khách: đơn khách đã đặt bị huỷ
 
 <a id="sale-cancellation-reminder"></a>Mã: `SALE_CANCELLATION_REMINDER`
 
-- **Nhận biết:** Sale nhận tin hệ thống "Đơn #… đã bị Điều phối huỷ (đã được duyệt)" trong Hộp việc → Tin nhắn.
+- **Nhận biết:** Hộp việc của Sale phụ trách có việc "Báo khách: đơn #… đã bị huỷ" — đơn khách đã đặt bị nhân viên huỷ (sổ thu, duyệt đề xuất huỷ) hoặc đề xuất huỷ của Điều phối được tự duyệt.
 - **Ai làm:** Sale
 - **Cần biết:** Điều hành
 - **Bước tiếp theo:**
-  - **Sale:** Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn. *(Hộp việc)*
-- **Hạn:** Trong 2 tiếng kể từ lúc duyệt huỷ (giờ cụ thể ghi trong tin).
-- **Hệ thống tự làm:** Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ.
+  - **Sale:** Gọi hoặc nhắn khách báo đơn bị huỷ. Khách đã chuyển tiền thì báo Điều hành hoàn — Sale không tự ghi hoàn.
+  - **Sale:** Báo xong thì bấm xác nhận ngay trong Hộp việc để đóng việc. *(Hộp việc → nút "Đã báo khách")*
+- **Hạn:** Trong 2 tiếng kể từ lúc huỷ — quá hạn việc lên đầu Hộp việc như đơn kẹt.
+- **Hệ thống tự làm:** Thẻ chào của khách tự hiện thông báo huỷ và hạn liên hệ (khi Điều phối huỷ). Không tạo việc cho đơn hệ thống tự huỷ vì quá hạn thanh toán hay đơn bỏ hiển thị; việc chỉ nhắc trong 7 ngày.
 - **Tiếp theo có thể là:** [Cần hoàn tiền / liên hệ khách sau khi huỷ](#cancellation-refund-due)
 
 ### Đơn đã huỷ nhưng khách báo đã chuyển khoản
@@ -467,7 +470,8 @@
 - **Nhận biết:** Sale hoặc Điều phối đề xuất bỏ hiển thị một link hoặc đơn chưa trả đồng nào (khách đổi ý, chỉ hỏi giá, trùng…).
 - **Ai làm:** Điều hành
 - **Bước tiếp theo:**
-  - **Điều hành:** Ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối. *(Theo dõi đơn → nút "Duyệt")*
+  - **Điều hành:** Hộp việc hiện đề xuất kèm lý do và người đề xuất: duyệt hoặc từ chối ngay tại đó. *(Hộp việc → nút "Duyệt bỏ hiển thị")*
+  - **Điều hành:** Hoặc ở chế độ Kanban của tab Theo dõi đơn, xem lý do trên thẻ rồi duyệt hoặc từ chối. *(Theo dõi đơn → nút "Duyệt")*
   - **Sale:** Đề xuất: bấm biểu tượng bỏ hiển thị trên thẻ đơn ở Kanban, chọn lý do. *(Theo dõi đơn → nút "Xác nhận bỏ hiển thị")*
   - **Điều phối:** Đề xuất như Sale. *(Theo dõi đơn → nút "Xác nhận bỏ hiển thị")*
 - **Hạn:** 5 phút — quá hạn hệ thống tự duyệt.
