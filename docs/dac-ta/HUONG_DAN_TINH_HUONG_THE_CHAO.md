@@ -258,12 +258,13 @@
 
 <a id="order-accepted-awaiting-florist"></a>Mã: `ORDER_ACCEPTED_AWAITING_FLORIST`
 
-- **Nhận biết:** Điều phối đã nhận đơn, chưa giao cho thợ.
+- **Nhận biết:** Điều phối đã nhận đơn (hoặc Điều hành đã ghi nhận tiền), chưa giao cho thợ.
 - **Ai làm:** Điều phối
 - **Bước tiếp theo:**
   - **Điều phối:** Chọn thợ và ghi chú yêu cầu cắm rồi giao việc. *(Điều phối → nút "Giao Florist")*
 - **Hạn:** Tính chung thời gian chuẩn bước nhận đơn (mặc định 30 phút).
 - **Tiếp theo có thể là:** [Thợ đang cắm hoa](#arranging-in-progress)
+- **Lưu ý:** Đơn chưa được nhận thì không có nút "Giao Florist" (cả Lưới thẻ lẫn Kanban) và hệ thống cũng không cho giao thợ, chụp ảnh hay giao ship — thẻ ghi "Đơn chưa được nhận".
 
 ### Thợ đang cắm hoa
 
@@ -277,21 +278,23 @@
 - **Hạn:** Mặc định 120 phút.
 - **Hệ thống tự làm:** Có ảnh: khách được báo hoa đã xong và thấy ảnh trên thẻ chào.
 - **Tiếp theo có thể là:** [Chờ khách duyệt ảnh hoa thành phẩm](#photo-awaiting-customer-approval) · [Hoa xong — giao cho shipper](#ready-to-dispatch) · [Không làm được đúng mẫu — đề xuất mẫu khác](#substitute-proposal)
-- **Lưu ý:** Tiệm chọn gói vận hành nghiêm ngặt thì không bỏ qua ảnh được.
+- **Lưu ý:** Nút bỏ qua ảnh theo Quy trình vận hành: tiệm bật "Bắt buộc chụp Ảnh thành phẩm" (gói Nghiêm ngặt) thì không bỏ qua được.
+- **Lưu ý:** Tiệm tắt chốt ảnh thành phẩm thì giao ship được ngay cả khi chưa chụp ảnh.
 
 ### Chờ khách duyệt ảnh hoa thành phẩm
 
 <a id="photo-awaiting-customer-approval"></a>Mã: `PHOTO_AWAITING_CUSTOMER_APPROVAL`
 
-- **Nhận biết:** Đã có ảnh hoa, khách chưa bấm duyệt và còn trong thời gian chờ (thẻ ghi "Chờ khách duyệt ảnh — còn N phút").
+- **Nhận biết:** Đã có ảnh hoa, khách chưa bấm duyệt (thẻ ghi "Đang chờ khách duyệt ảnh thành phẩm — còn N phút", hoặc "cần khách bấm duyệt" khi tiệm không tự duyệt).
 - **Ai làm:** Không ai — chờ khách hoặc hệ thống
 - **Cần biết:** Điều phối, Sale
 - **Bước tiếp theo:**
-  - **Sale:** Nhắc khách mở thẻ chào và duyệt ảnh nếu cần giao sớm.
+  - **Sale:** Nhắc khách mở thẻ chào và duyệt ảnh — bắt buộc khi tiệm không tự duyệt, nếu không đơn không giao được.
   - **Điều phối:** Chờ — nút giao ship tạm mờ. Khách cần gấp thì nhờ Sale nhắc khách duyệt.
-- **Hạn:** Mặc định 10 phút (tiệm bắt khách duyệt: tối thiểu 30 phút).
-- **Hệ thống tự làm:** Hết giờ hệ thống tự coi như khách đồng ý.
+- **Hạn:** Theo Thời hạn từng bước (Thẻ chào ghi đè được); tiệm chưa cài thì 10 phút.
+- **Hệ thống tự làm:** Chế độ "Tự duyệt" và bật tự duyệt khi hết giờ: hết giờ hệ thống tự coi như khách đồng ý. Chế độ "Bắt buộc khách bấm duyệt" hoặc tắt tự duyệt: không tự qua, chờ khách bấm.
 - **Tiếp theo có thể là:** [Hoa xong — giao cho shipper](#ready-to-dispatch)
+- **Lưu ý:** Chụp lại ảnh sau khi khách đã duyệt thì khách phải duyệt lại ảnh mới.
 
 ## Giao hoa
 
@@ -330,7 +333,7 @@
 - **Ai làm:** Điều phối, Sale
 - **Bước tiếp theo:**
   - **Sale:** Gọi khách và người nhận để hẹn lại giờ hoặc địa chỉ. Khách đổi được giờ/địa chỉ trên thẻ chào. *(Hộp việc → nút "Liên hệ khách")*
-  - **Điều phối:** Có lịch mới thì giao lại cho shipper. *(Điều phối → nút "Giao lại")*
+  - **Điều phối:** Có lịch mới thì giao lại cho shipper (nút có trên cả Lưới thẻ và Kanban). *(Điều phối → nút "Giao lại")*
 - **Hạn:** Mặc định 30 phút từ lúc ghi nhận giao hỏng.
 - **Hệ thống tự làm:** Nếu bật tính phí giao lại, phí được cộng vào đơn — đơn đã trả đủ sẽ cần thu thêm phần phí trước khi giao lại.
 - **Tiếp theo có thể là:** [Đang giao — chờ ảnh người nhận](#delivering) · [Hoa xong — chờ khách trả phần còn lại](#second-payment-due)
