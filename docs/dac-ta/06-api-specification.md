@@ -884,3 +884,14 @@ Quy tắc (PO duyệt 17/10/2026):
 - Bộ dọn nền chạy mỗi giờ trong tiến trình web (`src/instrumentation.ts` → `trash-purge-scheduler.ts`, tắt bằng `TRASH_PURGE=off`): xoá hẳn mục quá 30 ngày kể cả tệp ảnh trong kho (khi không còn bản ghi nào dùng chung khoá), tối đa 200 mục/loại/vòng.
 - Đơn hàng không có thùng rác — chỉ huỷ, không xoá.
 
+### 25.5 Tải dữ liệu cửa hàng (bản sao lưu ZIP)
+
+| Method | Path | Năng lực | Ghi chú |
+|---|---|---|---|
+| GET | `/storage/export` | `R13` | Lượt xuất gần nhất của tổ chức (`null` khi chưa có): `status` ∈ `PENDING · PROCESSING · COMPLETED · FAILED · EXPIRED`, `downloadUrl` (URL ký, chỉ khi `COMPLETED` và còn hạn 24 giờ), `sizeBytes`, `counts`, `imageCount`, `skippedImageCount` |
+| POST | `/storage/export` | `R13` | 202 — xếp một lượt xuất vào hàng đợi; đang có lượt chờ/chạy thì trả lại lượt đó. Ghi `audit_logs` `store.export.request` |
+
+- Job `generation_jobs.feature = "store.export"` (không trừ credit), nhận bằng `claimNext` trong tiến trình web (`src/instrumentation.ts` → `store-export-scheduler.ts`, 20 giây/vòng, tắt bằng `STORE_EXPORT_WORKER=off`).
+- ZIP (`org/<org>/exports/<job>.zip`): `doc-truoc.txt`, `du-lieu-cua-hang.xlsx` (Sản phẩm · Khách hàng · Đơn hàng · Mã giảm giá, bỏ mục trong Thùng rác), `data.json` (21 bảng của tổ chức, kể cả mục trong Thùng rác), `anh-goc/` (ảnh `ORIGINAL` đang dùng, trần 100 MB/lượt; phần vượt ghi ở `anh-bo-qua.txt`). KHÔNG chứa `integration_tokens`, `greeting_integrations`, `chat_channel_integrations`, `audit_logs`.
+- Tệp ZIP bị xoá khỏi kho sau 24 giờ (`output.file_removed = true`).
+
