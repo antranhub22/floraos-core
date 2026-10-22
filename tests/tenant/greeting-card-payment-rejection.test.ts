@@ -19,7 +19,7 @@ import { runBackgroundSweep } from "@/modules/greeting-card/use-cases/background
  */
 const ORDER = {
   customerName: "K", customerPhone: "0987654321", recipientName: "N", recipientPhone: "0912345678",
-  confirmedTerms: true, deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
+  confirmedTerms: true, selectedPromotionId: "promo-discount-10", deliveryDate: new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10), deliveryAddress: "1 Lê Lợi, Q1",
 }
 
 describe("greeting-card: Điều hành báo chưa nhận được tiền", () => {
