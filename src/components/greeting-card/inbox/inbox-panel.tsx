@@ -11,6 +11,9 @@ import { DiscountDecision } from "./discount-decision"
 import { ChangeDecision } from "./change-decision"
 import { CancellationFollowUp } from "./cancellation-follow-up"
 import { ReportedPaymentCheck } from "./reported-payment-check"
+import { ClaimOrderButton } from "./claim-order-button"
+import { CustomerNotifiedButton } from "./customer-notified-button"
+import { DismissalDecision } from "./dismissal-decision"
 
 type Group = "actions" | "messages" | "updates"
 export interface InboxTarget { tab: InboxTab; orderId: string | null; sessionId: string | null }
@@ -138,7 +141,7 @@ export function InboxPanel({ onClose, onOpenTarget }: { onClose: () => void; onO
 
 const ACTION_LABEL: Partial<Record<InboxAction["kind"], string>> = {
   CLAIM_ORDER: "Nhận đơn",
-  REMIND_DEPOSIT: "Nhắc cọc",
+  REMIND_DEPOSIT: "Nhắc chuyển khoản",
   FOLLOW_UP_LEAD: "Tư vấn",
   REMIND_BALANCE_PAYMENT: "Nhắc thanh toán",
   SEND_PHOTO_QC: "Gửi ảnh hoa",
@@ -158,6 +161,8 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
     action.kind === "CANCELLATION_REQUEST" ||
     action.kind === "CANCELLATION_FOLLOW_UP" ||
     action.kind === "CANCELLED_REPORTED_PAYMENT" ||
+    action.kind === "DISMISSAL_REQUEST" ||
+    (action.kind === "CANCELLED_NOTIFY_CUSTOMER" && action.urgency >= 1000) ||
     action.kind === "DELIVERY_FAILED_SALE_CONTACT" ||
     action.kind === "REDELIVER"
   const [done, setDone] = useState<string | null>(null)
@@ -196,9 +201,16 @@ function ActionRow({ action, onOpen, onMessage, onDecided }: { action: InboxActi
           <ReportedPaymentCheck {...action.reportedPayment} onDone={(msg) => { setDone(msg); onDecided() }} />
         </div>
       )}
+      {action.dismissalRequest && !done && (
+        <div className="rounded-xl border border-border bg-surface-alt p-3">
+          <DismissalDecision targetId={action.dismissalRequest.targetId} type={action.dismissalRequest.type} onDone={(msg) => { setDone(msg); onDecided() }} />
+        </div>
+      )}
       {done && <p role="status" className="rounded-xl bg-success-bg px-3 py-2 text-body-sm text-success">{done}</p>}
       <div className="flex gap-2 pl-15">
-        {!action.discount && !action.change && !action.followUp && !action.reportedPayment && (
+        {action.kind === "CLAIM_ORDER" && action.orderId && !done && <ClaimOrderButton orderId={action.orderId} onDone={(msg) => { setDone(msg); onDecided() }} />}
+        {action.customerNotice && !done && <CustomerNotifiedButton orderId={action.customerNotice.orderId} onDone={(msg) => { setDone(msg); onDecided() }} />}
+        {!action.discount && !action.change && !action.followUp && !action.reportedPayment && !action.dismissalRequest && action.kind !== "CLAIM_ORDER" && !action.customerNotice && (
           <button type="button" onClick={onOpen} className="h-11 flex-1 rounded-xl bg-primary px-3 text-body-sm font-bold text-white hover:bg-primary-dark sm:flex-none">
             {ACTION_LABEL[action.kind] ?? "Xử lý"}
           </button>

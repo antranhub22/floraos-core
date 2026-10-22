@@ -16,6 +16,7 @@ import { changeRequestActions } from "./order-change"
 import { BrochureOrderRepository } from "../infra/brochure-order-repository"
 import { ReportedPaymentCheckRepository } from "../infra/reported-payment-check-repository"
 import { GreetingCardRepository } from "../infra/greeting-card-repository"
+import { followUpInboxActions } from "./inbox-follow-ups"
 
 export interface InboxThread {
   key: string
@@ -49,6 +50,13 @@ export async function getInbox(ctx: TenantContext, targetRole?: MessageRole | un
   const actions: InboxAction[] = inboxActions(pipeline, role, ctx.userId)
   // Khách xin đổi thông tin đơn → người có quyền sửa đơn (R3) duyệt
   if (ctx.capabilities.has(GREETING_CARD_CAPABILITY.orderUpdate)) actions.unshift(...(await changeRequestActions(ctx, pipeline)))
+  // Duyệt bỏ hiển thị (R6), Sale nhận đơn chưa có người phụ trách, Sale báo khách đơn bị huỷ (PO 17/10/2026)
+  const ids = new Set(actions.map((a) => a.id))
+  for (const a of await followUpInboxActions(ctx, role, pipeline, scope, now)) {
+    if (ids.has(a.id)) continue
+    const at = actions.findIndex((x) => x.urgency < a.urgency)
+    actions.splice(at < 0 ? actions.length : at, 0, a)
+  }
   if (role === "ADMIN") {
     const [pending, pendingCancellations, followUps, org] = await Promise.all([
       new DiscountRepository().listPending(ctx),
